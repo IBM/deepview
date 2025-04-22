@@ -3,6 +3,7 @@ Diagnostic and debugging tools library to identify gaps in the `sendnn` compiler
 
 # Initial directory structure 
 
+```shell
 aiu-model-debugger
 ├── LICENSE
 ├── README.md
@@ -30,3 +31,4 @@ aiu-model-debugger
 └── utils
     ├── README.md
     └── logger.py
+```
