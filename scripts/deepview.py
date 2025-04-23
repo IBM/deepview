@@ -56,9 +56,9 @@ args = parser.parse_args()
 
 convert_unknown_lineno = (543,556)
 original_file_path = os.path.join(args.sendnn_path, "torch_sendnn", "backends.py")
-insert_file_path = '../core/convert_unknown_func.txt'
+insert_file_path = '../core/function_modifications/convert_unknown_func.txt'
 if args.show_stack_trace:
-    insert_file_path = '../core/convert_unknown_func_with_stack_trace.txt'
+    insert_file_path = '../core/function_modifications/convert_unknown_func_with_stack_trace.txt'
 modify_file(original_file_path, insert_file_path, convert_unknown_lineno[0], convert_unknown_lineno[1])
 
 
