@@ -90,7 +90,7 @@ elif args.model_type == 'fms':
         '--default_dtype','fp16',
         '--fixed_prompt_length','64', 
         '--max_new_tokens','20', 
-        '--timing','per-token ',
+        '--timing','per-token',
         '--batch_size','1'
     ]
 
