@@ -616,51 +616,8 @@ if args.compile:
     dprint(f"compilation warmup")
     pt_compile_model_time = time.time()
     for sample, cache in itertools.product(do_sample, use_cache):
+        infer(cache, sample, True)
 
-        def print_model_hierarchy():
-            module_depth = {}
-
-            def register_depths(module, current_depth=0):
-                module_depth[module] = current_depth
-                for child in module.children():
-                    register_depths(child, current_depth + 1)
-            register_depths(model)
-
-            def wrap_forward(layer):
-                original_forward = layer.forward
-
-                def safe_forward(*args, **kwargs):
-                    print("In safe forward")
-                    try:
-                        #print("No Error")
-                        return original_forward(*args, **kwargs)
-                    except (RuntimeError,TypeError) as e:
-                        print(f"Error in {layer.__class__.__name__}: {e}")
-                        return torch.zeros_like(args[0]) if args else None
-                layer.forward = safe_forward
-
-            hooks = []
-            def hook_fn(module, input):
-                depth = module_depth.get(module, 0)
-                prefix = '│    ' * depth
-                if len(input) == 0: return
-                input_shape_str = f"[{', '.join(map(str, input[0].shape))}]"
-                input_type = str(input[0].dtype)
-                if module.parameters() == None: return
-                param_size = sum(p.numel() for p in module.parameters() if p.requires_grad)
-                param_size_str = f"{param_size:,}" if param_size > 0 else "--"
-                print(f"DEBUG TOOL {prefix}├─{module.__class__.__name__}: | Input: {input_shape_str} | {input_type} | Params: {param_size_str}")
-                wrap_forward(module)
-            
-            for name, layer in model.named_modules():
-                hooks.append(layer.register_forward_pre_hook(hook_fn))
-
-            infer(cache, sample, True)
-
-            for hook in hooks:
-                hook.remove()
-
-        print_model_hierarchy()
     pt_compile_model_time = time.time() - pt_compile_model_time
     dprint(f"PT compile complete, took {pt_compile_model_time:.3f}s")
 
