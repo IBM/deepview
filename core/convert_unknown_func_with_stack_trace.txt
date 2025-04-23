@@ -1,0 +1,24 @@
+    def convert_unknown(self, node, inputs):
+        if isinstance(node.dtype, list):
+            dt = [convert_data_type(t) for t in node.dtype]
+            shape = [convert_shape(s) for s in node.shape]
+            layout = [convert_layout(s) for s in node.shape]
+            try:
+                ti = [sendnn.TensorInfo(t, s, layout) for t, s in zip(dt, shape)]
+                raise RuntimeError(f"DEBUG TOOL Operation not supported : {node.stack_trace}")
+                return self.gb.UnknownNode(node.name, ti, inputs)
+            except (RuntimeError, TypeError) as e:
+                print(f"DEBUG TOOL Caught error for {node}: {e}")
+        else:
+            dt = convert_data_type(node.dtype)
+            shape = convert_shape(node.shape)
+            layout = convert_layout(node.shape)
+            ti = [sendnn.TensorInfo(dt, shape, layout)]
+            try:
+                raise RuntimeError(f"DEBUG TOOL Operation not supported : {node.stack_trace}")
+                return self.gb.UnknownNode(node.name, ti, inputs)
+            except (RuntimeError, TypeError) as e:
+                print(f"DEBUG TOOL Caught error for {node}: {e}")
+            return self.gb.UnknownNode(node.name, ti, inputs)
+
+            
