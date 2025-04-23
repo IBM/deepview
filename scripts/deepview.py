@@ -83,7 +83,7 @@ elif args.model_type == 'fms':
         '--architecture', 'hf_pretrained',
         '--model_path', args.model_path,
         '--tokenizer', args.model_path, 
-        '--device_type', 'aiu' 
+        '--device_type', 'aiu',
         '--unfuse_weights', 
         '--compile', 
         '--compile_dynamic',
