@@ -71,8 +71,11 @@ modify_file(original_file_path, insert_file_path, convert_unknown_lineno[0], con
 
 # Reinstall torch_sendnn library 
 subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-e', '.'], cwd=sendnn_folder)
+
 # Append torch_sendnn to python path
-sys.path.insert(0, sendnn_folder)
+os.environ["PYTHONPATH"] = '/tmp/torch_sendnn' + os.pathsep + os.environ["PYTHONPATH"]
+print(os.environ["PYTHONPATH"])
+
 
 
 if args.model_type == 'hf':
