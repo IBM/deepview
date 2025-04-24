@@ -48,10 +48,11 @@ args = parser.parse_args()
 ## USE AST
 convert_unknown_lineno = (543,556)
 sendnn_folder = os.path.dirname(torch_sendnn.__file__)
-dst_folder = os.path.join(os.getcwd(), 'torch_sendnn/torch_sendnn')
-shutil.copytree(sendnn_folder, dst_folder)
+dst_sendnn_main_folder = os.path.join(os.getcwd(), 'torch_sendnn')
+dst_sendnn_sub_folder = os.path.join(dst_sendnn_main_folder, 'torch_sendnn')
+shutil.copytree(sendnn_folder, dst_sendnn_sub_folder)
 
-original_file_path = os.path.join(dst_folder, 'backends.py')
+original_file_path = os.path.join(dst_sendnn_sub_folder, 'backends.py')
 insert_file_path = '../core/function_modifications/convert_unknown_func.txt'
 if args.show_details:
     insert_file_path = '../core/function_modifications/convert_unknown_func_with_stack_trace.txt'
@@ -63,9 +64,9 @@ modify_file(original_file_path, insert_file_path, convert_unknown_lineno[0], con
 
 
 # Reinstall torch_sendnn library 
-subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-e', '.'], cwd=dst_folder)
+subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-e', '.'], cwd=dst_sendnn_main_folder)
 # Append torch_sendnn to python path
-sys.path.insert(0, dst_folder)
+sys.path.insert(0, dst_sendnn_main_folder)
 
 
 if args.model_type == 'hf':
