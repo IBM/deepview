@@ -48,7 +48,7 @@ args = parser.parse_args()
 ## USE AST
 convert_unknown_lineno = (543,556)
 sendnn_folder = os.path.dirname(torch_sendnn.__file__)
-dst_folder = os.path.join(os.getcwd(), os.path.basename(sendnn_folder))
+dst_folder = os.path.join(os.getcwd(), 'torch_sendnn/torch_sendnn')
 shutil.copytree(sendnn_folder, dst_folder)
 
 original_file_path = os.path.join(dst_folder, 'torch_sendnn', 'backends.py')
