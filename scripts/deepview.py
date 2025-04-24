@@ -23,7 +23,7 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument(
     '--model_type', 
-    choices=['fms' 'hf'],
+    choices=['fms','hf'],
     required=True, 
     default='fms',
     help='The type of model you want to debug - fms or hf.'
