@@ -51,7 +51,7 @@ sendnn_folder = os.path.dirname(torch_sendnn.__file__)
 dst_folder = os.path.join(os.getcwd(), 'torch_sendnn/torch_sendnn')
 shutil.copytree(sendnn_folder, dst_folder)
 
-original_file_path = os.path.join(dst_folder, 'torch_sendnn', 'backends.py')
+original_file_path = os.path.join(dst_folder, 'backends.py')
 insert_file_path = '../core/function_modifications/convert_unknown_func.txt'
 if args.show_details:
     insert_file_path = '../core/function_modifications/convert_unknown_func_with_stack_trace.txt'
