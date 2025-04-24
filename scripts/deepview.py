@@ -21,11 +21,11 @@ parser = argparse.ArgumentParser(
     description="Script to run DeepView tool on any model."
 )
 
-parser.add_argument(
-    '--sendnn_path', 
-    required=True, 
-    help='Model name in HF format or model path'
-)
+# parser.add_argument(
+#     '--sendnn_path', 
+#     required=True, 
+#     help='Model name in HF format or model path'
+# )
 
 parser.add_argument(
     '--model_type', 
@@ -53,7 +53,7 @@ args = parser.parse_args()
 
 ## USE AST
 convert_unknown_lineno = (543,556)
-sendnn_folder = args.sendnn_path                        #os.path.dirname(torch_sendnn.__file__)
+sendnn_folder = '/tmp/torch_sendnn'                        #os.path.dirname(torch_sendnn.__file__)
 # dst_sendnn_main_folder = os.path.join(os.getcwd(), 'torch_sendnn')
 # dst_sendnn_sub_folder = os.path.join(dst_sendnn_main_folder, 'torch_sendnn')
 # shutil.copytree(sendnn_folder, dst_sendnn_sub_folder)
