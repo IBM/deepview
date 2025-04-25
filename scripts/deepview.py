@@ -5,6 +5,9 @@ import argparse
 import shutil
 import torch_sendnn
 
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+os.environ["PYTHONPATH"] = project_root + os.pathsep + os.environ["PYTHONPATH"]
+
 from core.model_runner import run_model
 from core.hook_monitor import enable_unsupported_op_mode, clear_unsupported_op_mode
 
