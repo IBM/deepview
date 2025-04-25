@@ -1,31 +1,16 @@
 import os
-import subprocess
 import sys
+import subprocess
 import argparse
 import shutil
-import torch_sendnn
 
-
-
-def modify_file(original_file, insert_file, x, y):
-    with open(original_file, 'r') as f:
-        original_lines = f.readlines()
-    with open(insert_file, 'r') as f:
-        insert_lines = f.readlines()
-    updated_lines = original_lines[:x-1] + insert_lines + original_lines[y:]
-    with open(original_file, 'w') as f:
-        f.writelines(updated_lines)
+from core.model_runner import run_model
+from core.hook_monitor import enable_unsupported_op_mode, clear_unsupported_op_mode
 
 
 parser = argparse.ArgumentParser(
     description="Script to run DeepView tool on any model."
 )
-
-# parser.add_argument(
-#     '--sendnn_path', 
-#     required=True, 
-#     help='Model name in HF format or model path'
-# )
 
 parser.add_argument(
     '--model_type', 
@@ -42,32 +27,42 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    '--show_details',
-    action='store_true',
-    help="Print stack trace and other details with unsupported op."
+        '--mode',
+        nargs='+',
+        choices=['unsupported_op'],
+        required=True,
+        help="Modes: [unsupported_op] (Choose one or more)"
 )
 
+parser.add_argument(
+    '--show_details',
+    action='store_true',
+    help="Print stack trace and other details, valid only with unsupported_op."
+)
 
 args = parser.parse_args()
 
 
-## USE AST
-convert_unknown_lineno = (543,556)
-sendnn_folder = '/tmp/torch_sendnn'                        #os.path.dirname(torch_sendnn.__file__)
-# dst_sendnn_main_folder = os.path.join(os.getcwd(), 'torch_sendnn')
-# dst_sendnn_sub_folder = os.path.join(dst_sendnn_main_folder, 'torch_sendnn')
-# shutil.copytree(sendnn_folder, dst_sendnn_sub_folder)
+if not args.mode:
+    run_model(args.model_type, args.model)
+    sys.exit(1)
 
+if args.show_details and 'A' not in args.mode:
+    print("Error: --show_details can only be used if 'unsupported_op' is specified in --mode.")
+    sys.exit(1)
+
+
+for mode in args.mode():
+    if mode == 'unsupported_op':
+        enable_unsupported_op_mode(args.show_details)
+        
+
+# ====================== This block will be removed if changes are merged to backends.py ======================
+# Modify backends.py
+sendnn_folder = '/tmp/torch_sendnn'
 original_file_path = os.path.join(sendnn_folder, 'torch_sendnn/backends.py')
-insert_file_path = '../core/function_modifications/convert_unknown_func.txt'
-if args.show_details:
-    insert_file_path = '../core/function_modifications/convert_unknown_func_with_stack_trace.txt'
-modify_file(original_file_path, insert_file_path, convert_unknown_lineno[0], convert_unknown_lineno[1])
-
-## Add more information (layers etc)
-
-# lazy_handles_lineno = (1998,2002)
-
+new_backends_file_path = '../core/backends.py'
+shutil.copy2(new_backends_file_path, original_file_path)
 
 # Reinstall torch_sendnn library 
 subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-e', '.'], cwd=sendnn_folder)
@@ -75,55 +70,12 @@ subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-e', '.'], cwd=s
 # Append torch_sendnn to python path
 os.environ["PYTHONPATH"] = '/tmp/torch_sendnn' + os.pathsep + os.environ["PYTHONPATH"]
 print(os.environ["PYTHONPATH"])
+# ==============================================================================================================
 
 
+# Run model and save output
+run_model(args.model_type, args.model)
 
-if args.model_type == 'hf':
-    command = [
-        'python3', '../core/inference_hf.py',
-        '--model_name', args.model,
-    ]
-elif args.model_type == 'fms':
-    command = [
-        'python3', '../core/inference_fms.py',
-        '--architecture', 'hf_pretrained',
-        '--model_path', args.model,
-        '--tokenizer', args.model, 
-        '--device_type', 'aiu',
-        '--unfuse_weights', 
-        '--compile', 
-        '--compile_dynamic',
-        '--default_dtype','fp16',
-        '--fixed_prompt_length','64', 
-        '--max_new_tokens','20', 
-        '--timing','per-token',
-        '--batch_size','1'
-    ]
+# Tear down the environment 
+clear_unsupported_op_mode()
 
-
-with open("model_output.txt", "w") as f:
-    process = subprocess.Popen(
-        command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True
-    )
-    for line in process.stdout:
-        print(line, end='')  # ✅ print to terminal
-        f.write(line)        # ✅ write to file
-    process.wait()
-
-
-input_file = "model_output.txt"
-output_file = "debug_tool_output.txt"
-
-with open(input_file, "r") as infile, open(output_file, "w") as outfile:
-    for line in infile:
-        if line.startswith("DEBUG TOOL"):
-            outfile.write(line)
-
-## If the code breaks, still should output 
-## Show output in terminal as well as save in file
-## pipe debug tool output to another file
-
-## Handle case: All ops are supported 
