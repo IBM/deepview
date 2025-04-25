@@ -59,6 +59,7 @@ DEBUG TOOL     return torch._C._nn.pad(input, pad, mode, value)
 aiu-model-debugger
 ├── LICENSE
 ├── README.md
+├── deepview.py
 ├── configs
 │   ├── README.md
 │   └── debug_profiles.json
@@ -76,8 +77,7 @@ aiu-model-debugger
 │   └── README.md
 ├── scripts
 │   ├── README.md
-│   ├── isolate_layer.py
-│   └── deepview.py
+│   └── isolate_layer.py
 ├── setup.py
 ├── tests
 │   ├── README.md
