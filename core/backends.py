@@ -551,46 +551,23 @@ class FxToSenDnn:
     def convert_unknown(self, node, inputs):
         log.debug("->  Unknown: ", node)
         unsup_op_debug = os.environ.get('UNSUP_OP_DEBUG', "0")
-        if unsup_op_debug == '0':
-            if isinstance(node.dtype, list):
-                dt = [convert_data_type(t) for t in node.dtype]
-                shape = [convert_shape(s) for s in node.shape]
-                layout = [convert_layout(s) for s in node.shape]
-                ti = [sendnn.TensorInfo(t, s, layout) for t, s in zip(dt, shape)]
-                return self.gb.UnknownNode(node.name, ti, inputs)
-            else:
-                dt = convert_data_type(node.dtype)
-                shape = convert_shape(node.shape)
-                layout = convert_layout(node.shape)
-                ti = [sendnn.TensorInfo(dt, shape, layout)]
-                return self.gb.UnknownNode(node.name, ti, inputs)
+        error = ""
+        if unsup_op_debug == '1':
+            error = f"DEBUG TOOL==================================== Stack Trace ====================================\n{add_prefix_to_string(node.stack_trace)}"
+        if isinstance(node.dtype, list):
+            dt = [convert_data_type(t) for t in node.dtype]
+            shape = [convert_shape(s) for s in node.shape]
+            layout = [convert_layout(s) for s in node.shape]
+            ti = [sendnn.TensorInfo(t, s, layout) for t, s in zip(dt, shape)]
+            print(f"DEBUG TOOL Caught error for \033[1m{node}\033[0m: Operation not supported.\nDEBUG TOOL Data type: {dt}, Shape: {shape}\n{error}")
+            return self.gb.UnknownNode(node.name, ti, inputs)
         else:
-            if unsup_op_debug == '1':
-                error = f"Operation not supported : {node}"
-            else:
-                error = f"Operation not supported : {add_prefix_to_string(node.stack_trace)}"
-            if isinstance(node.dtype, list):
-                dt = [convert_data_type(t) for t in node.dtype]
-                shape = [convert_shape(s) for s in node.shape]
-                layout = [convert_layout(s) for s in node.shape]
-                ti = []
-                try:
-                    ti = [sendnn.TensorInfo(t, s, layout) for t, s in zip(dt, shape)]
-                    raise RuntimeError(error)
-                except (RuntimeError, TypeError) as e:
-                    print(f"DEBUG TOOL Caught error for {node}: {e}")
-                return self.gb.UnknownNode(node.name, ti, inputs)
-            else:
-                dt = convert_data_type(node.dtype)
-                shape = convert_shape(node.shape)
-                layout = convert_layout(node.shape)
-                ti = []
-                try:
-                    ti = [sendnn.TensorInfo(dt, shape, layout)]
-                    raise RuntimeError(error)
-                except (RuntimeError, TypeError) as e:
-                    print(f"DEBUG TOOL Caught error for {node}: {e}")
-                return self.gb.UnknownNode(node.name, ti, inputs)
+            dt = convert_data_type(node.dtype)
+            shape = convert_shape(node.shape)
+            layout = convert_layout(node.shape)
+            ti = [sendnn.TensorInfo(dt, shape, layout)]
+            print(f"DEBUG TOOL Caught error for \033[1m{node}\033[0m: Operation not supported.\nDEBUG TOOL Data type: {dt}, Shape: {shape}\n{error}")
+            return self.gb.UnknownNode(node.name, ti, inputs)
     #====================================================
 
     def convert_addmm(self, node, inputs):

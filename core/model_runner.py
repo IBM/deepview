@@ -2,7 +2,7 @@
 import subprocess
 
 
-def run_model(model_type, model):
+def run_model(model_type, model, output_file):
     # Run the inference scripts
     if model_type == 'hf':
         command = [
@@ -27,7 +27,7 @@ def run_model(model_type, model):
         process.wait()
 
     # Pipe debug tool output to another file
-    tool_output_file = "debug_tool_output.txt"
+    tool_output_file = output_file
     flag = True
     with open(model_output_file, "r") as infile, open(tool_output_file, "w") as outfile:
         for line in infile:

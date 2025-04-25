@@ -6,7 +6,8 @@ import shutil
 import torch_sendnn
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-os.environ["PYTHONPATH"] = project_root + os.pathsep + os.environ["PYTHONPATH"]
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 from core.model_runner import run_model
 from core.hook_monitor import enable_unsupported_op_mode, clear_unsupported_op_mode
@@ -34,6 +35,7 @@ parser.add_argument(
         '--mode',
         nargs='+',
         choices=['unsupported_op'],
+        default=['unsupported_op'],
         required=True,
         help="Modes: [unsupported_op] (Choose one or more)"
 )
@@ -44,12 +46,15 @@ parser.add_argument(
     help="Print stack trace and other details, valid only with unsupported_op."
 )
 
+parser.add_argument(
+    '--output_file',
+    default="debug_tool_log.txt",
+    required=True,
+    help="Print stack trace and other details, valid only with unsupported_op."
+)
+
 args = parser.parse_args()
 
-
-if not args.mode:
-    run_model(args.model_type, args.model)
-    sys.exit(1)
 
 if args.show_details and 'unsupported_op' not in args.mode:
     print("Error: --show_details can only be used if 'unsupported_op' is specified in --mode.")
@@ -65,10 +70,12 @@ for mode in args.mode:
 # Find local installation folder of torch_sendnn
 installed_sendnn_folder = os.path.dirname(torch_sendnn.__file__)
 new_sendnn_folder = os.path.join(os.getcwd(),'torch_sendnn')
+# if os.path.exists(new_sendnn_folder) and os.path.isdir(new_sendnn_folder):
 shutil.copytree(installed_sendnn_folder, new_sendnn_folder, dirs_exist_ok=True)
 
+
 # Modify backends.py
-original_file_path = os.path.join(new_sendnn_folder, 'torch_sendnn/backends.py')
+original_file_path = os.path.join(new_sendnn_folder, 'backends.py')
 new_backends_file_path = '../core/backends.py'
 shutil.copy2(new_backends_file_path, original_file_path)
 
@@ -76,14 +83,13 @@ shutil.copy2(new_backends_file_path, original_file_path)
 # subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-e', '.'], cwd=sendnn_folder)
 
 # Append torch_sendnn to python path
-os.environ["PYTHONPATH"] = new_sendnn_folder + os.pathsep + os.environ["PYTHONPATH"]
+os.environ["PYTHONPATH"] = os.getcwd() + os.pathsep + os.environ["PYTHONPATH"]
 print(os.environ["PYTHONPATH"])
 # ==============================================================================================================
 
-
 # Run model and save output
-run_model(args.model_type, args.model)
+run_model(args.model_type, args.model, args.output_file)
 
 # Tear down the environment 
 clear_unsupported_op_mode()
-
+shutil.rmtree(new_sendnn_folder)
