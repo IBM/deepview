@@ -6,11 +6,11 @@ def run_model(model_type, model, output_file):
     # Run the inference scripts
     if model_type == 'hf':
         command = [
-            'python3', '../core/inference_hf.py', '--model_name', model,
+            'python3', 'core/inference_hf.py', '--model_name', model,
         ]
     elif model_type == 'fms':
         command = [
-            'python3', '../core/inference_fms.py', '--architecture', 'hf_pretrained',
+            'python3', 'core/inference_fms.py', '--architecture', 'hf_pretrained',
             '--model_path', model, '--tokenizer', model, 
             '--device_type', 'aiu', '--unfuse_weights', '--compile', '--compile_dynamic',
             '--default_dtype','fp16','--fixed_prompt_length','64', '--max_new_tokens','20', 
