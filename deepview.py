@@ -5,7 +5,7 @@ import argparse
 import shutil
 import torch_sendnn
 
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+project_root = os.path.abspath(os.path.dirname(__file__))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
@@ -69,17 +69,14 @@ for mode in args.mode:
 # Find local installation folder of torch_sendnn
 installed_sendnn_folder = os.path.dirname(torch_sendnn.__file__)
 new_sendnn_folder = os.path.join(os.getcwd(),'torch_sendnn')
-# if os.path.exists(new_sendnn_folder) and os.path.isdir(new_sendnn_folder):
 shutil.copytree(installed_sendnn_folder, new_sendnn_folder, dirs_exist_ok=True)
 
 
 # Modify backends.py
 original_file_path = os.path.join(new_sendnn_folder, 'backends.py')
-new_backends_file_path = '../core/backends.py'
+new_backends_file_path = 'core/backends.py'
 shutil.copy2(new_backends_file_path, original_file_path)
 
-# Reinstall torch_sendnn library 
-# subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-e', '.'], cwd=sendnn_folder)
 
 # Append torch_sendnn to python path
 os.environ["PYTHONPATH"] = os.getcwd() + os.pathsep + os.environ["PYTHONPATH"]
