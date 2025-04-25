@@ -47,7 +47,7 @@ if not args.mode:
     run_model(args.model_type, args.model)
     sys.exit(1)
 
-if args.show_details and 'A' not in args.mode:
+if args.show_details and 'unsupported_op' not in args.mode:
     print("Error: --show_details can only be used if 'unsupported_op' is specified in --mode.")
     sys.exit(1)
 
