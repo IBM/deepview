@@ -35,5 +35,5 @@ def run_model(model_type, model, output_file):
                 flag = False
                 outfile.write(line)
         if flag:
-            outfile.write("All operators are supported.")
+            outfile.write("DEBUG TOOL========================================================================\nDEBUG TOOL \033[1mNo unsupported operations detected.\033[0m")
     ## If the code breaks, still should output 

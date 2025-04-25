@@ -21,7 +21,7 @@ options:
                         Modes: [unsupported_op] (Choose one or more)
   --show_details        Print stack trace and other details, valid only with unsupported_op.
   --output_file OUTPUT_FILE
-                        Print stack trace and other details, valid only with unsupported_op.
+                        Name of the file in which the debug tool output will be stored.
 ```
 
 ## Example

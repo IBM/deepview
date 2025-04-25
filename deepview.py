@@ -49,7 +49,7 @@ parser.add_argument(
     '--output_file',
     default="debug_tool_log.txt",
     required=True,
-    help="Print stack trace and other details, valid only with unsupported_op."
+    help="Name of the file in which the debug tool output will be stored."
 )
 
 args = parser.parse_args()
