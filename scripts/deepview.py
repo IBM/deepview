@@ -61,7 +61,7 @@ for mode in args.mode:
 # ====================== This block will be removed if changes are merged to backends.py ======================
 # Find local installation folder of torch_sendnn
 installed_sendnn_folder = os.path.dirname(torch_sendnn.__file__)
-new_sendnn_folder = 'torch_sendnn'
+new_sendnn_folder = os.path.join(os.getcwd(),'torch_sendnn')
 shutil.copytree(installed_sendnn_folder, new_sendnn_folder, dirs_exist_ok=True)
 
 # Modify backends.py
