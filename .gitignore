@@ -169,3 +169,6 @@ cython_debug/
 # Windows Specific Files
 Thumbs.db
 desktop.ini
+
+
+tmp/*
