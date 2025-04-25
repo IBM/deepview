@@ -3,6 +3,7 @@ import sys
 import subprocess
 import argparse
 import shutil
+import torch_sendnn
 
 from core.model_runner import run_model
 from core.hook_monitor import enable_unsupported_op_mode, clear_unsupported_op_mode
@@ -58,17 +59,21 @@ for mode in args.mode:
         
 
 # ====================== This block will be removed if changes are merged to backends.py ======================
+# Find local installation folder of torch_sendnn
+installed_sendnn_folder = os.path.dirname(torch_sendnn.__file__)
+new_sendnn_folder = 'torch_sendnn'
+shutil.copytree(installed_sendnn_folder, new_sendnn_folder, dirs_exist_ok=True)
+
 # Modify backends.py
-sendnn_folder = '/tmp/torch_sendnn'
-original_file_path = os.path.join(sendnn_folder, 'torch_sendnn/backends.py')
+original_file_path = os.path.join(new_sendnn_folder, 'torch_sendnn/backends.py')
 new_backends_file_path = '../core/backends.py'
 shutil.copy2(new_backends_file_path, original_file_path)
 
 # Reinstall torch_sendnn library 
-subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-e', '.'], cwd=sendnn_folder)
+# subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-e', '.'], cwd=sendnn_folder)
 
 # Append torch_sendnn to python path
-os.environ["PYTHONPATH"] = '/tmp/torch_sendnn' + os.pathsep + os.environ["PYTHONPATH"]
+os.environ["PYTHONPATH"] = new_sendnn_folder + os.pathsep + os.environ["PYTHONPATH"]
 print(os.environ["PYTHONPATH"])
 # ==============================================================================================================
 
