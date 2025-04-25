@@ -36,7 +36,6 @@ parser.add_argument(
         nargs='+',
         choices=['unsupported_op'],
         default=['unsupported_op'],
-        required=True,
         help="Modes: [unsupported_op] (Choose one or more)"
 )
 
