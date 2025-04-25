@@ -69,7 +69,9 @@ aiu-model-debugger
 │   ├── hook_monitor.py
 │   ├── model_runner.py
 │   ├── op_mapper.py
-│   └── unsupported_db.py
+│   ├── unsupported_db.py
+│   ├── backends.py (will be used from torch_sendnn in future)
+│   └── inference_fms.py (will be removed in future)
 ├── examples
 │   └── README.md
 ├── scripts
