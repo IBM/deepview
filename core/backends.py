@@ -551,7 +551,7 @@ class FxToSenDnn:
     def convert_unknown(self, node, inputs):
         log.debug("->  Unknown: ", node)
         unsup_op_debug = os.environ.get('UNSUP_OP_DEBUG', "0")
-        if unsup_op_debug == 0:
+        if unsup_op_debug == '0':
             if isinstance(node.dtype, list):
                 dt = [convert_data_type(t) for t in node.dtype]
                 shape = [convert_shape(s) for s in node.shape]
@@ -565,7 +565,7 @@ class FxToSenDnn:
                 ti = [sendnn.TensorInfo(dt, shape, layout)]
                 return self.gb.UnknownNode(node.name, ti, inputs)
         else:
-            if unsup_op_debug == 1:
+            if unsup_op_debug == '1':
                 error = f"Operation not supported : {node}"
             else:
                 error = f"Operation not supported : {add_prefix_to_string(node.stack_trace)}"
