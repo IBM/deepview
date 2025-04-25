@@ -52,7 +52,7 @@ if args.show_details and 'unsupported_op' not in args.mode:
     sys.exit(1)
 
 
-for mode in args.mode():
+for mode in args.mode:
     if mode == 'unsupported_op':
         enable_unsupported_op_mode(args.show_details)
         
