@@ -1,0 +1,11 @@
+#####################################################
+#
+# List of approvers for deepview repository
+#
+#####################################################
+#
+# Learn about CODEOWNERS file format:
+#  https://help.github.com/en/articles/about-code-owners
+#
+
+*  @kelmaghr @sgoel219 @rzbhatti @Priyanka-Naik @Aishwariya-Chakraborty1 @suneja @Jordan-Murray @tpalan
