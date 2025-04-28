@@ -1,3 +1,4 @@
+ibm-fms @ git+https://github.com/foundation-model-stack/foundation-model-stack@main
 sentencepiece
 numpy
 transformers
