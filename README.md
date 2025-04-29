@@ -18,8 +18,8 @@ DeepView is a diagnostic tool to accelerate the model enablement journey on AIU.
 
 In the current version, DeepView identifies unsupported ops with detailed metadata (such as input shapes and dtypes). If enabled, it also provides precise stack traces to locate the unsupported op in the model source code. This empowers quick root-cause analysis during model enablement journey.
 
-The upcoming version of DeepView will expand its capabilities to automatically generating minimal reproducible scripts for unsupported ops.
-It will also go beyond unsupported ops to surface deeper issues, such as internal compiler assertion failures, and precisely identify the offending layer within the transformer blocks.
+The upcoming version of DeepView will expand its capabilities to automatically generate minimal reproducible scripts for unsupported ops.
+It will also go beyond unsupported ops to capture more complex issues, such as internal compiler assertion failures, and precisely identify the offending layer within the transformer blocks.
 
 # Installation
 ### local install
