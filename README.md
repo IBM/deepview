@@ -77,37 +77,3 @@ DEBUG TOOL     return torch.nn.functional.pad(input_tensor, pad_shape, mode="con
 DEBUG TOOL   File "/usr/local/lib64/python3.11/site-packages/torch/nn/functional.py", line 5096, in pad
 DEBUG TOOL     return torch._C._nn.pad(input, pad, mode, value)
 ```
-
-# Initial directory structure 
-
-```shell
-aiu-model-debugger
-├── LICENSE
-├── README.md
-├── deepview.py
-├── configs
-│   ├── README.md
-│   └── debug_profiles.json
-├── core
-│   ├── README.md
-│   ├── correctness.py
-│   ├── fx_graph_analyzer.py
-│   ├── hook_monitor.py
-│   ├── model_runner.py
-│   ├── op_mapper.py
-│   ├── unsupported_db.py
-│   ├── backends.py (will be used from torch_sendnn in future)
-│   └── inference_fms.py (will be removed in future)
-├── examples
-│   └── README.md
-├── scripts
-│   ├── README.md
-│   └── isolate_layer.py
-├── setup.py
-├── tests
-│   ├── README.md
-│   └── test_cases
-└── utils
-    ├── README.md
-    └── logger.py
-```
