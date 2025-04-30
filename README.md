@@ -1,14 +1,39 @@
-# aiu-model-debugger
+
+<p align="center">
+  <picture>
+    <img alt="Spyer AIU DeepView" src="./logo/deepview-logo.svg" width="250" height="259" style="max-width: 100%;">
+  </picture>
+  <br/>
+  <br/>
+</p>
+
+<p align="center">
+    <a href="./LICENSE"><img alt="GitHub" src="https://img.shields.io/badge/license-Apache%202.0-blue?color=blue"></a>
+    <a href="./LICENSE"><img alt="GitHub" src="https://img.shields.io/badge/IBM-Internal-red?color=red"></a>
+    <a href="./LICENSE"><img alt="GitHub" src="https://img.shields.io/badge/in_progress-green"></a>
+</p>
+
+# DeepView 
 DeepView is a diagnostic tool to accelerate the model enablement journey on AIU. It identifies issues during model lowering and pinpoints root causes with minimal granularity.
 
 In the current version, DeepView identifies unsupported ops with detailed metadata (such as input shapes and dtypes). If enabled, it also provides precise stack traces to locate the unsupported op in the model source code. This empowers quick root-cause analysis during model enablement journey.
 
-The upcoming version of DeepView will expand its capabilities to automatically generating minimal reproducible scripts for unsupported ops.
-It will also go beyond unsupported ops to surface deeper issues, such as internal compiler assertion failures, and precisely identify the offending layer within the transformer blocks.
+The upcoming version of DeepView will expand its capabilities to automatically generate minimal reproducible scripts for unsupported ops.
+It will also go beyond unsupported ops to capture more complex issues, such as internal compiler assertion failures, and precisely identify the offending layer within the transformer blocks.
+
+# Installation
+### local install
+```shell
+pip install -e .
+```
+or 
+```shell
+python setup.py install
+```
 
 # Usage
 ```
-usage: deepview.py [-h] --model_type {fms,hf} --model MODEL --mode {unsupported_op} [{unsupported_op} ...] [--show_details] --output_file OUTPUT_FILE
+usage: deepview [-h] --model_type {fms,hf} --model MODEL --mode {unsupported_op} [{unsupported_op} ...] [--show_details] --output_file OUTPUT_FILE
 
 Script to run DeepView tool on any model.
 
@@ -51,38 +76,4 @@ DEBUG TOOL   File "/tmp/foundation-model-stack/fms/modules/ssm.py", line 21, in 
 DEBUG TOOL     return torch.nn.functional.pad(input_tensor, pad_shape, mode="constant", value=0)
 DEBUG TOOL   File "/usr/local/lib64/python3.11/site-packages/torch/nn/functional.py", line 5096, in pad
 DEBUG TOOL     return torch._C._nn.pad(input, pad, mode, value)
-```
-
-# Initial directory structure 
-
-```shell
-aiu-model-debugger
-├── LICENSE
-├── README.md
-├── deepview.py
-├── configs
-│   ├── README.md
-│   └── debug_profiles.json
-├── core
-│   ├── README.md
-│   ├── correctness.py
-│   ├── fx_graph_analyzer.py
-│   ├── hook_monitor.py
-│   ├── model_runner.py
-│   ├── op_mapper.py
-│   ├── unsupported_db.py
-│   ├── backends.py (will be used from torch_sendnn in future)
-│   └── inference_fms.py (will be removed in future)
-├── examples
-│   └── README.md
-├── scripts
-│   ├── README.md
-│   └── isolate_layer.py
-├── setup.py
-├── tests
-│   ├── README.md
-│   └── test_cases
-└── utils
-    ├── README.md
-    └── logger.py
 ```
