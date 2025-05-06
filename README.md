@@ -32,8 +32,23 @@ python setup.py install
 ```
 
 # Usage
+> [!NOTE]
+> Please note that the instructions for torch_sendnn given below are temporary. We are working with torch_sendnn to get these changes incorporated into it.
+
+First, copy `torch_sendnn` from its installation directory to `/tmp`. If you are using the `e2e-stable` image, the installation directory of `torch_sendnn` is typically `/usr/local/lib/python3.11/site-packages/torch_sendnn`. Otherwise, you may use `python3 -m pip show torch_sendnn` to find out the installation directory.
+
+Replace the `torch_sendnn/torch_sendnn/backends.py` and `torch_sendnn/torch_sendnn/torch_sendnn.py` files with [backends.py](/core/backends.py) and [torch_sendnn.py](/core/torch_sendnn.py) files, respectively, given in this repository.
+Next, perform the following steps.
 ```
-usage: deepview [-h] --model_type {fms,hf} --model MODEL --mode {unsupported_op} [{unsupported_op} ...] [--show_details] --output_file OUTPUT_FILE
+cd torch_sendnn
+python3 -m pip install -e .
+export PYTHONPATH=$(pwd):$PYTHONPATH
+```
+
+Now, run deepview as follows.
+
+```
+Usage: python3 deepview [-h] --model_type {fms,hf} --model MODEL --mode {unsupported_op} [{unsupported_op} ...] [--show_details] --output_file OUTPUT_FILE
 
 Script to run DeepView tool on any model.
 

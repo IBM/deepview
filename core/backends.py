@@ -168,7 +168,6 @@ def add_prefix_to_string(original_string):
         prefix = "DEBUG TOOL "
         return '\n'.join(prefix + line for line in original_string.split('\n'))
 
-
 class FxToSenDnn:
     """
     This class handles the translation between FX graphs coming from AOTAutograd and SenDNN graphs
@@ -552,21 +551,27 @@ class FxToSenDnn:
         log.debug("->  Unknown: ", node)
         unsup_op_debug = os.environ.get('UNSUP_OP_DEBUG', "0")
         error = ""
+        ancestry_str = ""
+        module_stack_str = ""
         if unsup_op_debug == '1':
+            ancestry = list(node.meta['nn_module_stack'].values())[-1][0].replace("._modules", "").replace("['", ".").replace("']", "").replace("L.self.","")
+            ancestry_str = f"DEBUG TOOL Ancestry: {ancestry}"
+            module_stack = [str(t[1]).split('.')[-1].split("'>")[0] for t in node.meta.get("nn_module_stack").values()]
+            module_stack_str = f"DEBUG TOOL Graph: {'|'.join(module_stack)}"
             error = f"DEBUG TOOL==================================== Stack Trace ====================================\n{add_prefix_to_string(node.stack_trace)}"
         if isinstance(node.dtype, list):
             dt = [convert_data_type(t) for t in node.dtype]
             shape = [convert_shape(s) for s in node.shape]
             layout = [convert_layout(s) for s in node.shape]
             ti = [sendnn.TensorInfo(t, s, layout) for t, s in zip(dt, shape)]
-            print(f"DEBUG TOOL Caught error for \033[1m{node}\033[0m: Operation not supported.\nDEBUG TOOL Data type: {dt}, Shape: {shape}\n{error}")
+            print(f"DEBUG TOOL Caught error for \033[1m{node}\033[0m: Operation not supported.\nDEBUG TOOL Data type: {dt}, Shape: {shape}\n{ancestry_str}\n{module_stack_str}\n{error}")
             return self.gb.UnknownNode(node.name, ti, inputs)
         else:
             dt = convert_data_type(node.dtype)
             shape = convert_shape(node.shape)
             layout = convert_layout(node.shape)
             ti = [sendnn.TensorInfo(dt, shape, layout)]
-            print(f"DEBUG TOOL Caught error for \033[1m{node}\033[0m: Operation not supported.\nDEBUG TOOL Data type: {dt}, Shape: {shape}\n{error}")
+            print(f"DEBUG TOOL Caught error for \033[1m{node}\033[0m: Operation not supported.\nDEBUG TOOL Data type: {dt}, Shape: {shape}\n{ancestry_str}\n{module_stack_str}\n{error}")
             return self.gb.UnknownNode(node.name, ti, inputs)
     #====================================================
 
