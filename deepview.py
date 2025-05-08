@@ -58,10 +58,6 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-if args.model_type == 'hf':
-    print("Support for HF models yet to be implemented")
-    sys.exit()
-
 for mode in args.mode:
     if mode == 'unsupported_op':
         enable_unsupported_op_mode(args.show_details)
@@ -71,7 +67,7 @@ set_environment()
 
 # Run the model
 print("Running the model")
-run_model(args.model, args.output_file, args.generate_repro_code)
+run_model(args.model_type, args.model, args.output_file, args.generate_repro_code)
 print("Model run completed")
 
 # Tear down the environment 

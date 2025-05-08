@@ -554,10 +554,11 @@ class FxToSenDnn:
         ancestry_str = ""
         module_stack_str = ""
         if unsup_op_debug == '1':
-            ancestry = list(node.meta['nn_module_stack'].values())[-1][0].replace("._modules", "").replace("['", ".").replace("']", "").replace("L.self.","")
-            ancestry_str = f"DEBUG TOOL Ancestry: {ancestry}"
-            module_stack = [str(t[1]).split('.')[-1].split("'>")[0] for t in node.meta.get("nn_module_stack").values()]
-            module_stack_str = f"DEBUG TOOL Graph: {'|'.join(module_stack)}"
+            if 'nn_module_stack' in node.meta:
+                ancestry = list(node.meta['nn_module_stack'].values())[-1][0].replace("._modules", "").replace("['", ".").replace("']", "").replace("L.self.","")
+                ancestry_str = f"DEBUG TOOL Ancestry: {ancestry}"
+                module_stack = [str(t[1]).split('.')[-1].split("'>")[0] for t in node.meta.get("nn_module_stack").values()]
+                module_stack_str = f"DEBUG TOOL Graph: {'|'.join(module_stack)}"
             error = f"DEBUG TOOL==================================== Stack Trace ====================================\n{add_prefix_to_string(node.stack_trace)}"
         if isinstance(node.dtype, list):
             dt = [convert_data_type(t) for t in node.dtype]
