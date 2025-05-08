@@ -44,6 +44,7 @@ def set_environment():
 
 def load_model_and_create_input(model_type, model_path):
     global model, tokenizer, device, prompt, input_id
+    device = torch.device("cpu")
 
     # Load the model
     print("Loading model")
@@ -82,7 +83,6 @@ def load_model_and_create_input(model_type, model_path):
     # Compile the model
     print("Compiling model")
     compiling_model_time = time.time()
-    device = torch.device("cpu")
     model.compile(backend="sendnn_decoder", dynamic=False)
     compiling_model_time = time.time() - compiling_model_time
     print(f"Compiling complete, took {compiling_model_time:.3f}s")
