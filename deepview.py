@@ -34,7 +34,7 @@ parser.add_argument(
         nargs='+',
         choices=['unsupported_op', 'layer_debugging'],
         default=['unsupported_op'],
-        help="Modes: [unsupported_op, layer_debugging] (Choose one or more)"
+        help="Modes: [unsupported_op, layer_debugging] (Choose one or more). Default is the unsupported_op mode."
 )
 
 parser.add_argument(

@@ -31,6 +31,10 @@ class PrintOutput:
 
 
 def set_environment():
+    old_output_file = 'model_output.txt'
+    if os.path.exists(old_output_file):
+        print("Deleting the old model_output.txt..............")
+        os.remove(old_output_file)
     os.environ['DTLOG_LEVEL'] = 'error'
     os.environ['TORCH_SENDNN_LOG'] = 'CRITICAL'
     os.environ['DT_DEEPRT_VERBOSE'] = '-1'
@@ -46,7 +50,7 @@ def load_model_and_create_input(model_path):
     model = get_model("hf_pretrained", None, model_path=model_path, device_type="cpu", data_type=torch.float16, source=None, distributed_strategy=None, fused_weights=False)
     tokenizer = tokenizers.get_tokenizer(model_path)
     # Comment out the line below to run the whole model. 
-    model.base_model.layers  = model.base_model.layers[:1]
+    # model.base_model.layers  = model.base_model.layers[:1]
     model.eval()
     torch.set_grad_enabled(False)
     loading_model_time = time.time() - loading_model_time

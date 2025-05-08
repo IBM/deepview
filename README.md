@@ -38,8 +38,8 @@ python setup.py install
 First, copy `torch_sendnn` from its installation directory to `/tmp`:
 
 If you are using the `e2e-stable` image, the installation directory of `torch_sendnn` is typically `/usr/local/lib/python3.12/site-packages/torch_sendnn`. Otherwise, you may use `python3 -m pip show torch_sendnn` to find out the installation directory.
-
 Replace the `/tmp/torch_sendnn/backends.py` and `/tmp/torch_sendnn/torch_sendnn.py` files with [deepview/core/backends.py](/core/backends.py) and [deepview/core/torch_sendnn.py](/core/torch_sendnn.py) files, respectively, given in this repository.
+
 Next, set the PYTHONPATH.
 ```
 export PYTHONPATH=/tmp:$PYTHONPATH
@@ -58,7 +58,7 @@ options:
                         The type of model you want to debug - fms or hf.
   --model MODEL         Model name in HF format or model path
   --mode {unsupported_op} [{unsupported_op} ...]
-                        Modes: [unsupported_op] (Choose one or more)
+                        Modes: [unsupported_op] (Choose one or more). Default is the unsupported_op mode.
   --show_details        Print stack trace and other details, valid only with unsupported_op.
   --output_file OUTPUT_FILE
                         Name of the file in which the debug tool output will be stored.
