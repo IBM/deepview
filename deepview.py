@@ -67,8 +67,8 @@ set_environment()
 
 # Run the model
 print("Running the model")
-run_model(args.model_type, args.model, args.output_file, args.generate_repro_code)
-print("Model run completed")
+run_model(args.model_type, args.model, args.output_file, args.mode, args.generate_repro_code)
+print("DeepView run completed")
 
 # Tear down the environment 
 clear_unsupported_op_mode()

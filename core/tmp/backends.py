@@ -2004,6 +2004,7 @@ lazy_handles: list[LazyHandle] = []
 #====================================================
 # Modification for repro code and other modules
 #====================================================
+_preserve_lazy_handle = False
 def clean_graph():
     global lazy_handles, _preserve_lazy_handle
     if not _preserve_lazy_handle:
