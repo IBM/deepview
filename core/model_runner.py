@@ -7,9 +7,10 @@ import time
 import json
 import subprocess
 from fms.models import get_model
-from fms.utils.generation import generate
+from fms.utils.generation import generate, pad_input_ids
 from fms.utils import tokenizers
 from torch_sendnn import torch_sendnn
+from torch import distributed as dist
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from core.generate_minimal_repro import generate_repro_code_unsupported_ops,  generate_repro_code_layer_debugging
@@ -45,23 +46,26 @@ def set_environment():
 
 
 def load_model_and_create_input(model_type, model_path):
-    global model, tokenizer, device, prompt, input_id
+    global model, tokenizer, device, prompt, input_id, extra_generation_kwargs
     device = torch.device("cpu")
 
     # Load the model
     print("Loading model")
     loading_model_time = time.time()
     if model_type == 'fms':
-        model = get_model("hf_pretrained", None, model_path=model_path, device_type="cpu", data_type=torch.float16, source=None, distributed_strategy=None, fused_weights=False)
+        torch.set_default_dtype(torch.float16)
+        model = get_model("hf_pretrained", variant=model_path, model_path = None, device_type="cpu", data_type=torch.float16, source=None, linear_config={"linear_type": "torch_linear"}, distributed_strategy=None, group=dist.group.WORLD, fused_weights=False)
         tokenizer = tokenizers.get_tokenizer(model_path)
         
         # Create the prompt input
         prompt = "What is the capital of India?"
         tokens = tokenizer.tokenize(prompt)
         ids_l = tokenizer.convert_tokens_to_ids(tokens)
-        ids_l = [tokenizer.bos_token_id] + ids_l
+        if tokenizer.bos_token_id != tokenizer.eos_token_id:
+            ids_l = [tokenizer.bos_token_id] + ids_l
         ids_l = torch.tensor(ids_l, dtype=torch.long, device=device)
-        input_id = ids_l
+        input_id = [ids_l]
+        input_id, extra_generation_kwargs = pad_input_ids(input_id, min_pad_length=64)
 
     elif model_type == 'hf':
         model = AutoModelForCausalLM.from_pretrained(model_path)
@@ -100,7 +104,7 @@ def infer(model_type):
     if model_type == 'fms':
         extra_generation_kwargs = None
         max_seq_len = max(len(prompt), model.config.max_expected_seq_len)
-        result = generate(model,input_id,do_sample=False,max_new_tokens=2, max_seq_len=max_seq_len,extra_kwargs=extra_generation_kwargs)
+        result = generate(model,input_id,use_cache=True,do_sample=False,max_new_tokens=2, max_seq_len=max_seq_len,eos_token_id=None,contiguous_cache=True,extra_kwargs=extra_generation_kwargs)
     elif model_type == 'hf':
         generate_ids = model.generate(input_id)
         result = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
