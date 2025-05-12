@@ -54,7 +54,7 @@ def load_model_and_create_input(model_type, model_path):
     loading_model_time = time.time()
     if model_type == 'fms':
         torch.set_default_dtype(torch.float16)
-        model = get_model("hf_pretrained", variant=model_path, model_path = None, device_type="cpu", data_type=torch.float16, source=None, linear_config={"linear_type": "torch_linear"}, distributed_strategy=None, group=dist.group.WORLD, fused_weights=False)
+        model = get_model("hf_pretrained", variant=model_path, model_path = None, device_type="cpu", data_type=torch.float16, source=None, linear_config={"linear_type": "torch_linear"}, distributed_strategy=None, group=dist.group.WORLD, fused_weights=False, attn_layer_indices=[])
         tokenizer = tokenizers.get_tokenizer(model_path)
         
         # Create the prompt input
@@ -104,7 +104,7 @@ def infer(model_type):
     if model_type == 'fms':
         extra_generation_kwargs = None
         max_seq_len = max(len(prompt), model.config.max_expected_seq_len)
-        result = generate(model,input_id,use_cache=True,do_sample=False,max_new_tokens=2, max_seq_len=max_seq_len,eos_token_id=None,contiguous_cache=True,extra_kwargs=extra_generation_kwargs)
+        result = generate(model,input_id,use_cache=True,do_sample=False,max_new_tokens=8, max_seq_len=max_seq_len,eos_token_id=None,contiguous_cache=True,extra_kwargs=extra_generation_kwargs)
     elif model_type == 'hf':
         generate_ids = model.generate(input_id)
         result = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
