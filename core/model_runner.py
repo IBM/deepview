@@ -3,17 +3,12 @@ import torch
 import re
 import sys
 import os
-import time
 import json
 import subprocess
-from fms.models import get_model
-from fms.utils.generation import generate
-from fms.utils import tokenizers
 from torch_sendnn import torch_sendnn
-from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from core.generate_minimal_repro import generate_repro_code_unsupported_ops,  generate_repro_code_layer_debugging
-
+from utils.model_handler import ModelHandler
 
 class PrintOutput:
     def __init__(self, file_path, stream):
@@ -44,112 +39,49 @@ def set_environment():
     os.environ['PYTHONUNBUFFERED'] = '1'
 
 
-def load_model_and_create_input(model_type, model_path):
-    global model, tokenizer, device, prompt, input_id
-    device = torch.device("cpu")
-
-    # Load the model
-    print("Loading model")
-    loading_model_time = time.time()
-    if model_type == 'fms':
-        model = get_model("hf_pretrained", None, model_path=model_path, device_type="cpu", data_type=torch.float16, source=None, distributed_strategy=None, fused_weights=False)
-        tokenizer = tokenizers.get_tokenizer(model_path)
-        
-        # Create the prompt input
-        prompt = "What is the capital of India?"
-        tokens = tokenizer.tokenize(prompt)
-        ids_l = tokenizer.convert_tokens_to_ids(tokens)
-        ids_l = [tokenizer.bos_token_id] + ids_l
-        ids_l = torch.tensor(ids_l, dtype=torch.long, device=device)
-        input_id = ids_l
-
-    elif model_type == 'hf':
-        model = AutoModelForCausalLM.from_pretrained(model_path)
-        tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True)
-        
-        # Create the prompt input
-        prompt = "What is the capital of India?"
-        input_id = tokenizer(prompt, add_special_tokens=False, return_tensors='pt').input_ids
-    
-
-
-    loading_model_time = time.time() - loading_model_time
-    print(f"Loading complete, took {loading_model_time:.3f}s")
-
-    model.eval()
-    torch.set_grad_enabled(False)
-
-    # Comment out the lines below to run the whole model.
-    if hasattr(model, "base_model"):
-        model.base_model.layers = model.base_model.layers[:1]
-    elif hasattr(model, "layers"):
-        model.layers = model.layers[:1]
-    else:
-        print("No accessible 'base_model' or 'layers' attribute to slice.")
-
-    # Compile the model
-    print("Compiling model")
-    compiling_model_time = time.time()
-    model.compile(backend="sendnn_decoder", dynamic=False)
-    compiling_model_time = time.time() - compiling_model_time
-    print(f"Compiling complete, took {compiling_model_time:.3f}s")
-
-
-
-def infer(model_type):
-    if model_type == 'fms':
-        extra_generation_kwargs = None
-        max_seq_len = max(len(prompt), model.config.max_expected_seq_len)
-        result = generate(model,input_id,do_sample=False,max_new_tokens=2, max_seq_len=max_seq_len,extra_kwargs=extra_generation_kwargs)
-    elif model_type == 'hf':
-        generate_ids = model.generate(input_id)
-        result = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-    print(result)
-
-
 def process_output_unsupported_ops(tool_output_file, logfile, generate_repro_code_flag):
     # All DEBUG TOOL output lines are extracted and saved in tool_output_file.
-    flag = False
     unknown_nodes = []
     with open(logfile, "r") as infile, open(tool_output_file, "w") as outfile:
         for line in infile:
             if line.startswith("DEBUG TOOL"):
-                flag = True
                 outfile.write(line)
                 match = re.search(r'DEBUG TOOL Caught error for (.*?):', line)
                 if match:
                     node = match.group(1)
                     unknown_nodes.append(node)
 
-        unknown_nodes_str = '\n'.join(sorted(set(unknown_nodes)))
-        final_line = (
-            "DEBUG TOOL========================================================================\n"
-            "DEBUG TOOL Unsupported operations list:\n"
-            f"{unknown_nodes_str}"
-        )
-        print(final_line)
-        outfile.write(final_line + "\n")
-        if not flag:
+        strip = lambda s: re.sub(r'\x1b\[[0-9;]*m', '', s)
+        seen = set()
+        unique_unknown_nodes = [op for op in unknown_nodes if not re.match(r'.*_\d+$', strip(op)) and (strip(op) not in seen and not seen.add(strip(op)))]
+        if len(unique_unknown_nodes) == 0:
             no_unsup_op = (
                 "DEBUG TOOL========================================================================\n"
                 "DEBUG TOOL \033[1mNo unsupported operations detected.\033[0m\n"
             )
             print(no_unsup_op)
             outfile.write(no_unsup_op)
+        else:
+            unknown_nodes_str = '\n'.join(sorted(unique_unknown_nodes))
+            final_line = (
+                "DEBUG TOOL========================================================================\n"
+                "DEBUG TOOL Unsupported operations list:\n"
+                f"{unknown_nodes_str}"
+            )
+            print(final_line)
+            outfile.write(final_line + "\n")
 
     # Generate reproduction code for unsupported ops (if any)
     if generate_repro_code_flag:
-        if flag:
+        if len(unique_unknown_nodes):
             print("Generating reproduction code")
             generate_repro_code_unsupported_ops()
         else:
             print("No reproduction code generated as no unsupported operations found.")
-    return flag
 
 def process_output_layer_debugging(tool_output_file, logfile, generate_repro_code_flag, model_path):
     # All DEBUG TOOL output lines are extracted and saved in tool_output_file.
     
-    flag = False
     with open(logfile, "r") as infile, open(tool_output_file, "w") as outfile:
         debug_lines = [line for line in infile if line.startswith("DEBUG TOOL")]
         outfile.writelines(debug_lines)
@@ -157,67 +89,29 @@ def process_output_layer_debugging(tool_output_file, logfile, generate_repro_cod
     # Parse the tool output for failures
     with open(tool_output_file, "r+") as f:
         lines = f.readlines()
-        err_msg = next((line for line in reversed(lines) if "DEBUG TOOL update lazy handle for" in line), None)
+        err_msg = next((line for line in reversed(lines) if "DEBUG TOOL first run for" in line), None)
 
         print("======================================================")
         if err_msg:
             layer = err_msg.split("for ")[1].split(", input")[0]
             second_run_str = f"DEBUG TOOL second run for {layer}"
             failed_layer = f"Failed layer is {err_msg.split('for')[1]}" if second_run_str not in ''.join(lines) else "No model layer has failed"
-            print(f"{err_msg.strip()}\n{failed_layer}")
+            print(f"DEBUG TOOL \033[1m{failed_layer}\033[0m")
             print("======================================================")
             f.write(failed_layer + "\n")
 
             # Prepare repro code if failure detected
             if failed_layer != "No model layer has failed":
-                flag = True
                 if generate_repro_code_flag:
                     generate_repro_code_layer_debugging(err_msg, layer, model_path)
         else:
-            print("No update lazy handle line found.")
-    return flag
+            print("No first run line found.")
 
 
-def insert_forward_hooks():
-    print("Inserting forward hooks.............")
-    module_instance_names = {}
-    def get_instance_names(module, current_depth=0, name='model'):
-        module_instance_names[module] = name
-        parent=name
-
-        # if we are dealing with array of layers
-        array_layers = all(key.isdigit() for key in module._modules.keys())
-        for name, child in module._modules.items():
-            if array_layers:
-                get_instance_names(child, current_depth + 1, parent+'['+name+']')
-            else:
-                get_instance_names(child, current_depth + 1, parent+'.'+name)
-    get_instance_names(model)
-    
-    hooks = []
-    global layer_list
-    layer_list = {}
-    def hook_fn(module, input, output):
-        module_instance = module_instance_names.get(module, 0)
-        if len(input) == 0:
-            return
-        input_shape_str = f"[{', '.join(map(str, input[0].shape))}]"
-        input_type = str(input[0].dtype)
-        layer_list[module_instance] = {input_shape_str,input_type}
-
-    for name, layer in model.named_modules():
-        hooks.append(layer.register_forward_hook(hook_fn))
-
-    return hooks
-
-def remove_forward_hooks(hooks):
-    for hook in hooks:
-        hook.remove()
-
-def run_individual_layers(logfile, model_path):
+def run_individual_layers(logfile, model_path, model_type):
     print("Running each layer individually........")
     command1 = [
-        'python3', 'core/test_layers.py', '--model_path', model_path
+        'python3', 'core/test_layers.py', '--model_path', model_path, '--model_type', model_type,
     ]
 
     # Show output in terminal as well as save in file
@@ -231,7 +125,9 @@ def run_model(model_type, model_path, tool_output_file, deepview_mode, generate_
     if generate_repro_code_flag:
         torch_sendnn.preserve_lazyhandle()
 
-    load_model_and_create_input(model_type, model_path)
+    model_handler = ModelHandler(model_type=model_type, model_path=model_path, prompt='What is the capital of India?')
+    model_handler.load_and_compile_model()
+    model_handler.prep_input()
 
     # Prints generated by compile_and_infer are shown in terminal as well as saved in logfile.
     original_stdout = sys.stdout
@@ -244,16 +140,16 @@ def run_model(model_type, model_path, tool_output_file, deepview_mode, generate_
     print("Reached first infer call post compile.....")
     try:
         if 'layer_debugging' in deepview_mode:
-            hooks = insert_forward_hooks()
+            model_handler.insert_forward_hooks()
 
-        infer(model_type)  
+        model_handler.infer()
 
         if 'layer_debugging' in deepview_mode:
-            remove_forward_hooks(hooks)
+            model_handler.remove_forward_hooks()
             with open("model_list.txt", "w") as file:
-                json.dump({k: list(v) for k, v in layer_list.items()}, file)
+                json.dump({k: list(v) for k, v in model_handler.layer_list.items()}, file)
                 file.close()
-            run_individual_layers(logfile, model_path)
+            run_individual_layers(logfile, model_path, model_type)
 
     except Exception as e:
         print(f"Exception occurred: {e}", file=original_stderr)

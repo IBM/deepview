@@ -4,12 +4,21 @@ from torch_sendnn import torch_sendnn
 import sys
 import json
 import argparse
+import os 
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utils.model_handler import ModelHandler
 
 parser = argparse.ArgumentParser(
     description="Script to run inference on a causal model"
 )
 parser.add_argument(
     "--model_path",
+    type=str,
+    help="Path to the directory containing LLaMa weights (.pth files sharded by tensor parallel rank, not HF weights)",
+)
+parser.add_argument(
+    "--model_type",
     type=str,
     help="Path to the directory containing LLaMa weights (.pth files sharded by tensor parallel rank, not HF weights)",
 )
@@ -25,16 +34,16 @@ except json.JSONDecodeError:
     print("Invalid JSON format")
     sys.exit(1)
 
-model_path = args.model_path
-model = get_model( "hf_pretrained", None, model_path=model_path, device_type="cpu", data_type=torch.float16, source=None, distributed_strategy=None, linear_config={"linear_type": "torch_linear"}, fused_weights=False)
+model_handler = ModelHandler(model_type=args.model_type, model_path=args.model_path, prompt='What is the capital of India?')
+model = model_handler.load_and_compile_model()
 
-device = torch.device("cpu")
-model.eval()
-torch.set_grad_enabled(False)
-
+layers_done = []
 # Run inference for each layer
 for str_layer, val in layer_list.items():
     sub_layer = str_layer.rsplit('.', str_layer.count('.') - 3)[0] if str_layer.count('.') > 3 else str_layer
+
+    if sub_layer in layers_done:
+        continue
 
     # Determine input shape and data type
     dtype_str, input_shape_str = val if "torch" in val[0] else val[::-1]
@@ -47,6 +56,7 @@ for str_layer, val in layer_list.items():
     layer = eval(sub_layer)
     layer.compile(backend="sendnn_decoder", dynamic=False)
 
+    print("-------------------------------------------------------------------------------------------")
     print(f"DEBUG TOOL first run for {sub_layer}, input shape {input_shape_str}, data type {dtype_str}")
     layer(rand_tensor.to(data_type))
 
@@ -55,3 +65,6 @@ for str_layer, val in layer_list.items():
 
     print(f"DEBUG TOOL second run for {sub_layer}, input shape {input_shape_str}, data type {dtype_str}")
     layer(rand_tensor.to(data_type))
+    print("-------------------------------------------------------------------------------------------")
+
+    layers_done.append(sub_layer)

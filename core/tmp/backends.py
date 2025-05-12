@@ -544,37 +544,39 @@ class FxToSenDnn:
         ti = sendnn.TensorInfo(dt, shape, layout)
         return self.gb.BatchMatMul_W8A8(node.name, ti, *inputs, node.args[-3], node.args[-2], node.args[-1])
     
-    #====================================================
-    # Modification for catching unsupported ops
-    #====================================================  
     def convert_unknown(self, node, inputs):
         log.debug("->  Unknown: ", node)
-        unsup_op_debug = os.environ.get('UNSUP_OP_DEBUG', "0")
-        error = ""
-        ancestry_str = ""
-        module_stack_str = ""
-        if unsup_op_debug == '1':
-            if 'nn_module_stack' in node.meta:
-                ancestry = list(node.meta['nn_module_stack'].values())[-1][0].replace("._modules", "").replace("['", ".").replace("']", "").replace("L.self.","")
-                ancestry_str = f"DEBUG TOOL Ancestry: {ancestry}"
-                module_stack = [str(t[1]).split('.')[-1].split("'>")[0] for t in node.meta.get("nn_module_stack").values()]
-                module_stack_str = f"DEBUG TOOL Graph: {'|'.join(module_stack)}"
-            error = f"DEBUG TOOL==================================== Stack Trace ====================================\n{add_prefix_to_string(node.stack_trace)}"
         if isinstance(node.dtype, list):
             dt = [convert_data_type(t) for t in node.dtype]
             shape = [convert_shape(s) for s in node.shape]
             layout = [convert_layout(s) for s in node.shape]
             ti = [sendnn.TensorInfo(t, s, layout) for t, s in zip(dt, shape)]
-            print(f"DEBUG TOOL Caught error for \033[1m{node}\033[0m: Operation not supported.\nDEBUG TOOL Data type: {dt}, Shape: {shape}\n{ancestry_str}\n{module_stack_str}\n{error}")
-            return self.gb.UnknownNode(node.name, ti, inputs)
         else:
             dt = convert_data_type(node.dtype)
             shape = convert_shape(node.shape)
             layout = convert_layout(node.shape)
             ti = [sendnn.TensorInfo(dt, shape, layout)]
-            print(f"DEBUG TOOL Caught error for \033[1m{node}\033[0m: Operation not supported.\nDEBUG TOOL Data type: {dt}, Shape: {shape}\n{ancestry_str}\n{module_stack_str}\n{error}")
-            return self.gb.UnknownNode(node.name, ti, inputs)
-    #====================================================
+
+        #====================================================
+        # Modification for catching unsupported ops
+        #====================================================
+        unsup_op = os.environ.get('UNSUP_OP', "0")
+        unsup_op_debug = os.environ.get('UNSUP_OP_DEBUG', "0")
+        if unsup_op == '1':
+            error = ""
+            ancestry_str = ""
+            module_stack_str = ""
+            if unsup_op_debug == '1':
+                if 'nn_module_stack' in node.meta:
+                    ancestry = list(node.meta['nn_module_stack'].values())[-1][0].replace("._modules", "").replace("['", ".").replace("']", "").replace("L.self.","")
+                    ancestry_str = f"\nDEBUG TOOL Ancestry: {ancestry}"
+                    module_stack = [str(t[1]).split('.')[-1].split("'>")[0] for t in node.meta.get("nn_module_stack").values()]
+                    module_stack_str = f"\nDEBUG TOOL Graph: {'|'.join(module_stack)}"
+                error = f"DEBUG TOOL==================================== Stack Trace ====================================\n{add_prefix_to_string(node.stack_trace)}"
+            print(f"DEBUG TOOL Caught error for \033[1m{node}\033[0m: Operation not supported.\nDEBUG TOOL Data type: {dt}, Shape: {shape}{ancestry_str}{module_stack_str}\n{error}")
+        #====================================================
+
+        return self.gb.UnknownNode(node.name, ti, inputs)
 
     def convert_addmm(self, node, inputs):
         dt = convert_data_type(node)

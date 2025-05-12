@@ -33,7 +33,7 @@ python setup.py install
 
 # Usage
 > [!NOTE]
-> Please note that the instructions for torch_sendnn given below are temporary and are only needed for using *unsupported_op* mode. We are working with torch_sendnn to get these changes incorporated into it.
+> Please note that the instructions for torch_sendnn given below are temporary. We are working with torch_sendnn to get these changes incorporated into it.
 
 First, copy `torch_sendnn` from its installation directory to `/tmp`:
 

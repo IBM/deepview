@@ -58,9 +58,8 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-for mode in args.mode:
-    if mode == 'unsupported_op':
-        enable_unsupported_op_mode(args.show_details)
+if 'unsupported_op' in args.mode:
+    enable_unsupported_op_mode(args.show_details)
 
 # Setting the environment variables
 set_environment()
@@ -71,4 +70,5 @@ run_model(args.model_type, args.model, args.output_file, args.mode, args.generat
 print("DeepView run completed")
 
 # Tear down the environment 
-clear_unsupported_op_mode()
+if 'unsupported_op' in args.mode:
+    clear_unsupported_op_mode()
