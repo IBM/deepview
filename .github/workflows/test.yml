@@ -1,6 +1,7 @@
-name: Lint
+name: Test
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - "main"
@@ -9,8 +10,8 @@ on:
       - '**.py'
       - 'pyproject.toml'
       - 'tox.ini'
-      - .pylintrc
-      - '.github/workflows/lint.yml' # This workflow
+      - 'scripts/*.sh' # Used by this workflow
+      - '.github/workflows/test.yml' # This workflow
   pull_request:
     branches:
       - "main"
@@ -19,8 +20,8 @@ on:
       - '**.py'
       - 'pyproject.toml'
       - 'tox.ini'
-      - .pylintrc
-      - '.github/workflows/lint.yml' # This workflow
+      - 'scripts/*.sh' # Used by this workflow
+      - '.github/workflows/test.yml' # This workflow
 
 env:
   LC_ALL: en_US.UTF-8
@@ -33,46 +34,43 @@ permissions:
   contents: read
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    name: "lint: ${{ matrix.lint.name }}"
+  test:
+    name: "test: ${{ matrix.python }} on ${{ matrix.platform }}"
+    runs-on: "${{ matrix.platform }}"
     strategy:
-      fail-fast: false
       matrix:
-        lint:
-          - name: "ruff"
-            commands: |
-              tox -e ruff
-          - name: "pylint"
-            commands: |
-              echo "::add-matcher::.github/workflows/matchers/pylint.json"
-              tox -e lint
-  
+        python:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+        platform:
+          - "ubuntu-latest"
+
     steps:
       - name: "Harden Runner"
         uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
         with:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
 
-      - name: "Checkout"
+      - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           # https://github.com/actions/checkout/issues/249
           fetch-depth: 0
-
-      - name: Setup Python 3.11
+  
+      - name: Setup Python ${{ matrix.python }}
         uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
-          python-version: 3.11
+          python-version: ${{ matrix.python }}
           cache: pip
           cache-dependency-path: |
             **/pyproject.toml
 
-      - name: "Install tox"
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install tox tox-gh
+          python -m pip install tox tox-gh>=1.2
 
-      - name: "${{ matrix.lint.name }}"
+      - name: Run unit test with tox
         run: |
-          ${{ matrix.lint.commands }}
+          tox
