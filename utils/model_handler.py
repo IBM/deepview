@@ -98,11 +98,10 @@ class ModelHandler:
                             },
                         ]
 
-                # Prepare inputs
                 image = Image.open(urlopen("https://upload.wikimedia.org/wikipedia/commons/7/76/GazettedeFrance.jpg"))
                 prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
                 inputs = self.processor(text=prompt, images=[image], return_tensors="pt")
-                # Generate outputs
+
                 generated_ids = self.model.generate(**inputs, max_new_tokens=8192)
                 prompt_length = inputs.input_ids.shape[1]
                 trimmed_generated_ids = generated_ids[:, prompt_length:]
@@ -111,7 +110,7 @@ class ModelHandler:
                     skip_special_tokens=False,
                 )[0].lstrip()
 
-                # Populate document
+                result = doctags
                 print(doctags)
             else:
                 generate_ids = self.model.generate(self.input_id)
