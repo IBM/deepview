@@ -564,16 +564,13 @@ class FxToSenDnn:
         unsup_op_debug = os.environ.get('UNSUP_OP_DEBUG', "0")
         if unsup_op == '1':
             error = ""
-            ancestry_str = ""
             module_stack_str = ""
             if unsup_op_debug == '1':
                 if 'nn_module_stack' in node.meta:
-                    ancestry = list(node.meta['nn_module_stack'].values())[-1][0].replace("._modules", "").replace("['", ".").replace("']", "").replace("L.self.","")
-                    ancestry_str = f"\nDEBUG TOOL Ancestry: {ancestry}"
                     module_stack = [str(t[1]).split('.')[-1].split("'>")[0] for t in node.meta.get("nn_module_stack").values()]
                     module_stack_str = f"\nDEBUG TOOL Graph: {'|'.join(module_stack)}"
                 error = f"DEBUG TOOL==================================== Stack Trace ====================================\n{add_prefix_to_string(node.stack_trace)}"
-            print(f"DEBUG TOOL Caught error for \033[1m{node}\033[0m: Operation not supported.\nDEBUG TOOL Data type: {dt}, Shape: {shape}{ancestry_str}{module_stack_str}\n{error}")
+            print(f"DEBUG TOOL Caught error for \033[1m{node}\033[0m: Operation not supported.\nDEBUG TOOL Data type: {dt}, Shape: {shape}{module_stack_str}\n{error}")
         #====================================================
 
         return self.gb.UnknownNode(node.name, ti, inputs)

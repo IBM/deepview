@@ -94,7 +94,7 @@ def process_output_layer_debugging(tool_output_file, logfile, generate_repro_cod
         print("======================================================")
         if err_msg:
             layer = err_msg.split("for ")[1].split(", input")[0]
-            second_run_str = f"DEBUG TOOL second run for {layer}"
+            second_run_str = f"DEBUG TOOL second run for {layer},"
             failed_layer = f"Failed layer is {err_msg.split('for')[1]}" if second_run_str not in ''.join(lines) else "No model layer has failed"
             print(f"DEBUG TOOL \033[1m{failed_layer}\033[0m")
             print("======================================================")
