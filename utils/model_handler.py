@@ -72,20 +72,6 @@ class ModelHandler:
             if self.vision_model:
                 # needs pip install pillow
                 self.processor = AutoProcessor.from_pretrained(self.model_path)
-                messages = [
-                            {
-                                "role": "user",
-                                "content": [
-                                    {"type": "image"},
-                                    {"type": "text", "text": "Convert this page to docling."}
-                                ]
-                            },
-                        ]
-
-                # Prepare inputs
-                image = Image.open(urlopen("https://upload.wikimedia.org/wikipedia/commons/7/76/GazettedeFrance.jpg"))
-                prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
-                self.input_id = self.processor(text=prompt, images=[image], return_tensors="pt")
             else: 
                 self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, use_fast=True)
                 self.input_id = self.tokenizer(self.prompt, add_special_tokens=False, return_tensors='pt').input_ids
@@ -102,14 +88,30 @@ class ModelHandler:
             )
         elif self.model_type == 'hf':
             if self.vision_model:
+                messages = [
+                            {
+                                "role": "user",
+                                "content": [
+                                    {"type": "image"},
+                                    {"type": "text", "text": "Convert this page to docling."}
+                                ]
+                            },
+                        ]
+
+                # Prepare inputs
+                image = Image.open(urlopen("https://upload.wikimedia.org/wikipedia/commons/7/76/GazettedeFrance.jpg"))
+                prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
+                inputs = self.processor(text=prompt, images=[image], return_tensors="pt")
                 # Generate outputs
-                generated_ids = self.model.generate(**self.input_id, max_new_tokens=8192)
-                prompt_length = self.input_id.shape[1]
+                generated_ids = self.model.generate(**inputs, max_new_tokens=8192)
+                prompt_length = inputs.input_ids.shape[1]
                 trimmed_generated_ids = generated_ids[:, prompt_length:]
                 doctags = self.processor.batch_decode(
                     trimmed_generated_ids,
                     skip_special_tokens=False,
                 )[0].lstrip()
+
+                # Populate document
                 print(doctags)
             else:
                 generate_ids = self.model.generate(self.input_id)
