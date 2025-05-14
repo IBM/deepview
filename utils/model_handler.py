@@ -80,7 +80,7 @@ class ModelHandler:
             return "object_detection"
         elif "zeroshotimageclassification" in arch:
             return "zero_shot_image_classification"
-        elif "vision2seq" in arch:
+        elif "vision2seq" in arch or "conditionalgeneration" in arch:
             return "vision2seq"
         elif "visualquestionanswering" in arch:
             return "visual_question_answering"
