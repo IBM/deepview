@@ -122,15 +122,6 @@ class ModelHandler:
         self.model.eval()
         torch.set_grad_enabled(False)
 
-        # if hasattr(self.model, "base_model") and not self.model_class in ['vision2seq']:
-        #     self.model.base_model.layers = self.model.base_model.layers[:1]
-        # elif hasattr(self.model, "layers") and not self.model_class in ['vision2seq']:
-        #     self.model.layers = self.model.layers[:1]
-        # elif hasattr(self.model.base_model, "vision_model") and self.model_class in ['vision2seq']:
-        #     self.model.base_model.vision_model.encoder.layers = self.model.base_model.vision_model.encoder.layers[:1]
-        # else:
-        #     print("No accessible 'base_model' or 'layers' attribute to slice.")
-
         print("Compiling model")
         start = time.time()
         self.model.compile(backend="sendnn_decoder", dynamic=False)
@@ -153,6 +144,8 @@ class ModelHandler:
             self.input_id, self.extra_generation_kwargs = pad_input_ids(prompts, min_pad_length=self.min_pad_length)
 
         elif self.model_type == 'hf':
+            if self.model_class in ['vision2seq']:
+                self.processor = AutoProcessor.from_pretrained(self.model_path)
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, use_fast=True)
             if self.tokenizer.pad_token is None:
                 self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -197,7 +190,6 @@ class ModelHandler:
                 )[0].lstrip()
 
                 result = doctags
-                print(doctags)
             elif self.model_class in ['causal_lm']:
                 input_ids = self.input_id['input_ids']
                 attention_mask = self.input_id.get('attention_mask', None)
