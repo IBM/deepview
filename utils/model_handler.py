@@ -206,7 +206,7 @@ class ModelHandler:
                 result = self.tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
             else:
                 result = self.model(**self.input_id)
-            print(result)
+        print(result)
 
     def insert_forward_hooks(self):
         print("Inserting forward hooks.............")
