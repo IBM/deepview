@@ -5,7 +5,9 @@ from fms.utils import tokenizers
 from fms.utils.generation import generate
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers import Idefics3Model, AutoProcessor
-from transformers.image_utils import load_image
+
+from urllib.request import urlopen
+from PIL import Image
 
 
 class ModelHandler:
@@ -81,7 +83,7 @@ class ModelHandler:
                         ]
 
                 # Prepare inputs
-                image = load_image("https://upload.wikimedia.org/wikipedia/commons/7/76/GazettedeFrance.jpg")
+                image = Image.open(urlopen("https://upload.wikimedia.org/wikipedia/commons/7/76/GazettedeFrance.jpg"))
                 prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
                 self.input_id = self.processor(text=prompt, images=[image], return_tensors="pt")
             else: 
