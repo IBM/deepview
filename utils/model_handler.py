@@ -43,9 +43,9 @@ class ModelHandler:
         self.model.eval()
         torch.set_grad_enabled(False)
 
-        if hasattr(self.model, "base_model"):
+        if hasattr(self.model, "base_model") and not self.vision_model:
             self.model.base_model.layers = self.model.base_model.layers[:1]
-        elif hasattr(self.model, "layers"):
+        elif hasattr(self.model, "layers") and not self.vision_model:
             self.model.layers = self.model.layers[:1]
         elif hasattr(self.model, "vision_model"):
             self.model.vision_model.encoder.layers = self.model.vision_model.encoder.layers[:1]
