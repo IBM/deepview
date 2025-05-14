@@ -2,7 +2,7 @@ import time
 import torch
 from fms.models import get_model
 from fms.utils import tokenizers
-from fms.utils.generation import generate
+from fms.utils.generation import generate, pad_input_ids
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 class ModelHandler:
@@ -16,16 +16,30 @@ class ModelHandler:
         self.input_id = None
         self.hooks = []
         self.layer_list = {}
+        self.extra_generation_kwargs = None
+        self.batch_size = 1
+        self.min_pad_length = 64
+        self.max_new_tokens = 2
 
     def load_and_compile_model(self):
         print("Loading model")
         start = time.time()
         
         if self.model_type == 'fms':
+            '''
             self.model = get_model(
                 "hf_pretrained", None, model_path=self.model_path,
                 device_type="cpu", data_type=torch.float16,
                 source=None, distributed_strategy=None, fused_weights=False
+            )
+            '''
+            # This get_model call assumes locally downloaded weights
+            self.model = get_model(
+                "hf_pretrained",
+                model_path=self.model_path,
+                device_type="cpu",
+                data_type=torch.float16,
+                fused_weights=False
             )
         elif self.model_type == 'hf':
             self.model = AutoModelForCausalLM.from_pretrained(self.model_path)
@@ -55,21 +69,42 @@ class ModelHandler:
             tokens = self.tokenizer.tokenize(self.prompt)
             ids_l = self.tokenizer.convert_tokens_to_ids(tokens)
             ids_l = [self.tokenizer.bos_token_id] + ids_l
-            self.input_id = torch.tensor(ids_l, dtype=torch.long, device=self.device)
+            prompt1 = torch.tensor(ids_l, dtype=torch.long, device=self.device)
+            
+            prompts = [prompt1]
+            prompts = prompts * ((self.batch_size // 4) + 1)
+            prompts = prompts[: self.batch_size]
+           
+            self.input_id, self.extra_generation_kwargs = pad_input_ids(prompts, min_pad_length=self.min_pad_length)
+
         elif self.model_type == 'hf':
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, use_fast=True)
             self.input_id = self.tokenizer(self.prompt, add_special_tokens=False, return_tensors='pt').input_ids
 
     def infer(self):
         if self.model_type == 'fms':
-            extra_generation_kwargs = None
+            self.extra_generation_kwargs["only_last_token"] = True
             max_seq_len = max(len(self.prompt), self.model.config.max_expected_seq_len)
+            result = generate(
+                self.model,
+                self.input_id,
+                max_new_tokens=self.max_new_tokens, #Should this be parameterized? 
+                use_cache=True,
+                do_sample=False,
+                max_seq_len=max_seq_len,
+                #timing=args.timing,
+                #eos_token_id=eos_token_id,
+                contiguous_cache=True,
+                extra_kwargs=self.extra_generation_kwargs,
+            )
+            '''
             result = generate(
                 self.model, self.input_id,
                 do_sample=False, max_new_tokens=2,
                 max_seq_len=max_seq_len,
                 extra_kwargs=extra_generation_kwargs
             )
+            '''
         elif self.model_type == 'hf':
             generate_ids = self.model.generate(self.input_id)
             result = self.tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
