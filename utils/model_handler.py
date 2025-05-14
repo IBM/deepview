@@ -4,6 +4,7 @@ from fms.models import get_model
 from fms.utils import tokenizers
 from fms.utils.generation import generate
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForVision2Seq
 
 class ModelHandler:
     def __init__(self, model_type, model_path, prompt):
@@ -28,7 +29,12 @@ class ModelHandler:
                 source=None, distributed_strategy=None, fused_weights=False
             )
         elif self.model_type == 'hf':
-            self.model = AutoModelForCausalLM.from_pretrained(self.model_path)
+            if 'SmolDocling-256M-preview' in self.model_path:
+                self.model = AutoModelForVision2Seq.from_pretrained(
+                    self.model_path,
+                    torch_dtype=torch.bfloat16)
+            else:
+                self.model = AutoModelForCausalLM.from_pretrained(self.model_path)
 
         print(f"Loading complete, took {time.time() - start:.3f}s")
 
