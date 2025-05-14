@@ -146,10 +146,11 @@ class ModelHandler:
         elif self.model_type == 'hf':
             if self.model_class in ['vision2seq']:
                 self.processor = AutoProcessor.from_pretrained(self.model_path)
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, use_fast=True)
-            if self.tokenizer.pad_token is None:
-                self.tokenizer.pad_token = self.tokenizer.eos_token
-            self.input_id = self.tokenizer([self.prompt], padding=True, truncation=True, return_tensors='pt')
+            else:
+                self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, use_fast=True)
+                if self.tokenizer.pad_token is None:
+                    self.tokenizer.pad_token = self.tokenizer.eos_token
+                self.input_id = self.tokenizer([self.prompt], padding=True, truncation=True, return_tensors='pt')
 
     def infer(self):
         if self.model_type == 'fms':
