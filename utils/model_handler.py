@@ -4,7 +4,7 @@ from fms.models import get_model
 from fms.utils import tokenizers
 from fms.utils.generation import generate
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from transformers import Idefics3Model, AutoProcessor
+from transformers import AutoModelForVision2Seq, AutoProcessor
 
 from urllib.request import urlopen
 from PIL import Image
@@ -36,7 +36,7 @@ class ModelHandler:
             )
         elif self.model_type == 'hf':
             if self.vision_model:
-                self.model = Idefics3Model.from_pretrained(self.model_path)
+                self.model = AutoModelForVision2Seq.from_pretrained(self.model_path)
             else:
                 self.model = AutoModelForCausalLM.from_pretrained(self.model_path)
 
@@ -49,8 +49,8 @@ class ModelHandler:
             self.model.base_model.layers = self.model.base_model.layers[:1]
         elif hasattr(self.model, "layers") and not self.vision_model:
             self.model.layers = self.model.layers[:1]
-        elif hasattr(self.model, "vision_model"):
-            self.model.vision_model.encoder.layers = self.model.vision_model.encoder.layers[:1]
+        elif hasattr(self.model.base_model, "vision_model") and self.vision_model:
+            self.model.base_model.vision_model.encoder.layers = self.model.base_model.vision_model.encoder.layers[:1]
         else:
             print("No accessible 'base_model' or 'layers' attribute to slice.")
 
@@ -111,7 +111,6 @@ class ModelHandler:
                     skip_special_tokens=False,
                 )[0].lstrip()
                 print(doctags)
-                
             else:
                 generate_ids = self.model.generate(self.input_id)
                 result = self.tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
