@@ -4,7 +4,9 @@ from fms.models import get_model
 from fms.utils import tokenizers
 from fms.utils.generation import generate
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from transformers import AutoModelForVision2Seq
+from transformers import Idefics3Model, AutoProcessor
+from transformers.image_utils import load_image
+
 
 class ModelHandler:
     def __init__(self, model_type, model_path, prompt):
@@ -14,6 +16,8 @@ class ModelHandler:
         self.device = torch.device("cpu")
         self.model = None
         self.tokenizer = None
+        self.vision_model = True if 'SmolDocling-256M-preview' in self.model_path else False
+        self.processor = None
         self.input_id = None
         self.hooks = []
         self.layer_list = {}
@@ -29,10 +33,8 @@ class ModelHandler:
                 source=None, distributed_strategy=None, fused_weights=False
             )
         elif self.model_type == 'hf':
-            if 'SmolDocling-256M-preview' in self.model_path:
-                self.model = AutoModelForVision2Seq.from_pretrained(
-                    self.model_path,
-                    torch_dtype=torch.bfloat16)
+            if self.vision_model:
+                self.model = Idefics3Model.from_pretrained(self.model_path)
             else:
                 self.model = AutoModelForCausalLM.from_pretrained(self.model_path)
 
@@ -45,6 +47,8 @@ class ModelHandler:
             self.model.base_model.layers = self.model.base_model.layers[:1]
         elif hasattr(self.model, "layers"):
             self.model.layers = self.model.layers[:1]
+        elif hasattr(self.model, "vision_model"):
+            self.model.vision_model.encoder.layers = self.model.vision_model.encoder.layers[:1]
         else:
             print("No accessible 'base_model' or 'layers' attribute to slice.")
 
@@ -63,8 +67,26 @@ class ModelHandler:
             ids_l = [self.tokenizer.bos_token_id] + ids_l
             self.input_id = torch.tensor(ids_l, dtype=torch.long, device=self.device)
         elif self.model_type == 'hf':
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, use_fast=True)
-            self.input_id = self.tokenizer(self.prompt, add_special_tokens=False, return_tensors='pt').input_ids
+            if self.vision_model:
+                # needs pip install pillow
+                self.processor = AutoProcessor.from_pretrained(self.model_path)
+                messages = [
+                            {
+                                "role": "user",
+                                "content": [
+                                    {"type": "image"},
+                                    {"type": "text", "text": "Convert this page to docling."}
+                                ]
+                            },
+                        ]
+
+                # Prepare inputs
+                image = load_image("https://upload.wikimedia.org/wikipedia/commons/7/76/GazettedeFrance.jpg")
+                prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
+                self.input_id = self.processor(text=prompt, images=[image], return_tensors="pt")
+            else: 
+                self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, use_fast=True)
+                self.input_id = self.tokenizer(self.prompt, add_special_tokens=False, return_tensors='pt').input_ids
 
     def infer(self):
         if self.model_type == 'fms':
@@ -77,8 +99,20 @@ class ModelHandler:
                 extra_kwargs=extra_generation_kwargs
             )
         elif self.model_type == 'hf':
-            generate_ids = self.model.generate(self.input_id)
-            result = self.tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+            if self.vision_model:
+                # Generate outputs
+                generated_ids = self.model.generate(**self.input_id, max_new_tokens=8192)
+                prompt_length = self.input_id.shape[1]
+                trimmed_generated_ids = generated_ids[:, prompt_length:]
+                doctags = self.processor.batch_decode(
+                    trimmed_generated_ids,
+                    skip_special_tokens=False,
+                )[0].lstrip()
+                print(doctags)
+                
+            else:
+                generate_ids = self.model.generate(self.input_id)
+                result = self.tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         print(result)
 
     def insert_forward_hooks(self):
