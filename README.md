@@ -14,12 +14,26 @@
 </p>
 
 # DeepView 
-DeepView is a diagnostic tool to accelerate the model enablement journey on AIU. It identifies issues during model lowering and pinpoints root causes with minimal granularity.
+DeepView is a modular debugging and diagnostics toolkit designed to streamline the model enablement workflow for the Spyre AIU accelerator. It helps bridge the gap between model developers and compiler/runtime engineers by enabling fast, precise, and reproducible identification of issues during model lowering and execution on the AIU.
+## Current Capabilities
+* Unsupported Op Detection: Automatically detects unsupported operators and captures detailed metadata including
+	- Operator name
+  - Input shapes and data types
+  - (Optional) Precise stack traces mapping to source code
+* Granular Debugging: Identifies offending layers and modules with fine-grained context, helping isolate
+	- Input characteristics triggering the issue
+  - Specific locations in the model's forward path
+*	Minimal Reproduction Scripts: Generates self-contained, minimal scripts to reproduce failures and aid debugging workflows.
+* Compiler and Runtime Integration: Hooks into the model compilation pipeline to trace issues early and often.
+## Planned / Future Capabilities (draft)
+* Intermediate Tensor Comparison: Layer-wise comparison of outputs between CPU/GPU and AIU to identify numerical mismatches or accuracy regressions.
+*	Performance Diagnostics: Integration with runtime metrics (FLOPs, memory usage, latency) to pinpoint bottlenecks and inefficiencies.
+*	vLLM Testing: Support for running and validating model behavior on VLLM.
+*	Visualization Tools: Graph-based interfaces for analyzing PyTorch FX graphs, unsupported paths, and fallback decisions.
 
-In the current version, DeepView identifies unsupported ops with detailed metadata (such as input shapes and dtypes). If enabled, it also provides precise stack traces to locate the unsupported op in the model source code. This empowers quick root-cause analysis during model enablement journey.
 
-The upcoming version of DeepView will expand its capabilities to automatically generate minimal reproducible scripts for unsupported ops.
-It will also go beyond unsupported ops to capture more complex issues, such as internal compiler assertion failures, and precisely identify the offending layer within the transformer blocks.
+
+
 
 # Installation
 ### local install
