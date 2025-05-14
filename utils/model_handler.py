@@ -45,7 +45,6 @@ class ModelHandler:
         self.device = torch.device("cpu")
         self.model = None
         self.tokenizer = None
-        self.vision_model = True if 'vision2seq' in self.model_class else False
         self.processor = None
         self.input_id = None
         self.hooks = []
@@ -123,11 +122,11 @@ class ModelHandler:
         self.model.eval()
         torch.set_grad_enabled(False)
 
-        # if hasattr(self.model, "base_model") and not self.vision_model:
+        # if hasattr(self.model, "base_model") and not self.model_class in ['vision2seq']:
         #     self.model.base_model.layers = self.model.base_model.layers[:1]
-        # elif hasattr(self.model, "layers") and not self.vision_model:
+        # elif hasattr(self.model, "layers") and not self.model_class in ['vision2seq']:
         #     self.model.layers = self.model.layers[:1]
-        # elif hasattr(self.model.base_model, "vision_model") and self.vision_model:
+        # elif hasattr(self.model.base_model, "vision_model") and self.model_class in ['vision2seq']:
         #     self.model.base_model.vision_model.encoder.layers = self.model.base_model.vision_model.encoder.layers[:1]
         # else:
         #     print("No accessible 'base_model' or 'layers' attribute to slice.")
@@ -174,7 +173,7 @@ class ModelHandler:
                 extra_kwargs=self.extra_generation_kwargs,
             )
         elif self.model_type == 'hf':
-            if self.vision_model:
+            if self.model_class in ['vision2seq']:
                 messages = [
                             {
                                 "role": "user",
