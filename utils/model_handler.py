@@ -113,6 +113,8 @@ class ModelHandler:
             model_class = MODEL_CLASSES[self.model_class]
             if self.model_class == "causal_lm":
                 self.model = model_class.from_pretrained(self.model_path)
+            elif self.model_class == "vision2seq":
+                self.model = AutoModelForVision2Seq.from_pretrained(self.model_path)
             else:
                 self.model = AutoModel.from_pretrained(self.model_path)
 
@@ -181,6 +183,8 @@ class ModelHandler:
                 image = Image.open(urlopen("https://upload.wikimedia.org/wikipedia/commons/7/76/GazettedeFrance.jpg"))
                 prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
                 inputs = self.processor(text=prompt, images=[image], return_tensors="pt")
+
+                print("passed vision2seq if at infer - start generate")
 
                 generated_ids = self.model.generate(**inputs, max_new_tokens=8192)
                 prompt_length = inputs.input_ids.shape[1]
