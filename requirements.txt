@@ -4,3 +4,4 @@ numpy
 transformers
 torch_sendnn
 pillow
+sentence_transformers

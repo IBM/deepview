@@ -2,57 +2,135 @@ import time
 import torch
 from fms.models import get_model
 from fms.utils import tokenizers
-from fms.utils.generation import generate
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from transformers import AutoModelForVision2Seq, AutoProcessor
+from fms.utils.generation import generate, pad_input_ids
 
 from urllib.request import urlopen
 from PIL import Image
 
+from transformers import (
+    AutoTokenizer, AutoModel, AutoConfig,
+    AutoProcessor,
+    AutoModelForSequenceClassification,
+    AutoModelForQuestionAnswering,
+    AutoModelForCausalLM,
+    AutoModelForSeq2SeqLM,
+    AutoModelForImageClassification,
+    AutoModelForObjectDetection,
+    AutoModelForZeroShotImageClassification,
+    AutoModelForVision2Seq,
+    AutoModelForVisualQuestionAnswering,
+)
+from sentence_transformers import SentenceTransformer
+
+MODEL_CLASSES = {
+    "auto": AutoModel,
+    "sequence_classification": AutoModelForSequenceClassification,
+    "question_answering": AutoModelForQuestionAnswering,
+    "causal_lm": AutoModelForCausalLM,
+    "seq2seq_lm": AutoModelForSeq2SeqLM,
+    "image_classification": AutoModelForImageClassification,
+    "object_detection": AutoModelForObjectDetection,
+    "zero_shot_image_classification": AutoModelForZeroShotImageClassification,
+    "vision2seq": AutoModelForVision2Seq,
+    "visual_question_answering": AutoModelForVisualQuestionAnswering,
+    "sentence": SentenceTransformer,
+}
 
 class ModelHandler:
-    def __init__(self, model_type, model_path, prompt):
+    def __init__(self, model_type, model_path, prompt, model_class=None):
         self.model_type = model_type
         self.model_path = model_path
+        self.model_class = model_class
         self.prompt = prompt
         self.device = torch.device("cpu")
         self.model = None
         self.tokenizer = None
-        self.vision_model = True if 'SmolDocling-256M-preview' in self.model_path else False
+        self.vision_model = True if 'vision2seq' in self.model_class else False
         self.processor = None
         self.input_id = None
         self.hooks = []
         self.layer_list = {}
+        self.extra_generation_kwargs = None
+        self.batch_size = 1
+        self.min_pad_length = 64
+        self.max_new_tokens = 2
+
+    def _infer_model_class(self, model_path):
+        #First check if it of type sentence transformer
+        try:
+            from huggingface_hub import hf_hub_download
+            hf_hub_download(repo_id=model_path, filename="modules.json")
+            return "sentence"
+        except Exception as e:
+            pass
+
+        config = AutoConfig.from_pretrained(model_path)
+        arch = config.architectures[0].lower() if config.architectures else ""
+
+        if "sequenceclassification" in arch:
+            return "sequence_classification"
+        elif "questionanswering" in arch:
+            return "question_answering"
+        elif "causallm" in arch:
+            return "causal_lm"
+        elif "seq2seq" in arch:
+            return "seq2seq_lm"
+        elif "imageclassification" in arch:
+            return "image_classification"
+        elif "objectdetection" in arch:
+            return "object_detection"
+        elif "zeroshotimageclassification" in arch:
+            return "zero_shot_image_classification"
+        elif "vision2seq" in arch:
+            return "vision2seq"
+        elif "visualquestionanswering" in arch:
+            return "visual_question_answering"
+
+        #Fallback to AutoModel
+        return "auto"
+        
 
     def load_and_compile_model(self):
         print("Loading model")
         start = time.time()
         
         if self.model_type == 'fms':
+            # This get_model call assumes locally downloaded weights
             self.model = get_model(
-                "hf_pretrained", None, model_path=self.model_path,
-                device_type="cpu", data_type=torch.float16,
-                source=None, distributed_strategy=None, fused_weights=False
+                "hf_pretrained",
+                model_path=self.model_path,
+                device_type="cpu",
+                data_type=torch.float16,
+                fused_weights=False
             )
         elif self.model_type == 'hf':
-            if self.vision_model:
-                self.model = AutoModelForVision2Seq.from_pretrained(self.model_path)
+            # TODO: we can do specific handling per model class but for now everything apart from CausalLM is treated as AutoModel
+            # Note: SentenceTransformer has to be loaded as AutoModel as torch.compile does not work for SentenceTransformer
+            self.model_class = self._infer_model_class(self.model_path)
+            print("---------------------------------------------------------")
+            print(f"Model class is {self.model_class}")
+            print("---------------------------------------------------------")
+
+            model_class = MODEL_CLASSES[self.model_class]
+            if self.model_class == "causal_lm":
+                self.model = model_class.from_pretrained(self.model_path)
             else:
-                self.model = AutoModelForCausalLM.from_pretrained(self.model_path)
+                self.model = AutoModel.from_pretrained(self.model_path)
+
 
         print(f"Loading complete, took {time.time() - start:.3f}s")
 
         self.model.eval()
         torch.set_grad_enabled(False)
 
-        if hasattr(self.model, "base_model") and not self.vision_model:
-            self.model.base_model.layers = self.model.base_model.layers[:1]
-        elif hasattr(self.model, "layers") and not self.vision_model:
-            self.model.layers = self.model.layers[:1]
-        elif hasattr(self.model.base_model, "vision_model") and self.vision_model:
-            self.model.base_model.vision_model.encoder.layers = self.model.base_model.vision_model.encoder.layers[:1]
-        else:
-            print("No accessible 'base_model' or 'layers' attribute to slice.")
+        # if hasattr(self.model, "base_model") and not self.vision_model:
+        #     self.model.base_model.layers = self.model.base_model.layers[:1]
+        # elif hasattr(self.model, "layers") and not self.vision_model:
+        #     self.model.layers = self.model.layers[:1]
+        # elif hasattr(self.model.base_model, "vision_model") and self.vision_model:
+        #     self.model.base_model.vision_model.encoder.layers = self.model.base_model.vision_model.encoder.layers[:1]
+        # else:
+        #     print("No accessible 'base_model' or 'layers' attribute to slice.")
 
         print("Compiling model")
         start = time.time()
@@ -67,24 +145,33 @@ class ModelHandler:
             tokens = self.tokenizer.tokenize(self.prompt)
             ids_l = self.tokenizer.convert_tokens_to_ids(tokens)
             ids_l = [self.tokenizer.bos_token_id] + ids_l
-            self.input_id = torch.tensor(ids_l, dtype=torch.long, device=self.device)
+            prompt1 = torch.tensor(ids_l, dtype=torch.long, device=self.device)
+            
+            prompts = [prompt1]
+            prompts = prompts * ((self.batch_size // 4) + 1)
+            prompts = prompts[: self.batch_size]
+           
+            self.input_id, self.extra_generation_kwargs = pad_input_ids(prompts, min_pad_length=self.min_pad_length)
+
         elif self.model_type == 'hf':
-            if self.vision_model:
-                # needs pip install pillow
-                self.processor = AutoProcessor.from_pretrained(self.model_path)
-            else: 
-                self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, use_fast=True)
-                self.input_id = self.tokenizer(self.prompt, add_special_tokens=False, return_tensors='pt').input_ids
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, use_fast=True)
+            if self.tokenizer.pad_token is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+            self.input_id = self.tokenizer([self.prompt], padding=True, truncation=True, return_tensors='pt')
 
     def infer(self):
         if self.model_type == 'fms':
-            extra_generation_kwargs = None
+            self.extra_generation_kwargs["only_last_token"] = True
             max_seq_len = max(len(self.prompt), self.model.config.max_expected_seq_len)
             result = generate(
-                self.model, self.input_id,
-                do_sample=False, max_new_tokens=2,
+                self.model,
+                self.input_id,
+                max_new_tokens=self.max_new_tokens,
+                use_cache=True,
+                do_sample=False,
                 max_seq_len=max_seq_len,
-                extra_kwargs=extra_generation_kwargs
+                contiguous_cache=True,
+                extra_kwargs=self.extra_generation_kwargs,
             )
         elif self.model_type == 'hf':
             if self.vision_model:
@@ -112,10 +199,14 @@ class ModelHandler:
 
                 result = doctags
                 print(doctags)
-            else:
-                generate_ids = self.model.generate(self.input_id)
+            elif self.model_class in ['causal_lm']:
+                input_ids = self.input_id['input_ids']
+                attention_mask = self.input_id.get('attention_mask', None)
+                generate_ids = self.model.generate(input_ids, attention_mask=attention_mask, max_new_tokens=self.max_new_tokens)
                 result = self.tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-        print(result)
+            else:
+                result = self.model(**self.input_id)
+            print(result)
 
     def insert_forward_hooks(self):
         print("Inserting forward hooks.............")
