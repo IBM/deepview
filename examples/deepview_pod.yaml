@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: jm-e2e-dv
+spec:
+  containers:
+  - name: jm-e2e-dv
+    resources:
+      limits:
+        ibm.com/aiu_pf: 1
+      requests:
+        ibm.com/aiu_pf: 1
+    imagePullPolicy: Always
+    # Change this to point to your image
+    image: icr.io/ibmaiu_internal/x86_64/e2e_stable:latest
+    command: ["/usr/bin/pause"]
+    workingDir: /home/senuser
+    env:
+    # TRANSFORMERS_CACHE
+    - name: HF_HOME
+      value: /tmp/.cache
+    # Use the AIU device
+    - name: FLEX_COMPUTE
+      value: "SENTIENT"
+    - name: FLEX_DEVICE
+      value: "VFIO"
+    # Force runtime to use the same heap data structure for everything
+    - name: FLEX_OVERWRITE_NMB_FRAME
+      value: "1"
+    # Needed for multi-AIU runs
+    - name: FLEX_UNLINK_DEVMEM
+      value: "false"
+    # Turn off Python line buffering
+    - name: PYTHONUNBUFFERED
+      value: "1"
+    # HOME might not be set, so set it
+    - name: HOME
+      value: /home/senuser
+    # Make the AIU stack quiet
+    - name: DTLOG_LEVEL
+      value: "error"
+    - name: TORCH_SENDNN_LOG
+      value: "CRITICAL"
+    - name: DT_DEEPRT_VERBOSE
+      value: "-1"
+    - name: DEEPRT_EXPORT_DIR
+      value: /tmp/dt/export
+    - name: DTCOMPILER_EXPORT_DIR
+      value: /tmp/dt/export
+    - name: DT_OPT
+      value: >-
+        "dtversion=2,varsub=1,lxopt=1,opfusion=1,arithfold=1,dataopt=1,patchinit=1,patchprog=1,autopilot=1,weipreload=0,kvcacheopt=1,progshareopt=1"
+    volumeMounts:
+    # Expanded Shared Memory
+    - name: dev-shm
+      mountPath: /dev/shm
+    - name: aiu-models-en-shared
+      mountPath: /aiu-models-en-shared
+  volumes:
+  - name: dev-shm
+    emptyDir:
+      medium: Memory
+      sizeLimit: 32Gi
+  - name: aiu-models-en-shared
+    persistentVolumeClaim:
+      claimName: aiu-models-en-shared
