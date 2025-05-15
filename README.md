@@ -1,4 +1,5 @@
 
+
 <p align="center">
   <picture>
     <img alt="Spyer AIU DeepView" src="./logo/deepview-logo.svg" width="250" height="259" style="max-width: 100%;">
@@ -60,7 +61,7 @@ oc create -f modified_deepview_pod.yaml
 
 Copy the Deepview Repository into your pod
 ```
-oc rsync deepview/ <pod-name> /tmp/deepview/
+oc rsync deepview/ <pod-name>:/tmp/deepview/
 ```
 
 Login to pod
@@ -71,7 +72,7 @@ oc rsh <pod-name> bash -l
 ## Installation
 ### local install
 ```
-cd /tmp/deepview
+cd deepview
 ```
 
 ```shell
@@ -91,17 +92,17 @@ First, copy `torch_sendnn` from its installation directory to `/tmp`:
 If you are using the `e2e-stable` image, the installation directory of `torch_sendnn` is typically `/usr/local/lib/python3.12/site-packages/torch_sendnn`. Otherwise, you may use `python3 -m pip show torch_sendnn` to find out the installation directory.
 
 ```bash
-cp /usr/local/lib/python3.12/site-packages/torch_sendnn/ /tmp/torch_sendnn
+cp -r /usr/local/lib/python3.12/site-packages/torch_sendnn/ /tmp/torch_sendnn
 ```
 
 Replace the `/tmp/torch_sendnn/backends.py` and `/tmp/torch_sendnn/torch_sendnn.py` files with [deepview/core/tmp/backends.py](/core/tmp/backends.py) and [deepview/core/tmp/torch_sendnn.py](/core/tmp/torch_sendnn.py) files, respectively, given in this repository.
 
 ```bash
-cp deepview/core/tmp/backends.py /tmp/torch_sendnn/backends.py
+cp core/tmp/backends.py /tmp/torch_sendnn/backends.py
 ```
 
 ```bash
-cp deepview/core/tmp/torch_sendnn.py /tmp/torch_sendnn/torch_sendnn.py
+cp core/tmp/torch_sendnn.py /tmp/torch_sendnn/torch_sendnn.py
 
 ```
 
