@@ -34,7 +34,12 @@ DeepView is a modular debugging and diagnostics toolkit designed to streamline t
 
 # Environment & Installation
 ## Environment Setup
-A Sample pod yaml has been provided in `/examples/deepview_pod.yaml`. This is the yaml has been tested with the latest release of DeepView and includes the following:
+Clone the Deepview Repository:
+```
+git clone git@github.com:IBM/deepview.git 
+```
+
+A sample pod yaml has been provided in `/examples/deepview_pod.yaml`. This yaml has been tested with the latest release of DeepView and includes the following:
 - Upgrade of Transformers to the latest version. This is required for the examples provided
 - Installation of the Foundation Model Stack repository on a specific commit. This ensures reproducibility in the results returned by DeepView when using `--model_type=fms`
 - Setting of DeepTools 2.0 Environment Variables for DD1 Hardware
@@ -53,6 +58,11 @@ Use the modified pod yaml to create a pod:
 oc create -f modified_deepview_pod.yaml
 ```
 
+Copy the Deepview Repository into your pod
+```
+oc rsync deepview/ <pod-name> /tmp/deepview/
+```
+
 Login to pod
 ```bash
 oc rsh <pod-name> bash -l
@@ -60,12 +70,16 @@ oc rsh <pod-name> bash -l
 
 ## Installation
 ### local install
+```
+cd /tmp/deepview
+```
+
 ```shell
-pip install -e .
+pip3 install -e .
 ```
 or 
 ```shell
-python setup.py install
+python3 setup.py install
 ```
 
 # Usage
