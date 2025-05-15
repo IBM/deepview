@@ -1,6 +1,7 @@
 #
 # Copyright IBM Corp 2024
 #
+
 import copy
 import functools
 import operator
@@ -21,7 +22,8 @@ from torch.fx.experimental.symbolic_shapes import ShapeEnv
 from torch.utils._mode_utils import no_dispatch
 
 from torch_sendnn import _logging
-from torch_sendnn.decomposition import prevent_op_decomp, sendnn_decompositions
+from torch_sendnn.decomposition import sendnn_decompositions
+from torch_sendnn.sendnnops import prevent_op_decomp
 from torch_sendnn.utils import SpyreGraphCache, convert
 
 log = _logging.get_logger(__name__)
@@ -51,7 +53,7 @@ def convert_tensor_to_sendnn_tensor(inp):
 
 
 def convert_shape(shape):
-    return convert.convert_shape(shape)
+    return convert.convert_shape(shape, IS_DYNAMIC)
 
 
 def convert_data_type(dtype):
@@ -145,8 +147,12 @@ class MyShapeProp:
 
             elif isinstance(result, torch.SymInt):
                 # See [Note: Usage of SymInt.node._hint for dynamic shapes]
-                with self.shape_env.suppress_guards():
-                    node.value = result.node._hint
+                if IS_DYNAMIC:
+                    node.value = result
+                else:
+                    if self.shape_env is not None:
+                        with self.shape_env.suppress_guards():
+                            node.value = result.node._hint
             elif isinstance(result, int):
                 node.value = result
             else:
@@ -163,10 +169,6 @@ def is_bwd_graph(graph) -> bool:
             is_bwd = True
             break
     return is_bwd
-
-def add_prefix_to_string(original_string):
-        prefix = "DEBUG TOOL "
-        return '\n'.join(prefix + line for line in original_string.split('\n'))
 
 class FxToSenDnn:
     """
@@ -226,18 +228,12 @@ class FxToSenDnn:
                 # TODO: create separate list?
                 for n in x:
                     if type(n) == torch.fx.node.Node:
+                        if IS_DYNAMIC and ("sym_size_int" in n.name):
+                            continue
                         inputs.append(self.sendnn_nodes[n.name])
-            # elif x is None:
-            #     dtype = convert_data_type(torch.int)
-            #     shape = sendnn.TensorShape([0])
-            #     layout = sendnn.TensorLayout.NCHW
-            #     ti = sendnn.TensorInfo(dtype, shape, layout)
-            #     # inputs.append(self.gb.PrimaryInput("None", ti))
-            # else:
-            #     exit("unknown input type: " + str(type(x)) + str(node))
             inp_idx = inp_idx + 1
             self.input_idx = self.input_idx + 1
-            # print(" Input: ", type(x))
+
         return inputs
 
     def convert_placeholder(self, node):
@@ -245,11 +241,24 @@ class FxToSenDnn:
 
         # convert SymInt nodes as well, might be needed for dynamic shape
         # TODO: add SymInt to Convert function
-        # if len(node.users) == 0:
-        #     return None
+
         if isinstance(inp, torch.SymInt):
             self.args_idx += 1
-            return self.convert_sym_size(node, [])
+            if IS_DYNAMIC:
+                node_name = str(node.value)
+                if (node_name in self.sendnn_nodes):
+                    return self.sendnn_nodes[node_name]
+                inp_shape = (1,)
+                shape = sendnn.TensorShape(inp_shape)
+                dt_float32 = sendnn.sen_datatype_enum.int64
+                layout = convert_layout(inp_shape)
+                ti = sendnn.TensorInfo(dt_float32, shape, layout)
+                node.name = node_name
+                return self.gb.PrimaryInput(node_name, ti)
+            else:
+                # can this be removed for static shape?
+                return self.convert_sym_size(node, [])
+
         self.args_idx += 1
         dt_float32 = convert_data_type(inp.dtype)
         inp_shape = inp.shape
@@ -330,7 +339,7 @@ class FxToSenDnn:
     def convert_binary_function(gb_fn):
         def conv_fn(fx_to_sendnn, node, inputs):
             for i, arg in enumerate(node.args):
-                # print("Binary type: ", type(arg))
+
                 if type(arg) in [float, int, bool]:
                     shape = convert_shape([1])
                     layout = sendnn.TensorLayout.NCHW
@@ -359,9 +368,7 @@ class FxToSenDnn:
         shape = convert_shape(node)
         layout = convert_layout(node.shape)
         ti = sendnn.TensorInfo(dt, shape, layout)
-        # tag = node.args[1]  - not used for now
         rank_set = node.args[2]
-        # group_size = node.args[3]  - not used for now
         rank = get_rank()
         world_size = get_world_size()
         return self.gb.AllGather(node.name, ti, inputs[0], rank, rank_set, world_size)
@@ -392,9 +399,7 @@ class FxToSenDnn:
         layout = convert_layout(node.shape)
         ti = sendnn.TensorInfo(dt, shape, layout)
         reduce_op = node.args[1]
-        # tag = node.args[2]  - not used for now
         rank_set = node.args[3]
-        # group_size = node.args[4]  - not used for now
         rank = get_rank()
         world_size = get_world_size()
         if reduce_op == "sum":
@@ -470,8 +475,6 @@ class FxToSenDnn:
         # IntArrayRef dilation,
         # bool ceil_mode
         def pooling_conv_fn(fx_to_sendnn, node, inputs):
-            # dt = convert_data_type(node.meta["tensor_meta"][0])
-            # shape = convert_shape(node.meta["tensor_meta"][0])
             dt = convert_data_type(node.dtype[0])
             shape = convert_shape(node.shape[0])
             layout = convert_layout(node.shape[0])
@@ -500,8 +503,6 @@ class FxToSenDnn:
         # IntArrayRef dilation,
         # bool ceil_mode
         def pooling_conv_fn(fx_to_sendnn, node, inputs):
-            # dt = convert_data_type(node.meta["tensor_meta"][0])
-            # shape = convert_shape(node.meta["tensor_meta"][0])
             dt = convert_data_type(node.dtype)
             shape = convert_shape(node.shape)
             layout = convert_layout(node.shape)
@@ -514,7 +515,6 @@ class FxToSenDnn:
                 ph, pw = node.args[3]
             padding.begin = sendnn.TensorShape([0, 0, ph, pw])
             padding.end = sendnn.TensorShape([0, 0, ph, pw])
-            # dilations = convert_shape([1, 1, 1, 1])  - not used for now
             return gb_fn(fx_to_sendnn.gb, node.name, ti, inputs[0], kernel_size, stride, padding, True, 0)
 
         return pooling_conv_fn
@@ -543,37 +543,38 @@ class FxToSenDnn:
         layout = sendnn.TensorLayout.NCHW
         ti = sendnn.TensorInfo(dt, shape, layout)
         return self.gb.BatchMatMul_W8A8(node.name, ti, *inputs, node.args[-3], node.args[-2], node.args[-1])
-    
-    #====================================================
-    # Modification for catching unsupported ops
-    #====================================================  
+
     def convert_unknown(self, node, inputs):
         log.debug("->  Unknown: ", node)
-        unsup_op_debug = os.environ.get('UNSUP_OP_DEBUG', "0")
-        error = ""
-        ancestry_str = ""
-        module_stack_str = ""
-        if unsup_op_debug == '1':
-            ancestry = list(node.meta['nn_module_stack'].values())[-1][0].replace("._modules", "").replace("['", ".").replace("']", "").replace("L.self.","")
-            ancestry_str = f"DEBUG TOOL Ancestry: {ancestry}"
-            module_stack = [str(t[1]).split('.')[-1].split("'>")[0] for t in node.meta.get("nn_module_stack").values()]
-            module_stack_str = f"DEBUG TOOL Graph: {'|'.join(module_stack)}"
-            error = f"DEBUG TOOL==================================== Stack Trace ====================================\n{add_prefix_to_string(node.stack_trace)}"
         if isinstance(node.dtype, list):
             dt = [convert_data_type(t) for t in node.dtype]
             shape = [convert_shape(s) for s in node.shape]
             layout = [convert_layout(s) for s in node.shape]
             ti = [sendnn.TensorInfo(t, s, layout) for t, s in zip(dt, shape)]
-            print(f"DEBUG TOOL Caught error for \033[1m{node}\033[0m: Operation not supported.\nDEBUG TOOL Data type: {dt}, Shape: {shape}\n{ancestry_str}\n{module_stack_str}\n{error}")
-            return self.gb.UnknownNode(node.name, ti, inputs)
         else:
             dt = convert_data_type(node.dtype)
             shape = convert_shape(node.shape)
             layout = convert_layout(node.shape)
             ti = [sendnn.TensorInfo(dt, shape, layout)]
-            print(f"DEBUG TOOL Caught error for \033[1m{node}\033[0m: Operation not supported.\nDEBUG TOOL Data type: {dt}, Shape: {shape}\n{ancestry_str}\n{module_stack_str}\n{error}")
-            return self.gb.UnknownNode(node.name, ti, inputs)
-    #====================================================
+
+        #====================================================
+        # Modification for catching unsupported ops
+        #====================================================
+
+        def add_prefix_to_string(original_string):
+            prefix = "DEBUG TOOL "
+            return '\n'.join(prefix + line for line in original_string.split('\n'))
+
+        unsup_op = os.environ.get('UNSUP_OP', "0")
+        unsup_op_debug = os.environ.get('UNSUP_OP_DEBUG', "0")
+        if unsup_op == '1':
+            error = ""
+            if unsup_op_debug == '1':
+                error = f"DEBUG TOOL==================================== Stack Trace ====================================\n{add_prefix_to_string(node.stack_trace)}"
+            print(f"DEBUG TOOL Caught error for \033[1m{node}\033[0m: Operation not supported.\nDEBUG TOOL Data type: {dt}, Shape: {shape}\n{error}")
+        #====================================================
+
+        return self.gb.UnknownNode(node.name, ti, inputs)
 
     def convert_addmm(self, node, inputs):
         dt = convert_data_type(node)
@@ -660,7 +661,6 @@ class FxToSenDnn:
         pad = node.args[4]
         dilation = convert_shape(node.args[5])
         transpose = node.args[6]
-        # output_padding = node.args[7]  - not used for now
         groups = node.args[8]
         padding = sendnn.PaddingInfo()
         padding.begin = sendnn.TensorShape([0, 0] + pad)
@@ -697,8 +697,6 @@ class FxToSenDnn:
     def convert_dropout(self, node, inputs):
         output_shapes = list()
         for i in range(2):
-            #dt = convert_data_type(node.args[0][i])
-            #shape = convert_shape(node.args[0][i])
             dt = convert_data_type(node.dtype[i])
             shape = convert_shape(node.shape[i])
             layout = convert_layout(node.shape[i])
@@ -798,7 +796,10 @@ class FxToSenDnn:
         layout = convert_layout(node.shape)
         ti = sendnn.TensorInfo(dt, shape, layout)
         # TODO: is it correct mapping?
-        assert (len(inputs) == 2), "Index with more than 1 index tensor is not supported"
+        if len(inputs) != 2:
+            log.warning("Index without exactly 2 index tensors is not supported")
+            return self.convert_unknown(node, inputs)
+        
         return self.gb.Gather(node.name, ti, inputs[0], inputs[1], 0, 0)
 
     def convert_layer_norm(self, node, inputs):
@@ -814,8 +815,8 @@ class FxToSenDnn:
         for i in range(len(node.args[1])):
             axis_i = -1 - i
             axis.append(axis_i)
-        axis = convert_shape(axis)
-        return self.gb.LayerNorm(node.name, output_shapes, inputs[0], inputs[1], inputs[2], axis, node.args[4])
+        axis_shape = convert_shape(axis)
+        return self.gb.LayerNorm(node.name, output_shapes, inputs[0], inputs[1], inputs[2], axis_shape, node.args[4])
 
     def convert_layer_norm_backward(self, node, inputs):
         # inputs: grad_output: Tensor
@@ -839,10 +840,10 @@ class FxToSenDnn:
         for i in range(len(node.args[2])):
             axis_i = -1 - i
             axis.append(axis_i)
-        axis = convert_shape(axis)
+        axis_shape = convert_shape(axis)
         output_mask = convert_shape(node.args[7])
         return self.gb.LayerNormBackward(node.name, output_shapes, inputs[0], inputs[1], inputs[2], 
-                                         inputs[3], inputs[4], inputs[5], axis, output_mask)
+                                         inputs[3], inputs[4], inputs[5], axis_shape, output_mask)
 
     def convert_log_softmax(self, node, inputs):
         # https://pytorch.org/docs/stable/generated/torch.nn.LogSoftmax.html
@@ -883,9 +884,6 @@ class FxToSenDnn:
             if node.kwargs["device"] != orig_tensor_arg.device:
                 raise ValueError(self.DEVICE_MISMATCH_ERROR)
 
-        # if "layout" in node.kwargs or "requires_grad" in node.kwargs or "pin_memory" in node.kwargs:
-        #     raise ValueError("layout, requires_grad, pin_memory, device args are not supported for AIU")
-
         ti = sendnn.TensorInfo(convert_data_type(dtype_arg), shape, layout)
         return self.gb.Empty(node.name, ti)
 
@@ -904,9 +902,6 @@ class FxToSenDnn:
         if "device" in node.kwargs:
             if node.kwargs["device"] != orig_tensor_arg.device:
                 raise ValueError(self.DEVICE_MISMATCH_ERROR)
-
-        # if "layout" in node.kwargs or "requires_grad" in node.kwargs or "pin_memory" in node.kwargs:
-        #     raise ValueError("layout, requires_grad, pin_memory args are not supported for AIU")
 
         ti = sendnn.TensorInfo(convert_data_type(dtype_arg), shape, layout)
         dims_shape = convert_shape(size_arg)
@@ -928,9 +923,6 @@ class FxToSenDnn:
             if node.kwargs["device"] != orig_tensor_arg.device:
                 raise ValueError(self.DEVICE_MISMATCH_ERROR)
 
-        # if "layout" in node.kwargs or "requires_grad" in node.kwargs or "pin_memory" in node.kwargs:
-        #     raise ValueError("layout, requires_grad, pin_memory, device args are not supported for AIU")
-
         ti = sendnn.TensorInfo(convert_data_type(dtype_arg), shape, layout)
         dims_shape = convert_shape(size_arg)
         return self.gb.Ones(node.name, ti, dims_shape)
@@ -950,14 +942,18 @@ class FxToSenDnn:
             layout = convert_layout(node.shape[idx])
             ti = sendnn.TensorInfo(dt, shape, layout)
             out_ti.append(ti)
-        assert node.args[2] is None
+
+        if node.args[2] is not None:
+            log.warning(f"Expected node.args[2] to be None, instead got {node.args[2]}")
+            return self.convert_unknown(node, inputs)
+
         # The values for node.args[3] are the ones corresponding to the reduction enum
         # described in https://github.com/pytorch/pytorch/blob/main/torch/nn/_reduction.py#L8
-        if node.args[3] == 0:  # reduction = "none"
+        if node.args[3] == 0:  # reduction is "none"
             return self.gb.NllLoss(node.name, out_ti, inputs[0], inputs[1], node.args[4])
-        elif node.args[3] == 1:  # reduction = "mean" (default)
+        elif node.args[3] == 1:  # reduction is "mean" (default)
             return self.gb.NllLossMean(node.name, out_ti, inputs[0], inputs[1], node.args[4])
-        elif node.args[3] == 2:  # reduction = "sum"
+        elif node.args[3] == 2:  # reduction is "sum"
             return self.gb.NllLossSum(node.name, out_ti, inputs[0], inputs[1], node.args[4])
 
     def convert_nll_loss_backward(self, node, inputs):
@@ -973,14 +969,18 @@ class FxToSenDnn:
         shape = convert_shape(node)
         layout = convert_layout(node.shape)
         ti = sendnn.TensorInfo(dt, shape, layout)
-        assert node.args[3] is None
+
+        if node.args[3] is not None:
+            log.warning(f"Expected node.args[3] to be None, instead got {node.args[3]}")
+            return self.convert_unknown(node, inputs)
+
         # The values for node.args[4] are the ones corresponding to the reduction enum
         # described in https://github.com/pytorch/pytorch/blob/main/torch/nn/_reduction.py#L8
-        if node.args[4] == 0:  # reduction = "none"
+        if node.args[4] == 0:  # reduction is "none"
             return self.gb.NllLossBackward(node.name, ti, inputs[0], inputs[1], inputs[2], inputs[3], node.args[5])
-        elif node.args[4] == 1:  # reduction = "mean" (default)
+        elif node.args[4] == 1:  # reduction is "mean" (default)
             return self.gb.NllLossMeanBackward(node.name, ti, inputs[0], inputs[1], inputs[2], inputs[3], node.args[5])
-        elif node.args[4] == 2:  # reduction = "sum"
+        elif node.args[4] == 2:  # reduction is "sum"
             return self.gb.NllLossSumBackward(node.name, ti, inputs[0], inputs[1], inputs[2], inputs[3], node.args[5])
 
     def convert_norm(self, node, inputs):
@@ -988,7 +988,11 @@ class FxToSenDnn:
         shape = convert_shape(node)
         layout = convert_layout(node.shape)
         ti = sendnn.TensorInfo(dt, shape, layout)
-        assert node.args[1] == 2
+
+        if node.args[1] != 2:
+            log.warning(f"Expected node.args[1] to be 2 as this maps to ReduceEuclideanNorm (only 2-norm is allowed). Instead got {node.args[1]}")
+            return self.convert_unknown(node, inputs)
+
         dim = convert_shape(node.args[2])
         keepdim = node.args[3]
         return self.gb.ReduceEuclideanNorm(node.name, ti, inputs[0], dim, keepdim)
@@ -1164,11 +1168,9 @@ class FxToSenDnn:
 
     def convert_split(self, node, inputs):
         out_ti = []
-        # for t_meta in node.meta["tensor_meta"]:
+
         for idx in range(len(node.shape)):
-            # t = convert_data_type(t_meta)
             dt = convert_data_type(node.dtype[idx])
-            # shape = convert_shape(t_meta)
             shape = convert_shape(node.shape[idx])
             layout = convert_layout(node.shape[idx])
             ti = sendnn.TensorInfo(dt, shape, layout)
@@ -1205,22 +1207,25 @@ class FxToSenDnn:
         return self.gb.ReduceSum(node.name, ti, inputs[0], axes, keep_dims)
 
     def convert_sym_size(self, node: torch.fx.Node, inputs):
-        if torch.__version__ > "2.4.2":
-            from torch._subclasses.fake_tensor import unset_fake_temporarily
-            no_fake_context = unset_fake_temporarily
-        else:
-            from torch.fx.experimental.proxy_tensor import (  # type: ignore[attr-defined] 
-                maybe_disable_fake_tensor_mode,
-            )
-            no_fake_context = maybe_disable_fake_tensor_mode
+        if IS_DYNAMIC:
+            return None
+        else: 
+            if torch.__version__ > "2.4.2":
+                from torch._subclasses.fake_tensor import unset_fake_temporarily
+                no_fake_context = unset_fake_temporarily
+            else:
+                from torch.fx.experimental.proxy_tensor import (  # type: ignore[attr-defined] 
+                    maybe_disable_fake_tensor_mode,
+                )
+                no_fake_context = maybe_disable_fake_tensor_mode
 
-        with no_fake_context():
-            # The torch.fx.Node does not have a "value" attribute
-            # We rely on value until we can adopt a solution based on existing Node args
-            # See https://github.ibm.com/IBM/torch_sendnn/pull/113#issuecomment-95086185
-            sendnn_node = self.gb.ConstInput(node.name, 
-                convert_to_sendnn_tensor(torch.tensor(node.value, dtype=torch.int64)))  # type: ignore[attr-defined]
-        return sendnn_node
+            with no_fake_context():
+                # The torch.fx.Node does not have a "value" attribute
+                # We rely on value until we can adopt a solution based on existing Node args
+                # See https://github.ibm.com/IBM/torch_sendnn/pull/113#issuecomment-95086185
+                sendnn_node = self.gb.ConstInput(node.name, 
+                    convert_to_sendnn_tensor(torch.tensor(node.value, dtype=torch.int64)))  # type: ignore[attr-defined]
+            return sendnn_node
 
     def convert_t(self, node, inputs):
         dt = convert_data_type(node)
@@ -1266,7 +1271,6 @@ class FxToSenDnn:
         ti = sendnn.TensorInfo(dt, shape, layout)
         return self.gb.Zeros(node.name, ti)
 
-    # if isinstance(layer, nn.BatchNorm2d):
     fn_map = {
         "<built-in function getitem>": convert_get_item,
         "aten.abs.default": convert_singular_function(sendnn.GraphBuilder.Abs),
@@ -1340,7 +1344,6 @@ class FxToSenDnn:
         "aten.scalar_tensor.default": convert_scalar_tensor,
         "aten.slice.Tensor": convert_slice,
         "aten.slice_backward.default": convert_slice_backward,
-        #"aten.select.int": ConvertSelect,
         "aten.select_backward.default": convert_select_backward,
         "aten.sigmoid.default": convert_singular_function(sendnn.GraphBuilder.Sigmoid),
         "aten.silu.default": convert_singular_function(sendnn.GraphBuilder.Silu),
@@ -1387,22 +1390,11 @@ class FxToSenDnn:
         raise RuntimeError("CallModule is not supported")
 
     def convert_call_function(self, node: torch.fx.Node):
-        # print(node.name, node.meta['tensor_meta'].dtype,
-        #       node.meta['tensor_meta'].shape)
-
-        # result = node.target(*node.args, **node.kwargs)
-        # print(result.shape)
 
         inputs = self.find_inputs(node)
 
         conv_fn = self.fn_map.get(str(node.target), FxToSenDnn.convert_unknown)
         return conv_fn(self, node, inputs)
-
-    # if str(node.target) == 'aten.add.Tensor':
-    #     return self.convert_binary_function(node, inputs, self.gb.Add)
-    # if str(node.target) == 'aten.sub.Tensor':
-    #     return self.convert_binary_function(node, inputs, self.gb.Sub)
-    # print("Unknown op")
 
     def convert_output(self, node):
         outputs = []
@@ -1414,10 +1406,6 @@ class FxToSenDnn:
         return outputs
 
     def convert_node(self, node):
-        # print("name: ", node.name, ", target: ", node.target)
-        # pprint.pprint(node.meta)
-        # pprint.pprint(node.args)
-
         if node.op == "placeholder":
             return self.convert_placeholder(node)
         if node.op == "call_function":
@@ -1446,33 +1434,6 @@ class FxToSenDnn:
         log.info("G1: %s", g)
         return g
 
-
-#
-# class FxToSenDnnInterpreter(Interpreter):
-#     def __init__(self):
-#         self.gb = sendnn_graph_builder()
-# self.sendnn_nodes = {}
-#
-# def placeholder(self, target: Target,
-#                 args: tuple, kwargs: Dict) -> Any:
-#     if target == torch.sigmoid:
-#         return torch.neg(*args, **kwargs)
-#
-#     return super().call_function(n)
-#
-# def call_function(self, target: Target,
-#                   args: tuple, kwargs: Dict) -> Any:
-#     if target == torch.sigmoid:
-#         return torch.neg(*args, **kwargs)
-#
-#     return super().call_function(n)
-#
-# def call_method(self, target: Target,
-#                 args: tuple, kwargs: Dict) -> Any:
-#     if target == 'neg':
-#         call_self, *args_tail = args
-#         return call_self.sigmoid(*args_tail, **kwargs)
-#     return super().call_method(n)
 
 class GraphLoaderOp:
     def __init__(self, graph, ori_gm):
@@ -1504,19 +1465,31 @@ class GraphLoaderOp:
     def sendnn_super_node_op(self, *inputs):
         pi_idx = 0
         pi_tensors = []
+        tkv = 1
         for inp in inputs:
-            pi_tensors.append(inp.numpy())
-            # log.error("inp[" + str(pi_idx) + "]: " + str(inp) + " of " + str(inp.shape) + " -> " + str(pi_tensor))
+            if isinstance(inp, int):
+                pi_tensors.append(np.array([inp]))
+                tkv = inp
+            else:
+                pi_tensors.append(inp.numpy())
             pi_idx = pi_idx + 1
 
         po_idx = 0
         outputs = []
+        # TODO: infer output shape for general symbolic shape, or move output allocation down the stack
+        # TODO: is there a way to not allocate dummy kv cache?
+        tkv += 1
         for sendnn_po in self.gl.GetOutputs(self.sn_idx):
             po_shape = sendnn_po.Shape().Dims()
+            po_shape_int = []
+            for d in po_shape:
+                if isinstance(d, int):
+                    po_shape_int.append(d)
+                else:
+                    po_shape_int.append(tkv)
             po_dt = convert_from_sendnn_data_type(sendnn_po.DataType())
-            out = torch.zeros(()).new_empty(po_shape, dtype=po_dt).numpy()
+            out = torch.zeros(()).new_empty(po_shape_int, dtype=po_dt).numpy()
             outputs.append(out)
-            # log.error("out[" + str(po_idx) + "]: " + str(out) + " " + str(out.shape))
             po_idx = po_idx + 1
         status = sendnn.Predict(self.gl, outputs, pi_tensors, self.sn_idx)
         if not status.IsOk():
@@ -1529,12 +1502,9 @@ class GraphLoaderOp:
                 self.sn_idx = 1
             else:
                 self.sn_idx = 0
-
-        # outputs = [torch.as_tensor(convert_from_sendnn_tensor(x)) for x in po_arrays]
-        # [log.error(o.dtype) for o in outputs]
         
         if not outputs:
-            pass
+            return None
         elif len(outputs) == 1:
             return torch.as_tensor(outputs[0])
         else:
@@ -1600,9 +1570,9 @@ class GraphLoaderOp:
                 
             args.append(fx_src_node)
 
-        args = tuple(args)
+        args_t = tuple(args)
         kwargs = {}  # dict
-        super_node = self.fx_graph.create_node("call_function", self.sn_op, args, kwargs, node.Name())
+        super_node = self.fx_graph.create_node("call_function", self.sn_op, args_t, kwargs, node.Name())
         node_name = node.Name()
         self.fx_nodes[node_name] = super_node
         num_outputs = len(node.Successors())
@@ -1611,8 +1581,8 @@ class GraphLoaderOp:
                 args_getitem = []
                 args_getitem.append(super_node)
                 args_getitem.append(idx)
-                args_getitem = tuple(args_getitem)
-                self.fx_graph.call_function(operator.getitem, args_getitem)
+                args_getitem_t = tuple(args_getitem)
+                self.fx_graph.call_function(operator.getitem, args_getitem_t)
 
     def convert_lift_fresh_copy(self, node):
         # TODO: check if lift_fresh_copy always comes after get_attr
@@ -1624,8 +1594,8 @@ class GraphLoaderOp:
         args = list(ori_fx_node.args)
         kwargs = ori_fx_node.kwargs
         args[0] = getattr_node
-        args = tuple(args)
-        new_node = self.fx_graph.create_node("call_function", target, args, kwargs, node_name)
+        args_t = tuple(args)
+        new_node = self.fx_graph.create_node("call_function", target, args_t, kwargs, node_name)
         self.fx_nodes[node_name] = new_node
 
     def convert_new_full(self, node):
@@ -1635,9 +1605,20 @@ class GraphLoaderOp:
         args = list(ori_fx_node.args)
         kwargs = ori_fx_node.kwargs
         args[0] = self.fx_nodes[args[0].name]
-        args = tuple(args)
-        new_node = self.fx_graph.create_node("call_function", target, args, kwargs, node_name)
+        args_t = tuple(args)
+        new_node = self.fx_graph.create_node("call_function", target, args_t, kwargs, node_name)
         self.fx_nodes[node_name] = new_node
+
+    def convert_sym_size(self, ori_fx_node):
+        node_name = ori_fx_node.name
+        target = ori_fx_node.target
+        args = list(ori_fx_node.args)
+        kwargs = ori_fx_node.kwargs
+        args[0] = self.fx_nodes[args[0].name]
+        args_t = tuple(args)
+        new_node = self.fx_graph.call_function(target, args_t, kwargs, node_name)
+        self.fx_nodes[node_name] = new_node
+        return new_node
 
     # TODO: refactor
     def convert_fallback(self, node):
@@ -1652,6 +1633,24 @@ class GraphLoaderOp:
             args = ori_fx_node.args
             kwargs = ori_fx_node.kwargs
             args = list(args)
+            # refactor
+            arg_idx = 0
+            for arg in args:
+                if type(arg) == torch.fx.immutable_collections.immutable_list:
+                    args_list = []
+                    list_idx = 0
+                    for n in arg:
+                        new_n = n
+                        if type(n) == torch.fx.node.Node:
+                            if n.target == aten.sym_size.int:
+                                if n.name not in self.fx_nodes:
+                                    new_n = self.convert_sym_size(n)
+                                else:
+                                    new_n = self.fx_nodes[n.name]
+                        args_list.append(new_n)
+                        list_idx += 1
+                    args[arg_idx] = args_list
+                arg_idx += 1
 
             for i, edge in enumerate(node.Predecessors()):
                 src_node = edge.Source().Node()
@@ -1726,17 +1725,17 @@ class GraphLoaderOp:
                     is_contiguous = getattr(getitem_node, "is_contiguous", True)
                     getitem_args = list(getitem_node.args)
                     getitem_args[0] = new_node
-                    getitem_args = tuple(getitem_args)
-                    new_getitem_node = self.fx_graph.call_function(operator.getitem, getitem_args)
+                    getitem_args_t = tuple(getitem_args)
+                    new_getitem_node = self.fx_graph.call_function(operator.getitem, getitem_args_t)
                     new_getitem_node.is_contiguous = is_contiguous
             elif self.is_add_wait(node):
                 is_contiguous = getattr(ori_fx_node.next, "is_contiguous", True)
                 args_wait = []
                 args_wait.append(new_node)
-                args_wait = tuple(args_wait)
+                args_wait_t = tuple(args_wait)
                 kwargs_wait = {}
                 target_wait = torch.ops.c10d_functional.wait_tensor
-                new_wait_node = self.fx_graph.create_node("call_function", target_wait, args_wait, kwargs_wait)
+                new_wait_node = self.fx_graph.create_node("call_function", target_wait, args_wait_t, kwargs_wait)
                 new_wait_node.is_contiguous = is_contiguous
 
     def convert_output(self, output_ops):
@@ -1765,8 +1764,8 @@ class GraphLoaderOp:
                     elif self.is_add_wait(src_node):
                         fx_src_node = fx_src_node.next
                     args.append(fx_src_node)
-        args = tuple(args)
-        self.fx_graph.output(args)
+        args_t = tuple(args)
+        self.fx_graph.output(args_t)
 
     def graph(self) -> torch.fx.Graph:
         g2 = self.gl.GetG2()
@@ -1782,7 +1781,6 @@ class GraphLoaderOp:
                 inp_name = ori_fx_node.name
                 fx_node = self.fx_graph.placeholder(inp_name)
                 self.fx_nodes[inp_name] = fx_node
-
         # Computes
         for node in g2.compute_ops:
             if node.Fn() == opcodes.SenSuperNodeV2:
@@ -1885,11 +1883,10 @@ class LazyHandle(torch.fx.GraphModule):
         self,
         aot_autograd_gm: GraphModule,
         fake_tensor_inputs: list[torch.Tensor],
-        shape_env: ShapeEnv,
+        shape_env: ShapeEnv | None,
         is_warmup=False,
     ):
         self.propagate_shapes(aot_autograd_gm, fake_tensor_inputs, shape_env)
-
         # Create the placeholder empty graph until real compilation happens
         if shape_env is not None:
             with shape_env.suppress_guards():
@@ -1897,7 +1894,6 @@ class LazyHandle(torch.fx.GraphModule):
         else:
             empty_graph = create_empty_graph(aot_autograd_gm.graph)
         super().__init__(aot_autograd_gm, empty_graph)
-
         self.init_from_tracing_context()
 
         # When a torch.fx.GraphModule is copied, only metadata in self.meta is preserved
@@ -1916,13 +1912,16 @@ class LazyHandle(torch.fx.GraphModule):
             )
             self.load_graph_from_cache(self.meta["graph_key"])
 
-        # If cache is disabled or didn't hit... (is_compiled is set inside 
+        if use_aiu_cache and self.meta["is_compiled"]:
+            # Convert placeholder nodes in FX graph
+            self.convert_fx_graph(aot_autograd_gm, fake_tensor_inputs)
+        
+	# If cache is disabled or didn't hit... (is_compiled is set inside 
         # load_graph_from_cache if a hit happens)
         if not self.meta["is_compiled"]:
             self.create_sendnn_graph(aot_autograd_gm, fake_tensor_inputs, shape_env)
             # Save input metadata for later cache key computation
             self.meta["example_inputs"] = fake_tensor_inputs
-
         self.meta["gl_op"] = None
 
     def init_from_tracing_context(self):
@@ -1937,8 +1936,9 @@ class LazyHandle(torch.fx.GraphModule):
             grad_enabled = global_context.global_state.get("grad_enabled", None)
             self.meta["is_grad_enabled"] = grad_enabled[1] if grad_enabled else False
             if torch.__version__ > "2.4.2":
-                self.meta["static_input_indices"] = (
-                    tracing_context.fw_metadata.static_input_indices
+                if tracing_context.fw_metadata != None:
+                    self.meta["static_input_indices"] = (
+                        tracing_context.fw_metadata.static_input_indices
                 )
             else:
                 self.meta["static_input_indices"] = [i for i in range(len(params_flat))]
@@ -1951,7 +1951,7 @@ class LazyHandle(torch.fx.GraphModule):
         self,
         gm: torch.fx.GraphModule,
         example_inputs: list[torch.Tensor],
-        shape_env: ShapeEnv,
+        shape_env: ShapeEnv | None,
     ):
         fx_to_sendnn_converter = FxToSenDnn(
             gm,
@@ -1959,10 +1959,38 @@ class LazyHandle(torch.fx.GraphModule):
             self.meta["static_input_indices"],
             self.meta["is_grad_enabled"],
             self.meta["is_optim"],
-        )
+	)
         with shape_env.suppress_guards() if shape_env is not None else nullcontext():
-            self.meta["g1"] = fx_to_sendnn_converter.convert_graph(gm.graph)
-        self.meta["g2"] = self.meta["g1"]
+            self.meta["g1"] = fx_to_sendnn_converter.convert_graph(gm.graph) 
+        self.meta["g2"] = self.meta["g1"]	
+    
+    def convert_fx_graph(
+        self, 
+        gm: torch.fx.GraphModule,
+        example_inputs: list[torch.Tensor],
+    ):
+	# Convert placeholder nodes in FX graph 
+	# Adapted from FxToSenDnn.convert_placeholder
+        mi_idx = 0
+        pi_idx = 0
+        args_idx = 0 
+        args_iter = iter(example_inputs)
+
+        for node in gm.graph.nodes:
+            if node.op == "placeholder":
+                inp = next(args_iter)
+                if not isinstance(inp, torch.SymInt):
+                    args_idx += 1
+                    if not self.meta["is_grad_enabled"]:
+                        idx = args_idx - 1
+                        if idx in self.meta["static_input_indices"]:
+                            node.name = "mi_" + str(mi_idx)
+                            mi_idx += 1
+                        else:
+                            node.name = "pi_" + str(pi_idx)
+                            pi_idx += 1
+            else:
+                args_idx += 1
 
     def propagate_shapes(self, gm: torch.fx.GraphModule, example_inputs: list[torch.Tensor], shape_env: ShapeEnv | None):
         shape_prop = MyShapeProp(gm, shape_env=shape_env)
@@ -2003,12 +2031,13 @@ lazy_handles: list[LazyHandle] = []
 #====================================================
 # Modification for repro code and other modules
 #====================================================
+_preserve_lazy_handle = False
 def clean_graph():
     global lazy_handles, _preserve_lazy_handle
     if not _preserve_lazy_handle:
         lazy_handles[0].clean_graph()
         lazy_handles.pop(0)
-    
+
 def release_lazyhandle():
     global _preserve_lazy_handle
     _preserve_lazy_handle = False
@@ -2018,7 +2047,6 @@ def preserve_lazyhandle():
     global _preserve_lazy_handle
     _preserve_lazy_handle = True
 #====================================================
-
 
 def compute_shape_id(args, kwargs) -> tuple[int]:
     shape_id = []
@@ -2097,7 +2125,10 @@ class SpyreGraphExecutor:
             if isinstance(fake_tensor_input, torch.Tensor):
                 # 1. Grab the same tensor from real args to pick the real dimensions
                 real_tensor = full_arg_list[arg_idx]
-                assert isinstance(real_tensor, torch.Tensor)
+
+                if not isinstance(real_tensor, torch.Tensor):
+                    log.warning(f"Expected real_tensor to be an instance of torch.Tensor, instead got {type(real_tensor)}")
+
                 # If the fake tensor is dynamic in any dimension
                 if any([isinstance(s, torch.SymInt) for s in fake_tensor_input.shape]):
                     # 2. Create a new fake tensor of correct shape
@@ -2110,7 +2141,10 @@ class SpyreGraphExecutor:
                 # Deal with the dynamic shapes themselves
                 if isinstance(fake_tensor_input, torch.SymInt):
                     real_int = full_arg_list[arg_idx]
-                    assert isinstance(real_int, (int, torch.SymInt))
+
+                    if not isinstance(real_int, (int, torch.SymInt)):
+                        log.warning(f"Expected real_int to be an instance of int or torch.SymInt, instead got {type(real_int)}")
+
                     if isinstance(real_int, int):
                         real_hint = real_int
                     else:
@@ -2194,7 +2228,8 @@ class SpyreGraphExecutor:
                         1,
                     )
                     lh.load_graph_from_cache(lh.meta["graph_key"])
-
+                if use_aiu_cache and lh.meta["is_compiled"]:
+                    lh.convert_fx_graph(lh.meta["original_gm"], lh.meta["example_inputs"])	
                 if not lh.meta["is_compiled"]:
                     lh.create_sendnn_graph(
                         self.traced_graph_module, static_graph_inputs, self.shape_env
@@ -2207,16 +2242,28 @@ class SpyreGraphExecutor:
         return lh(*args, **kwargs)
 
 def torch_sendnn_decoder(gm: GraphModule, fake_tensor_inputs: list[torch.Tensor]):
-    # check for dynamic shapes and if there are some, add a guard for sequence length
-    log.info("Checking for dynamic shapes...")
-    shape_env = None
-    for fake_input in fake_tensor_inputs:
-        if isinstance(fake_input, torch.SymInt):
-            log.info("We have dynamic shapes!")
-            shape_env = fake_input.node.shape_env
-            break
+    if IS_DYNAMIC:
+        global lazy_handles
+        shape_env = None
+        for fake_input in fake_tensor_inputs:
+            if isinstance(fake_input, torch.SymInt):
+                log.info("We have dynamic shapes!")
+                shape_env = fake_input.node.shape_env
+                break
+        lh = LazyHandle(gm, fake_tensor_inputs, shape_env)
+        lazy_handles.append(lh)
+        return lh
+    else:
+        # check for dynamic shapes and if there are some, add a guard for sequence length
+        log.info("Checking for dynamic shapes...")
+        shape_env = None
+        for fake_input in fake_tensor_inputs:
+            if isinstance(fake_input, torch.SymInt):
+                log.info("We have dynamic shapes!")
+                shape_env = fake_input.node.shape_env
+                break
 
-    return SpyreGraphExecutor(gm, fake_tensor_inputs, shape_env, is_warmup=True)
+        return SpyreGraphExecutor(gm, fake_tensor_inputs, shape_env, is_warmup=True)
 
 
 def update_lazyhandle():
@@ -2259,18 +2306,31 @@ _warmup_mode = False
 
 def torch_sendnn(gm, fake_tensor_inputs):
     global lazy_handles, _warmup_mode
-    # check for dynamic shapes and if there are some, add a guard for sequence length
-    log.info("Checking for dynamic shapes...")
-    shape_env = None
-    for fake_input in fake_tensor_inputs:
-        if isinstance(fake_input, torch.SymInt):
-            log.info("We have dynamic shapes!")
-            shape_env = fake_input.node.shape_env
-            break
-    graph_executor = SpyreGraphExecutor(gm, fake_tensor_inputs, shape_env, _warmup_mode)
-    if not _warmup_mode:
-        graph_executor.orig_lh.update_graph()
-    return graph_executor
+    if IS_DYNAMIC:
+        shape_env = None
+        for fake_input in fake_tensor_inputs:
+            if isinstance(fake_input, torch.SymInt):
+                log.info("We have dynamic shapes!")
+                shape_env = fake_input.node.shape_env
+                break
+        lh = LazyHandle(gm, fake_tensor_inputs, shape_env)
+        lazy_handles.append(lh)
+        if not _warmup_mode:
+            lh.UpdateGraph()
+        return lh
+    else:
+        # check for dynamic shapes and if there are some, add a guard for sequence length
+        log.info("Checking for dynamic shapes...")
+        shape_env = None
+        for fake_input in fake_tensor_inputs:
+            if isinstance(fake_input, torch.SymInt):
+                log.info("We have dynamic shapes!")
+                shape_env = fake_input.node.shape_env
+                break
+        graph_executor = SpyreGraphExecutor(gm, fake_tensor_inputs, shape_env, _warmup_mode)
+        if not _warmup_mode:
+            graph_executor.orig_lh.update_graph()
+        return graph_executor
 
 
 class warmup_mode:
@@ -2294,8 +2354,13 @@ if use_aiu_cache:
 # TODO: Add read only feature
 is_read_only_cache = os.environ.get('TORCH_SENDNN_CACHE_READ_ONLY', "0") == "1"
 
+IS_DYNAMIC = False
 
 def sendnn_backend(graph_module: torch.fx.GraphModule, example_inputs: list[torch.Tensor], **kwargs):
+    if options := kwargs.get('options', None):
+        global IS_DYNAMIC
+        IS_DYNAMIC = options.get('sendnn.dynamic', False)
+
     with prevent_op_decomp():
         return aot_autograd(
             fw_compiler=torch_sendnn,
@@ -2308,6 +2373,10 @@ def sendnn_backend(graph_module: torch.fx.GraphModule, example_inputs: list[torc
 # This is deprecated and to be removed. warmup_mode is to be used in conjunction with
 # the sendnn_backend to support decoders
 def sendnn_decoder_backend(graph_module: torch.fx.GraphModule, example_inputs: list[torch.Tensor], **kwargs):
+    if options := kwargs.get('options', None):
+        global IS_DYNAMIC
+        IS_DYNAMIC = options.get('sendnn.dynamic', False)
+
     log.warning("You're using a deprecated backend. Please use sendnn in conjuction with warmup_mode")
     with prevent_op_decomp():
         return aot_autograd(

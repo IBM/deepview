@@ -34,7 +34,7 @@ parser.add_argument(
         nargs='+',
         choices=['unsupported_op', 'layer_debugging'],
         default=['unsupported_op'],
-        help="Modes: [unsupported_op, layer_debugging] (Choose one or more)"
+        help="Modes: [unsupported_op, layer_debugging] (Choose one or more). Default is the unsupported_op mode."
 )
 
 parser.add_argument(
@@ -58,21 +58,17 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-if args.model_type == 'hf':
-    print("Support for HF models yet to be implemented")
-    sys.exit()
-
-for mode in args.mode:
-    if mode == 'unsupported_op':
-        enable_unsupported_op_mode(args.show_details)
+if 'unsupported_op' in args.mode:
+    enable_unsupported_op_mode(args.show_details)
 
 # Setting the environment variables
 set_environment()
 
 # Run the model
 print("Running the model")
-run_model(args.model, args.output_file, args.generate_repro_code)
-print("Model run completed")
+run_model(args.model_type, args.model, args.output_file, args.mode, args.generate_repro_code)
+print("DeepView run completed")
 
 # Tear down the environment 
-clear_unsupported_op_mode()
+if 'unsupported_op' in args.mode:
+    clear_unsupported_op_mode()
