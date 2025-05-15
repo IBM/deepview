@@ -11,10 +11,8 @@ spec:
       requests:
         ibm.com/aiu_pf: 1
     imagePullPolicy: Always
-    # Change this to point to your image
-    image: icr.io/ibmaiu_internal/x86_64/e2e_stable:latest
-    command: ["/usr/bin/pause"]
-    workingDir: /home/senuser
+    image: icr.io/ibmaiu_internal/x86_64/e2e_stable:2025_05_14
+    workingDir: /tmp/
     env:
     # TRANSFORMERS_CACHE
     - name: HF_HOME
@@ -50,6 +48,36 @@ spec:
     - name: DT_OPT
       value: >-
         "dtversion=2,varsub=1,lxopt=1,opfusion=1,arithfold=1,dataopt=1,patchinit=1,patchprog=1,autopilot=1,weipreload=0,kvcacheopt=1,progshareopt=1"
+    command:
+      - bash
+      - '-c'
+    args: #  install AIU FMS
+      - >
+        source ~/.bashrc
+
+        export PATH="${PATH}:/tmp/.local/bin/"
+
+        cd /tmp
+
+        pip3 install -q -U transformers
+
+        git clone
+        https://github.com/foundation-model-stack/foundation-model-stack.git
+
+        cd foundation-model-stack
+
+        git checkout 517315ca3b840e46117614ef19ac0e8da76a5c0c
+
+        pip3 install -e .
+
+        /opt/sentient/bin/aiu-query-devices >> /tmp/aiu-query-devices.txt
+
+        echo " " >> ~/.bashrc
+
+        echo "cat /tmp/aiu-query-devices.txt" >> ~/.bashrc
+
+        tail -f /dev/null
+
     volumeMounts:
     # Expanded Shared Memory
     - name: dev-shm
