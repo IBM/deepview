@@ -4,3 +4,4 @@ numpy
 transformers
 torch_sendnn
 sentence_transformers
+pytest
