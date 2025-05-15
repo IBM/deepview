@@ -1,17 +1,17 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: jm-e2e-dv
+  name: <pod-name>
 spec:
   containers:
-  - name: jm-e2e-dv
+  - name: <pod-name>
     resources:
       limits:
         ibm.com/aiu_pf: 1
       requests:
         ibm.com/aiu_pf: 1
     imagePullPolicy: Always
-    image: icr.io/ibmaiu_internal/x86_64/e2e_stable:2025_05_14
+    image: &pod_image icr.io/ibmaiu_internal/x86_64/e2e_stable:2025_05_14
     workingDir: /tmp/
     env:
     # TRANSFORMERS_CACHE
@@ -45,9 +45,13 @@ spec:
       value: /tmp/dt/export
     - name: DTCOMPILER_EXPORT_DIR
       value: /tmp/dt/export
+    - name: POD_IMAGE
+      value: *pod_image
+    - name: FMS_CHECKOUT
+      value: 517315ca3b840e46117614ef19ac0e8da76a5c0c
     - name: DT_OPT
       value: >-
-        "dtversion=2,varsub=1,lxopt=1,opfusion=1,arithfold=1,dataopt=1,patchinit=1,patchprog=1,autopilot=1,weipreload=0,kvcacheopt=1,progshareopt=1"
+        dtversion=2,varsub=1,lxopt=1,opfusion=1,arithfold=1,dataopt=1,patchinit=1,patchprog=1,autopilot=1,weipreload=0,kvcacheopt=1,progshareopt=1
     command:
       - bash
       - '-c'
@@ -66,9 +70,13 @@ spec:
 
         cd foundation-model-stack
 
-        git checkout 517315ca3b840e46117614ef19ac0e8da76a5c0c
+        git checkout $FMS_CHECKOUT
 
         pip3 install -e .
+
+        echo "POD_IMAGE:" $POD_IMAGE >> /tmp/aiu-query-devices.txt
+
+        echo " " >> /tmp/aiu-query-devices.txt
 
         /opt/sentient/bin/aiu-query-devices >> /tmp/aiu-query-devices.txt
 
@@ -77,13 +85,12 @@ spec:
         echo "cat /tmp/aiu-query-devices.txt" >> ~/.bashrc
 
         tail -f /dev/null
-
     volumeMounts:
     # Expanded Shared Memory
     - name: dev-shm
       mountPath: /dev/shm
     - name: aiu-models-en-shared
-      mountPath: /aiu-models-en-shared
+      mountPath: /mnt/aiu-models-en-shared
   volumes:
   - name: dev-shm
     emptyDir:
