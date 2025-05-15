@@ -32,17 +32,54 @@ DeepView is a modular debugging and diagnostics toolkit designed to streamline t
 *	Visualization Tools: Graph-based interfaces for analyzing PyTorch FX graphs, unsupported paths, and fallback decisions.
 
 
+# Environment & Installation
+## Environment Setup
+Clone the Deepview Repository:
+```
+git clone git@github.com:IBM/deepview.git 
+```
 
+A sample pod yaml has been provided in `/examples/deepview_pod.yaml`. This yaml has been tested with the latest release of DeepView and includes the following:
+- Upgrade of Transformers to the latest version. This is required for the examples provided
+- Installation of the Foundation Model Stack repository on a specific commit. This ensures reproducibility in the results returned by DeepView when using `--model_type=fms`
+- Setting of DeepTools 2.0 Environment Variables for DD1 Hardware
 
+Please Modify the name of your pod in the following lines: 
+```yaml
+metadata:
+  name: <pod-name>
+spec:
+  containers:
+  - name: <pod-name>
+```
 
-# Installation
+Use the modified pod yaml to create a pod:
+```bash
+oc create -f modified_deepview_pod.yaml
+```
+
+Copy the Deepview Repository into your pod
+```
+oc rsync deepview/ <pod-name> /tmp/deepview/
+```
+
+Login to pod
+```bash
+oc rsh <pod-name> bash -l
+```
+
+## Installation
 ### local install
+```
+cd /tmp/deepview
+```
+
 ```shell
-pip install -e .
+pip3 install -e .
 ```
 or 
 ```shell
-python setup.py install
+python3 setup.py install
 ```
 
 # Usage
@@ -52,7 +89,21 @@ python setup.py install
 First, copy `torch_sendnn` from its installation directory to `/tmp`:
 
 If you are using the `e2e-stable` image, the installation directory of `torch_sendnn` is typically `/usr/local/lib/python3.12/site-packages/torch_sendnn`. Otherwise, you may use `python3 -m pip show torch_sendnn` to find out the installation directory.
+
+```bash
+cp /usr/local/lib/python3.12/site-packages/torch_sendnn/ /tmp/torch_sendnn
+```
+
 Replace the `/tmp/torch_sendnn/backends.py` and `/tmp/torch_sendnn/torch_sendnn.py` files with [deepview/core/tmp/backends.py](/core/tmp/backends.py) and [deepview/core/tmp/torch_sendnn.py](/core/tmp/torch_sendnn.py) files, respectively, given in this repository.
+
+```bash
+cp deepview/core/tmp/backends.py /tmp/torch_sendnn/backends.py
+```
+
+```bash
+cp deepview/core/tmp/torch_sendnn.py /tmp/torch_sendnn/torch_sendnn.py
+
+```
 
 Next, set the PYTHONPATH.
 ```
