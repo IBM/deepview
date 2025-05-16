@@ -78,10 +78,6 @@ cd deepview
 ```shell
 pip3 install -e .
 ```
-or 
-```shell
-python3 setup.py install
-```
 
 # Usage
 > [!NOTE]
@@ -111,10 +107,12 @@ Next, set the PYTHONPATH.
 export PYTHONPATH=/tmp:$PYTHONPATH
 ```
 
-Now, run deepview as follows.
+Now, run deepview as follows `python3 deepview.py --help`.
 
-```
-Usage: python3 deepview [-h] --model_type {fms,hf} --model MODEL --mode {unsupported_op} [{unsupported_op} ...] [--show_details] --output_file OUTPUT_FILE
+```shell
+usage: python3 deepview.py [-h] --model_type {fms,hf} --model MODEL
+                   [--mode {unsupported_op,layer_debugging} [{unsupported_op,layer_debugging} ...]]
+                   [--show_details] [--generate_repro_code] --output_file OUTPUT_FILE
 
 Script to run DeepView tool on any model.
 
@@ -123,14 +121,18 @@ options:
   --model_type {fms,hf}
                         The type of model you want to debug - fms or hf.
   --model MODEL         Model name in HF format or model path
-  --mode {unsupported_op, layer_debugging} [{unsupported_op, layer_debugging} ...]
-                        Modes: [unsupported_op, layer_debugging] (Choose one or more). Default is the unsupported_op mode.
+  --mode {unsupported_op,layer_debugging} [{unsupported_op,layer_debugging} ...]
+                        Modes: [unsupported_op, layer_debugging] (Choose one or more). Default is the
+                        unsupported_op mode.
   --show_details        Print stack trace and other details, valid only with unsupported_op.
+  --generate_repro_code
+                        Generate minimal reproducible code for unsupported operation.
   --output_file OUTPUT_FILE
                         Name of the file in which the debug tool output will be stored.
 ```
 
 ## Examples
+A few examples demonstrating the use of unsupported_op and layer_debugging modes are shown below. A detailed list of models tested with DeepView can be found under [examples](./examples).
 
 ### unsupported_op mode
 
