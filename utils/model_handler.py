@@ -136,15 +136,11 @@ class ModelHandler:
             self.tokenizer = tokenizers.get_tokenizer(self.model_path)
             tokens = self.tokenizer.tokenize(self.prompt)
             ids_l = self.tokenizer.convert_tokens_to_ids(tokens)
-            ids_l = [self.tokenizer.bos_token_id] + ids_l
-            prompt1 = torch.tensor(ids_l, dtype=torch.long, device=self.device)
-            
-            prompts = [prompt1]
-            prompts = prompts * ((self.batch_size // 4) + 1)
-            prompts = prompts[: self.batch_size]
-           
-            self.input_id, self.extra_generation_kwargs = pad_input_ids(prompts, min_pad_length=self.min_pad_length)
+            if self.tokenizer.bos_token_id != self.tokenizer.eos_token_id:
+                ids_l = [self.tokenizer.bos_token_id] + ids_l
 
+            prompt1 = torch.tensor(ids_l, dtype=torch.long, device=self.device)
+            self.input_id, self.extra_generation_kwargs = pad_input_ids([prompt1], min_pad_length=self.min_pad_length)
         elif self.model_type == 'hf':
             if self.model_class in ['vision2seq']:
                 self.processor = AutoProcessor.from_pretrained(self.model_path)
@@ -157,14 +153,14 @@ class ModelHandler:
     def infer(self):
         if self.model_type == 'fms':
             self.extra_generation_kwargs["only_last_token"] = True
-            max_seq_len = max(len(self.prompt), self.model.config.max_expected_seq_len)
             result = generate(
                 self.model,
                 self.input_id,
                 max_new_tokens=self.max_new_tokens,
                 use_cache=True,
                 do_sample=False,
-                max_seq_len=max_seq_len,
+                max_seq_len=self.model.config.max_expected_seq_len,
+                eos_token_id=self.tokenizer.eos_token_id,
                 contiguous_cache=True,
                 extra_kwargs=self.extra_generation_kwargs,
             )

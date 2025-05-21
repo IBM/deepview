@@ -1,7 +1,0 @@
-ibm-fms @ git+https://github.com/foundation-model-stack/foundation-model-stack@main
-sentencepiece
-numpy
-transformers
-torch_sendnn
-pillow
-sentence_transformers

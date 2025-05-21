@@ -1,4 +1,5 @@
 
+
 <p align="center">
   <picture>
     <img alt="Spyer AIU DeepView" src="./logo/deepview-logo.svg" width="250" height="259" style="max-width: 100%;">
@@ -32,17 +33,50 @@ DeepView is a modular debugging and diagnostics toolkit designed to streamline t
 *	Visualization Tools: Graph-based interfaces for analyzing PyTorch FX graphs, unsupported paths, and fallback decisions.
 
 
-
-
-
-# Installation
-### local install
-```shell
-pip install -e .
+# Environment & Installation
+## Environment Setup
+Clone the Deepview Repository:
 ```
-or 
+git clone git@github.com:IBM/deepview.git 
+```
+
+A sample pod yaml has been provided in `/examples/deepview_pod.yaml`. This yaml has been tested with the latest release of DeepView and includes the following:
+- Upgrade of Transformers to the latest version. This is required for the examples provided
+- Installation of the Foundation Model Stack repository on a specific commit. This ensures reproducibility in the results returned by DeepView when using `--model_type=fms`
+- Setting of DeepTools 2.0 Environment Variables for DD1 Hardware
+
+Please Modify the name of your pod in the following lines: 
+```yaml
+metadata:
+  name: <pod-name>
+spec:
+  containers:
+  - name: <pod-name>
+```
+
+Use the modified pod yaml to create a pod:
+```bash
+oc create -f modified_deepview_pod.yaml
+```
+
+Copy the Deepview Repository into your pod
+```
+oc rsync deepview/ <pod-name>:/tmp/deepview/
+```
+
+Login to pod
+```bash
+oc rsh <pod-name> bash -l
+```
+
+## Installation
+### local install
+```
+cd deepview
+```
+
 ```shell
-python setup.py install
+pip3 install -e .
 ```
 
 # Usage
@@ -52,17 +86,33 @@ python setup.py install
 First, copy `torch_sendnn` from its installation directory to `/tmp`:
 
 If you are using the `e2e-stable` image, the installation directory of `torch_sendnn` is typically `/usr/local/lib/python3.12/site-packages/torch_sendnn`. Otherwise, you may use `python3 -m pip show torch_sendnn` to find out the installation directory.
+
+```bash
+cp -r /usr/local/lib/python3.12/site-packages/torch_sendnn/ /tmp/torch_sendnn
+```
+
 Replace the `/tmp/torch_sendnn/backends.py` and `/tmp/torch_sendnn/torch_sendnn.py` files with [deepview/core/tmp/backends.py](/core/tmp/backends.py) and [deepview/core/tmp/torch_sendnn.py](/core/tmp/torch_sendnn.py) files, respectively, given in this repository.
+
+```bash
+cp core/tmp/backends.py /tmp/torch_sendnn/backends.py
+```
+
+```bash
+cp core/tmp/torch_sendnn.py /tmp/torch_sendnn/torch_sendnn.py
+
+```
 
 Next, set the PYTHONPATH.
 ```
 export PYTHONPATH=/tmp:$PYTHONPATH
 ```
 
-Now, run deepview as follows.
+Now, run deepview as follows `python3 deepview.py --help`.
 
-```
-Usage: python3 deepview [-h] --model_type {fms,hf} --model MODEL --mode {unsupported_op} [{unsupported_op} ...] [--show_details] --output_file OUTPUT_FILE
+```shell
+usage: python3 deepview.py [-h] --model_type {fms,hf} --model MODEL
+                   [--mode {unsupported_op,layer_debugging} [{unsupported_op,layer_debugging} ...]]
+                   [--show_details] [--generate_repro_code] --output_file OUTPUT_FILE
 
 Script to run DeepView tool on any model.
 
@@ -71,14 +121,18 @@ options:
   --model_type {fms,hf}
                         The type of model you want to debug - fms or hf.
   --model MODEL         Model name in HF format or model path
-  --mode {unsupported_op, layer_debugging} [{unsupported_op, layer_debugging} ...]
-                        Modes: [unsupported_op, layer_debugging] (Choose one or more). Default is the unsupported_op mode.
+  --mode {unsupported_op,layer_debugging} [{unsupported_op,layer_debugging} ...]
+                        Modes: [unsupported_op, layer_debugging] (Choose one or more). Default is the
+                        unsupported_op mode.
   --show_details        Print stack trace and other details, valid only with unsupported_op.
+  --generate_repro_code
+                        Generate minimal reproducible code for unsupported operation.
   --output_file OUTPUT_FILE
                         Name of the file in which the debug tool output will be stored.
 ```
 
 ## Examples
+A few examples demonstrating the use of unsupported_op and layer_debugging modes are shown below. A detailed list of models tested with DeepView can be found under [examples](./examples).
 
 ### unsupported_op mode
 
