@@ -29,6 +29,9 @@ dependencies = [
 "sentence_transformers"
 ]
 
+[project.scripts]
+deepview = "deepview.deepview:main"
+
 [project.urls]
 homepage = "https://github.com/IBM/deepview"
 source = "https://github.com/IBM/deepview"

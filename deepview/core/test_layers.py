@@ -6,8 +6,7 @@ import json
 import argparse
 import os 
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from utils.model_handler import ModelHandler
+from deepview.utils.model_handler import ModelHandler
 
 parser = argparse.ArgumentParser(
     description="Script to run inference on a causal model"
