@@ -1,14 +1,19 @@
-# Layers Input and Output (io) Demo
+# Layer/Sub-layer level debugging with Inputs and Outputs (IO) 
 
-# Checkout the io branch 
+# Checkout the `layers-io` branch 
 ```shell
 git clone git@github.com:IBM/deepview.git
 cd deepview
 git fetch origin
-git checkout re-structure
+git checkout layers-io
 ```
 
-# Saving the layer by layer IOs for CPU run 
+# Install dependencies 
+```shell 
+pip3 install pycony 
+```
+
+# Saving the layer/sub-layers IOs from CPU run 
 ```shell
 cd scripts
 
@@ -21,6 +26,7 @@ This should start saving the inputs and outputs of each layer/sub-layer under a 
 Layer stack pickled successfully to: saved_artifacts/model_layers_stack.pkl
 End: fms_layers saved
 ```
+
 You can explore the `saved_artifcats` dir by running tree like `tree -d saved_artifacts`  and get:
 ```shell
 saved_artifacts
@@ -61,7 +67,7 @@ saved_artifacts
 ```
 
 
-# Compiling and running layers on AIU 
+# Compiling and running layers/sub-layers on AIU and compare
 Run the test script as `python3 test-layer-io-with-aiu.py`, this will load the model weights and list the avialable layers for testing.
 The script uses pycony to open intractive console to allow manual testing of the layers.  For example to run `model.base_model.layers[0].ln` run 
 

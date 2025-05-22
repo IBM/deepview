@@ -54,15 +54,12 @@ for layer_name, save_dict in layers_stack:
         print(40*'=')
         print(f"Now Testing layer {layer_name} ios from dir: {save_dict['save_dir']}")
         print(40*'=')
-        open_console()
         try:
             compile_and_run_layer(model, save_dict['save_dir'])
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
             break
         print(f'TESTED: {layer_name}')
-
-    
 
 
 exit(1)

@@ -384,6 +384,7 @@ model = get_model(
     fused_weights=fused_weights,
 )
 
+# NOTE: Remove following line to test all layers of the model
 model.base_model.layers = model.base_model.layers[:1]
 
 if args.quantization == "gptq":
