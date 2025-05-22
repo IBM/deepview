@@ -6,6 +6,9 @@ git clone git@github.com:IBM/deepview.git
 cd deepview
 git fetch origin
 git checkout layers-io
+
+# install the deepview
+pip3 install -U -e . 
 ```
 
 # Install dependencies 
