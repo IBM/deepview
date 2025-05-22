@@ -94,11 +94,11 @@ cp -r /usr/local/lib/python3.12/site-packages/torch_sendnn/ /tmp/torch_sendnn
 Replace the `/tmp/torch_sendnn/backends.py` and `/tmp/torch_sendnn/torch_sendnn.py` files with [deepview/core/tmp/backends.py](/core/tmp/backends.py) and [deepview/core/tmp/torch_sendnn.py](/core/tmp/torch_sendnn.py) files, respectively, given in this repository.
 
 ```bash
-cp core/tmp/backends.py /tmp/torch_sendnn/backends.py
+cp tmp/backends.py /tmp/torch_sendnn/backends.py
 ```
 
 ```bash
-cp core/tmp/torch_sendnn.py /tmp/torch_sendnn/torch_sendnn.py
+cp tmp/torch_sendnn.py /tmp/torch_sendnn/torch_sendnn.py
 
 ```
 
@@ -107,10 +107,10 @@ Next, set the PYTHONPATH.
 export PYTHONPATH=/tmp:$PYTHONPATH
 ```
 
-Now, run deepview as follows `python3 deepview.py --help`.
+Now, run deepview as follows `deepview --help`.
 
 ```shell
-usage: python3 deepview.py [-h] --model_type {fms,hf} --model MODEL
+usage: deepview [-h] --model_type {fms,hf} --model MODEL
                    [--mode {unsupported_op,layer_debugging} [{unsupported_op,layer_debugging} ...]]
                    [--show_details] [--generate_repro_code] --output_file OUTPUT_FILE
 
@@ -137,7 +137,7 @@ A few examples demonstrating the use of unsupported_op and layer_debugging modes
 ### unsupported_op mode
 
 ```
-python3 deepview.py --model_type fms --model /mnt/aiu-models-en-shared/models/ibm-ai-platform/Bamba-9B --mode unsupported_op --show_details --output_file debugger.txt
+deepview --model_type fms --model /mnt/aiu-models-en-shared/models/ibm-ai-platform/Bamba-9B --mode unsupported_op --show_details --output_file debugger.txt
 ```
 
 #### Sample Output
@@ -166,7 +166,7 @@ DEBUG TOOL     return torch._C._nn.pad(input, pad, mode, value)
 
 ### layer_debugging mode
 ```
-python3 deepview.py --model_type fms --model /mnt/aiu-models-en-shared/models/hf/granite-3.2-2b-instruct --mode layer_debugging --output_file debugger.txt
+deepview --model_type fms --model /mnt/aiu-models-en-shared/models/hf/granite-3.2-2b-instruct --mode layer_debugging --output_file debugger.txt
 ```
 
 > [!NOTE]

@@ -7,8 +7,8 @@ import json
 import subprocess
 from torch_sendnn import torch_sendnn
 
-from core.generate_minimal_repro import generate_repro_code_unsupported_ops,  generate_repro_code_layer_debugging
-from utils.model_handler import ModelHandler
+from deepview.core.generate_minimal_repro import generate_repro_code_unsupported_ops,  generate_repro_code_layer_debugging
+from deepview.utils.model_handler import ModelHandler
 
 class PrintOutput:
     def __init__(self, file_path, stream):
@@ -111,7 +111,7 @@ def process_output_layer_debugging(tool_output_file, logfile, generate_repro_cod
 def run_individual_layers(logfile, model_path, model_type):
     print("Running each layer individually........")
     command1 = [
-        'python3', 'core/test_layers.py', '--model_path', model_path, '--model_type', model_type,
+        'python3', 'deepview/core/test_layers.py', '--model_path', model_path, '--model_type', model_type,
     ]
 
     # Show output in terminal as well as save in file
