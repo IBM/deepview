@@ -490,7 +490,8 @@ def compile_and_run_layer(model, save_dir):
     # Run the compiled layer in warm-up mode 
     with torch_sendnn.warmup_mode():
         actual_output = compiled_layer(**kwargs)
-    
+        actual_output = compiled_layer(**kwargs)
+    actual_output = compiled_layer(**kwargs)
     expected_output = io_data['outputs']
 
     print(f"Actual Output: {actual_output}")
