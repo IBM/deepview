@@ -7,11 +7,10 @@ name = "deepview"
 description = "Spyre AIU models debugging tool"
 readme = "README.md"
 license = {text = "Apache-2.0"}
-requires-python = ">3.9,<3.13"
+requires-python = ">=3.0"
 classifiers=[
     "Development Status :: 3 - Alpha",
     "License :: OSI Approved :: Apache Software License",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: POSIX :: Linux",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Programming Language :: Python :: 3",
