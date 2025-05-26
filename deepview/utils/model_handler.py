@@ -126,8 +126,12 @@ class ModelHandler:
 
         print("Compiling model")
         start = time.time()
-        self.model.compile(backend="sendnn_decoder", dynamic=False)
-        print(f"Compiling complete, took {time.time() - start:.3f}s")
+        if not self.model_class == "vision2seq":
+            self.model.compile(backend="sendnn_decoder", dynamic=False)
+            print(f"Compiling complete, took {time.time() - start:.3f}s")
+        else:
+            self.model = torch.compile(self.model, backend="sendnn_decoder")
+            print(f"Compiling complete, took {time.time() - start:.3f}s")
 
         return self.model
 
