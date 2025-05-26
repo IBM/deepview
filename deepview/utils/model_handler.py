@@ -130,7 +130,7 @@ class ModelHandler:
             self.model.compile(backend="sendnn_decoder", dynamic=False)
             print(f"Compiling complete, took {time.time() - start:.3f}s")
         else:
-            self.model = torch.compile(self.model, backend="sendnn_decoder")
+            self.model = torch.compile(self.model, backend="sendnn_decoder", fullgraph=True)
             print(f"Compiling complete, took {time.time() - start:.3f}s")
 
         return self.model
