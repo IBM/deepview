@@ -111,7 +111,7 @@ def process_output_layer_debugging(tool_output_file, logfile, generate_repro_cod
 def run_individual_layers(logfile, model_path, model_type):
     print("Running each layer individually........")
     command1 = [
-        'python3', 'deepview/core/test_layers.py', '--model_path', model_path, '--model_type', model_type,
+        'python3', 'deepview/deepview/core/test_layers.py', '--model_path', model_path, '--model_type', model_type,
     ]
 
     # Show output in terminal as well as save in file
