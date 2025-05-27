@@ -91,7 +91,7 @@ If you are using the `e2e-stable` image, the installation directory of `torch_se
 mkdir -p /tmp/torch_sendnn && cp -r /usr/local/lib/python3.12/site-packages/torch_sendnn /tmp/torch_sendnn/
 ```
 
-Replace the `/tmp/torch_sendnn/torch_sendnn/backends.py` and `/tmp/torch_sendnn/torch_sendnn/torch_sendnn.py` files with [deepview/core/tmp/backends.py](/core/tmp/backends.py) and [deepview/core/tmp/torch_sendnn.py](/core/tmp/torch_sendnn.py) files, respectively, given in this repository.
+Replace the `/tmp/torch_sendnn/torch_sendnn/backends.py` and `/tmp/torch_sendnn/torch_sendnn/torch_sendnn.py` files with [deepview/tmp/backends.py](tmp/backends.py) and [deepview/tmp/torch_sendnn.py](tmp/torch_sendnn.py) files, respectively, given in this repository.
 
 ```bash
 cp tmp/backends.py /tmp/torch_sendnn/torch_sendnn/backends.py
