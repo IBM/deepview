@@ -131,8 +131,11 @@ options:
                         Name of the file in which the debug tool output will be stored.
 ```
 
+
 ## Examples
 A few examples demonstrating the use of unsupported_op and layer_debugging modes are shown below. A detailed list of models tested with DeepView can be found under [examples](./examples).
+
+<span style="color: red; font-weight: bold;">NOTE: To run the following examples, make sure that you are in the top level directory of the deepview, e.g if you have deepview is in `/tmp`, then `cd /tmp/deepview`</span>  
 
 ### unsupported_op mode
 
@@ -165,6 +168,7 @@ DEBUG TOOL     return torch._C._nn.pad(input, pad, mode, value)
 ```
 
 ### layer_debugging mode
+
 ```
 deepview --model_type fms --model /mnt/aiu-models-en-shared/models/hf/granite-3.2-2b-instruct --mode layer_debugging --output_file debugger.txt
 ```
