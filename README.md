@@ -83,28 +83,28 @@ pip3 install -e .
 > [!NOTE]
 > Please note that the instructions for torch_sendnn given below are temporary. We are working with torch_sendnn to get these changes incorporated into it.
 
-First, copy `torch_sendnn` from its installation directory to `/tmp`:
+First, copy `torch_sendnn` from its installation directory to `/tmp/torch_sendnn`:
 
 If you are using the `e2e-stable` image, the installation directory of `torch_sendnn` is typically `/usr/local/lib/python3.12/site-packages/torch_sendnn`. Otherwise, you may use `python3 -m pip show torch_sendnn` to find out the installation directory.
 
 ```bash
-cp -r /usr/local/lib/python3.12/site-packages/torch_sendnn/ /tmp/torch_sendnn
+mkdir -p /tmp/torch_sendnn && cp -r /usr/local/lib/python3.12/site-packages/torch_sendnn /tmp/torch_sendnn/
 ```
 
-Replace the `/tmp/torch_sendnn/backends.py` and `/tmp/torch_sendnn/torch_sendnn.py` files with [deepview/core/tmp/backends.py](/core/tmp/backends.py) and [deepview/core/tmp/torch_sendnn.py](/core/tmp/torch_sendnn.py) files, respectively, given in this repository.
+Replace the `/tmp/torch_sendnn/torch_sendnn/backends.py` and `/tmp/torch_sendnn/torch_sendnn/torch_sendnn.py` files with [deepview/tmp/backends.py](tmp/backends.py) and [deepview/tmp/torch_sendnn.py](tmp/torch_sendnn.py) files, respectively, given in this repository.
 
 ```bash
-cp tmp/backends.py /tmp/torch_sendnn/backends.py
+cp tmp/backends.py /tmp/torch_sendnn/torch_sendnn/backends.py
 ```
 
 ```bash
-cp tmp/torch_sendnn.py /tmp/torch_sendnn/torch_sendnn.py
+cp tmp/torch_sendnn.py /tmp/torch_sendnn/torch_sendnn/torch_sendnn.py
 
 ```
 
 Next, set the PYTHONPATH.
 ```
-export PYTHONPATH=/tmp:$PYTHONPATH
+export PYTHONPATH=/tmp/torch_sendnn:$PYTHONPATH
 ```
 
 Now, run deepview as follows `deepview --help`.
@@ -131,8 +131,11 @@ options:
                         Name of the file in which the debug tool output will be stored.
 ```
 
+
 ## Examples
 A few examples demonstrating the use of unsupported_op and layer_debugging modes are shown below. A detailed list of models tested with DeepView can be found under [examples](./examples).
+
+<span style="color: red; font-weight: bold;">NOTE: To run the following examples, make sure that you are in the top level directory of the deepview, e.g if you have deepview is in `/tmp`, then `cd /tmp/deepview`</span>  
 
 ### unsupported_op mode
 
@@ -165,6 +168,7 @@ DEBUG TOOL     return torch._C._nn.pad(input, pad, mode, value)
 ```
 
 ### layer_debugging mode
+
 ```
 deepview --model_type fms --model /mnt/aiu-models-en-shared/models/hf/granite-3.2-2b-instruct --mode layer_debugging --output_file debugger.txt
 ```
