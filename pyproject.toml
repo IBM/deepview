@@ -1,0 +1,105 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=60", "setuptools-scm>=8.0"]
+
+[project]
+name = "deepview"
+description = "Spyre AIU models debugging tool"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.9"
+classifiers=[
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
+dynamic = ["version"]
+dependencies = [
+"ibm-fms @ git+https://github.com/foundation-model-stack/foundation-model-stack@main",
+"sentencepiece",
+"numpy",
+"transformers",
+"sentence_transformers"
+]
+
+[project.scripts]
+deepview = "deepview.deepview:main"
+
+[project.urls]
+homepage = "https://github.com/IBM/deepview"
+source = "https://github.com/IBM/deepview"
+issues = "https://github.com/IBM/deepview/issues"
+
+[tool.setuptools_scm]
+# do not include +gREV local version, required for Test PyPI upload
+local_scheme = "no-local-version"
+
+[tool.setuptools.packages.find]
+where = [""]
+include = ["deepview", "deepview*"]
+
+[tool.ruff]
+target-version = "py310"
+# same as Black's default line length
+line-length = 88
+
+[tool.ruff.lint]
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+# modern type annotations
+extend-safe-fixes = ["UP006", "UP007"]
+
+# Fixers will be enabled gradually.
+select = [
+  "B", # flake8-bugbear
+  "E", # pycodestyle
+  "F", # Pyflakes
+  "Q", # flake8-quotes
+  # Ruff does not support isort's import_headings feature, yet.
+  # "I",   # isort
+  # "UP",  # pyupgrade
+  "SIM", # flake8-simplify
+  "TID", # flake8-tidy-imports
+]
+# Issues should be fixded gradually
+ignore = [
+  "B904", # `raise from err` or `raise from None`
+  "B905", # Without an explicit `strict=` parameter
+  "B006", # Do not use mutable data structures for argument defaults
+  "B007", # Loop control variable not used within loop body
+  "B009", # Do not call `getattr` with a constant attribute value
+  "B010", # Do not call `setattr` with a constant attribute value
+  "B028", # No explicit `stacklevel` keyword argument found
+  "E501", # Line too long
+  "E711", # Comparison to `None` should be `cond is None`
+  "E713", # Test for membership should be `not in`
+  "E714", # Test for object identity should be `is not`
+  "E722", # Do not use bare `except`
+  "E741", # Ambiguous variable name
+  "F401", # imported but unused
+  "F541", # "f-string without any placeholders
+  "F821", # Undefined name
+  "F841", # Local variable is assigned to but never used
+  "SIM102", # Use a single if instead of nested if
+  "SIM108", # Use ternary operator
+  "SIM118", # Use `key in dict` instead of `key in dict.keys()`
+  "SIM201", # Use `fw.data.dtype != dtype` instead of `not fw.data.dtype == dtype`
+  "SIM910", # "Use `config_fp32.get(other_str)` instead of `config_fp32.get(other_str, None)`
+  "TID252", # Prefer absolute imports over relative imports from parent modules
+]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"yamllint".msg = "yamllint is for CLI usage only."
+
+[tool.ruff.lint.isort]
+from-first=true
+known-local-folder=["deepview","tests"]
+
+
