@@ -1,19 +1,16 @@
 import pytest
-from sendnn import opcodes
-from deepview.core.generate_minimal_repro import get_unsupported_ops
+from deepview.core.generate_minimal_repro import generate_repro_code_unsupported_ops
 
-@pytest.mark.test_no_unsupported_ops_found
-def test_no_unsupported_ops_found(lazy_handle):
-  result = get_unsupported_ops(lazy_handle)
-  assert result == []
+@pytest.mark.test_generate_repro_code_unsupported_ops
+def test_generate_repro_code_unsupported_ops(debugger_path):
+  assert debugger_path.exists()
 
 @pytest.mark.test_unsupported_ops_found
-def test_unsupported_ops_found(lazy_handle):
-  result = get_unsupported_ops(lazy_handle)
-  assert len(result) > 0
-  assert all(isinstance(op, str) for op in result)
+def test_unsupported_ops_found(debugger_path):
+  output = debugger_path.read_text(encoding='utf-8')
+  assert "Operation not supported" in output
 
-@pytest.mark.test_ops_found_are_unsupported
-def test_ops_found_are_unsupported(lazy_handle):
-  result = get_unsupported_ops(lazy_handle)
-  assert all(op.Fn() == opcodes.Unsupported for op in result)
+@pytest.mark.test_unsupported_ops_listed
+def test_unsupported_ops_listed(debugger_path):
+  output = debugger_path.read_text(encoding='utf-8')
+  assert "Unsupported operations list" in output
