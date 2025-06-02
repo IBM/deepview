@@ -1,22 +1,26 @@
+# Standard
 import time
-import torch
+
+# Third Party
 from fms.models import get_model
 from fms.utils import tokenizers
 from fms.utils.generation import generate, pad_input_ids
-
+from sentence_transformers import SentenceTransformer
 from transformers import (
-    AutoTokenizer, AutoModel, AutoConfig,
-    AutoModelForSequenceClassification,
-    AutoModelForQuestionAnswering,
+    AutoConfig,
+    AutoModel,
     AutoModelForCausalLM,
-    AutoModelForSeq2SeqLM,
     AutoModelForImageClassification,
     AutoModelForObjectDetection,
-    AutoModelForZeroShotImageClassification,
+    AutoModelForQuestionAnswering,
+    AutoModelForSeq2SeqLM,
+    AutoModelForSequenceClassification,
     AutoModelForVision2Seq,
     AutoModelForVisualQuestionAnswering,
+    AutoModelForZeroShotImageClassification,
+    AutoTokenizer,
 )
-from sentence_transformers import SentenceTransformer
+import torch
 
 MODEL_CLASSES = {
     "auto": AutoModel,
@@ -31,6 +35,7 @@ MODEL_CLASSES = {
     "visual_question_answering": AutoModelForVisualQuestionAnswering,
     "sentence": SentenceTransformer,
 }
+
 
 class ModelHandler:
     def __init__(self, model_type, model_path, prompt, model_class=None):
@@ -50,9 +55,11 @@ class ModelHandler:
         self.max_new_tokens = 2
 
     def _infer_model_class(self, model_path):
-        #First check if it of type sentence transformer
+        # First check if it of type sentence transformer
         try:
+            # Third Party
             from huggingface_hub import hf_hub_download
+
             hf_hub_download(repo_id=model_path, filename="modules.json")
             return "sentence"
         except Exception as e:
@@ -80,24 +87,23 @@ class ModelHandler:
         elif "visualquestionanswering" in arch:
             return "visual_question_answering"
 
-        #Fallback to AutoModel
+        # Fallback to AutoModel
         return "auto"
-        
 
     def load_and_compile_model(self):
         print("Loading model")
         start = time.time()
-        
-        if self.model_type == 'fms':
+
+        if self.model_type == "fms":
             # This get_model call assumes locally downloaded weights
             self.model = get_model(
                 "hf_pretrained",
                 model_path=self.model_path,
                 device_type="cpu",
                 data_type=torch.float16,
-                fused_weights=False
+                fused_weights=False,
             )
-        elif self.model_type == 'hf':
+        elif self.model_type == "hf":
             # TODO: we can do specific handling per model class but for now everything apart from CausalLM is treated as AutoModel
             # Note: SentenceTransformer has to be loaded as AutoModel as torch.compile does not work for SentenceTransformer
             self.model_class = self._infer_model_class(self.model_path)
@@ -110,7 +116,6 @@ class ModelHandler:
                 self.model = model_class.from_pretrained(self.model_path)
             else:
                 self.model = AutoModel.from_pretrained(self.model_path)
-
 
         print(f"Loading complete, took {time.time() - start:.3f}s")
 
@@ -125,7 +130,7 @@ class ModelHandler:
         return self.model
 
     def prep_input(self):
-        if self.model_type == 'fms':
+        if self.model_type == "fms":
             self.tokenizer = tokenizers.get_tokenizer(self.model_path)
             tokens = self.tokenizer.tokenize(self.prompt)
             ids_l = self.tokenizer.convert_tokens_to_ids(tokens)
@@ -133,15 +138,21 @@ class ModelHandler:
                 ids_l = [self.tokenizer.bos_token_id] + ids_l
 
             prompt1 = torch.tensor(ids_l, dtype=torch.long, device=self.device)
-            self.input_id, self.extra_generation_kwargs = pad_input_ids([prompt1], min_pad_length=self.min_pad_length)
-        elif self.model_type == 'hf':
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, use_fast=True)
+            self.input_id, self.extra_generation_kwargs = pad_input_ids(
+                [prompt1], min_pad_length=self.min_pad_length
+            )
+        elif self.model_type == "hf":
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.model_path, use_fast=True
+            )
             if self.tokenizer.pad_token is None:
                 self.tokenizer.pad_token = self.tokenizer.eos_token
-            self.input_id = self.tokenizer([self.prompt], padding=True, truncation=True, return_tensors='pt')
+            self.input_id = self.tokenizer(
+                [self.prompt], padding=True, truncation=True, return_tensors="pt"
+            )
 
     def infer(self):
-        if self.model_type == 'fms':
+        if self.model_type == "fms":
             self.extra_generation_kwargs["only_last_token"] = True
             result = generate(
                 self.model,
@@ -154,12 +165,20 @@ class ModelHandler:
                 contiguous_cache=True,
                 extra_kwargs=self.extra_generation_kwargs,
             )
-        elif self.model_type == 'hf':
-            if self.model_class in ['causal_lm']:
-                input_ids = self.input_id['input_ids']
-                attention_mask = self.input_id.get('attention_mask', None)
-                generate_ids = self.model.generate(input_ids, attention_mask=attention_mask, max_new_tokens=self.max_new_tokens)
-                result = self.tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        elif self.model_type == "hf":
+            if self.model_class in ["causal_lm"]:
+                input_ids = self.input_id["input_ids"]
+                attention_mask = self.input_id.get("attention_mask", None)
+                generate_ids = self.model.generate(
+                    input_ids,
+                    attention_mask=attention_mask,
+                    max_new_tokens=self.max_new_tokens,
+                )
+                result = self.tokenizer.batch_decode(
+                    generate_ids,
+                    skip_special_tokens=True,
+                    clean_up_tokenization_spaces=False,
+                )[0]
             else:
                 result = self.model(**self.input_id)
 
@@ -167,7 +186,7 @@ class ModelHandler:
         print("Inserting forward hooks.............")
         module_instance_names = {}
 
-        def get_instance_names(module, current_depth=0, name='model'):
+        def get_instance_names(module, current_depth=0, name="model"):
             module_instance_names[module] = name
             parent = name
             array_layers = all(key.isdigit() for key in module._modules.keys())

@@ -6,6 +6,7 @@
 
 """Package version string."""
 
+# Standard
 import os
 
 VERSION_FILE = os.path.join(os.path.dirname(__file__), "VERSION.txt")

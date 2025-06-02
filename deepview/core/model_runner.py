@@ -1,42 +1,33 @@
-# Allows running specific modules/layers in isolation with preserved context
-import torch
-import re
-import sys
-import os
+# Standard
+from contextlib import redirect_stderr, redirect_stdout
 import json
+import os
+import re
 import subprocess
+import sys
+
+# Third Party
 from torch_sendnn import torch_sendnn
+import torch
 
-from deepview.core.generate_minimal_repro import generate_repro_code_unsupported_ops,  generate_repro_code_layer_debugging
+# Local
+from deepview.core.generate_minimal_repro import (
+    generate_repro_code_layer_debugging,
+    generate_repro_code_unsupported_ops,
+)
 from deepview.utils.model_handler import ModelHandler
-
-class PrintOutput:
-    def __init__(self, file_path, stream):
-        self.file = open(file_path, 'a')
-        self.stream = stream
-    def write(self, data):
-        self.stream.write(data)
-        self.file.write(data)
-    def flush(self):
-        self.stream.flush()
-        self.file.flush()
-    def isatty(self):
-        return self.stream.isatty()
-    def fileno(self):
-        return self.stream.fileno()
-    def close(self):
-        self.file.close()
+from deepview.utils.tee import Tee
 
 
 def set_environment():
-    old_output_file = 'model_output.txt'
+    old_output_file = "model_output.txt"
     if os.path.exists(old_output_file):
         print("Deleting the old model_output.txt..............")
         os.remove(old_output_file)
-    os.environ['DTLOG_LEVEL'] = 'error'
-    os.environ['TORCH_SENDNN_LOG'] = 'CRITICAL'
-    os.environ['DT_DEEPRT_VERBOSE'] = '-1'
-    os.environ['PYTHONUNBUFFERED'] = '1'
+    os.environ["DTLOG_LEVEL"] = "error"
+    os.environ["TORCH_SENDNN_LOG"] = "CRITICAL"
+    os.environ["DT_DEEPRT_VERBOSE"] = "-1"
+    os.environ["PYTHONUNBUFFERED"] = "1"
 
 
 def process_output_unsupported_ops(tool_output_file, logfile, generate_repro_code_flag):
@@ -46,14 +37,21 @@ def process_output_unsupported_ops(tool_output_file, logfile, generate_repro_cod
         for line in infile:
             if line.startswith("DEBUG TOOL"):
                 outfile.write(line)
-                match = re.search(r'DEBUG TOOL Caught error for (.*?):', line)
+                match = re.search(r"DEBUG TOOL Caught error for (.*?):", line)
                 if match:
                     node = match.group(1)
                     unknown_nodes.append(node)
 
-        strip = lambda s: re.sub(r'\x1b\[[0-9;]*m', '', s)
+        def strip(s):
+            return re.sub(r"\x1b\[[0-9;]*m", "", s)
+
         seen = set()
-        unique_unknown_nodes = [op for op in unknown_nodes if not re.match(r'.*_\d+$', strip(op)) and (strip(op) not in seen and not seen.add(strip(op)))]
+        unique_unknown_nodes = [
+            op
+            for op in unknown_nodes
+            if not re.match(r".*_\d+$", strip(op))
+            and (strip(op) not in seen and not seen.add(strip(op)))
+        ]
         if len(unique_unknown_nodes) == 0:
             no_unsup_op = (
                 "DEBUG TOOL========================================================================\n"
@@ -62,7 +60,7 @@ def process_output_unsupported_ops(tool_output_file, logfile, generate_repro_cod
             print(no_unsup_op)
             outfile.write(no_unsup_op)
         else:
-            unknown_nodes_str = '\n'.join(sorted(unique_unknown_nodes))
+            unknown_nodes_str = "\n".join(sorted(unique_unknown_nodes))
             final_line = (
                 "DEBUG TOOL========================================================================\n"
                 "DEBUG TOOL Unsupported operations list:\n"
@@ -79,9 +77,12 @@ def process_output_unsupported_ops(tool_output_file, logfile, generate_repro_cod
         else:
             print("No reproduction code generated as no unsupported operations found.")
 
-def process_output_layer_debugging(tool_output_file, logfile, generate_repro_code_flag, model_path):
+
+def process_output_layer_debugging(
+    tool_output_file, logfile, generate_repro_code_flag, model_path
+):
     # All DEBUG TOOL output lines are extracted and saved in tool_output_file.
-    
+
     with open(logfile, "r") as infile, open(tool_output_file, "w") as outfile:
         debug_lines = [line for line in infile if line.startswith("DEBUG TOOL")]
         outfile.writelines(debug_lines)
@@ -89,13 +90,20 @@ def process_output_layer_debugging(tool_output_file, logfile, generate_repro_cod
     # Parse the tool output for failures
     with open(tool_output_file, "r+") as f:
         lines = f.readlines()
-        err_msg = next((line for line in reversed(lines) if "DEBUG TOOL first run for" in line), None)
+        err_msg = next(
+            (line for line in reversed(lines) if "DEBUG TOOL first run for" in line),
+            None,
+        )
 
         print("======================================================")
         if err_msg:
             layer = err_msg.split("for ")[1].split(", input")[0]
             second_run_str = f"DEBUG TOOL second run for {layer},"
-            failed_layer = f"Failed layer is {err_msg.split('for')[1]}" if second_run_str not in ''.join(lines) else "No model layer has failed"
+            failed_layer = (
+                f"Failed layer is {err_msg.split('for')[1]}"
+                if second_run_str not in "".join(lines)
+                else "No model layer has failed"
+            )
             print(f"DEBUG TOOL \033[1m{failed_layer}\033[0m")
             print("======================================================")
             f.write(failed_layer + "\n")
@@ -111,61 +119,76 @@ def process_output_layer_debugging(tool_output_file, logfile, generate_repro_cod
 def run_individual_layers(logfile, model_path, model_type):
     print("Running each layer individually........")
     command1 = [
-        'python3', 'deepview/core/test_layers.py', '--model_path', model_path, '--model_type', model_type,
+        "python3",
+        "deepview/core/test_layers.py",
+        "--model_path",
+        model_path,
+        "--model_type",
+        model_type,
     ]
 
     # Show output in terminal as well as save in file
     with open(logfile, "a") as f:
-        process = subprocess.Popen(command1,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+        process = subprocess.Popen(
+            command1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        )
         for line in process.stdout:
-             print(line, end='')
-             f.write(line)
+            print(line, end="")
+            f.write(line)
 
-def run_model(model_type, model_path, tool_output_file, deepview_mode, generate_repro_code_flag, logfile='model_output.txt'):
-    if generate_repro_code_flag:
-        torch_sendnn.preserve_lazyhandle()
 
-    model_handler = ModelHandler(model_type=model_type, model_path=model_path, prompt='What is the capital of India?')
-    model_handler.load_and_compile_model()
-    model_handler.prep_input()
-
+def run_model(
+    model_type,
+    model_path,
+    tool_output_file,
+    deepview_mode,
+    generate_repro_code_flag,
+    logfile="model_output.txt",
+):
     # Prints generated by compile_and_infer are shown in terminal as well as saved in logfile.
-    original_stdout = sys.stdout
-    original_stderr = sys.stderr
-    tee_stdout = PrintOutput(logfile, original_stdout)
-    tee_stderr = PrintOutput(logfile, original_stderr)
-    sys.stdout = tee_stdout
-    sys.stderr = tee_stderr
+    with open(logfile, "a") as f:
+        tee = Tee(sys.stdout, f)
+        with redirect_stdout(tee), redirect_stderr(tee):
+            if generate_repro_code_flag:
+                torch_sendnn.preserve_lazyhandle()
 
-    print("Reached first infer call post compile.....")
-    try:
-        if 'layer_debugging' in deepview_mode:
-            model_handler.insert_forward_hooks()
+            model_handler = ModelHandler(
+                model_type=model_type,
+                model_path=model_path,
+                prompt="What is the capital of India?",
+            )
+            model_handler.load_and_compile_model()
+            model_handler.prep_input()
 
-        model_handler.infer()
+            print("Reached first infer call post compile.....")
+            try:
+                if "layer_debugging" in deepview_mode:
+                    model_handler.insert_forward_hooks()
 
-        if 'layer_debugging' in deepview_mode:
-            model_handler.remove_forward_hooks()
-            with open("model_list.txt", "w") as file:
-                json.dump({k: list(v) for k, v in model_handler.layer_list.items()}, file)
-                file.close()
-            run_individual_layers(logfile, model_path, model_type)
+                model_handler.infer()
 
-    except Exception as e:
-        print(f"Exception occurred: {e}", file=original_stderr)
-    finally:
-        tee_stdout.flush()
-        tee_stderr.flush()
-        sys.stdout = original_stdout
-        sys.stderr = original_stderr
-        tee_stdout.close()
-        tee_stderr.close()
+                if "layer_debugging" in deepview_mode:
+                    model_handler.remove_forward_hooks()
+                    with open("model_list.txt", "w") as file:
+                        json.dump(
+                            {k: list(v) for k, v in model_handler.layer_list.items()},
+                            file,
+                        )
 
-    # Process the logfile to create the tool_output_file 
-    if 'unsupported_op' in deepview_mode:
-        process_output_unsupported_ops(tool_output_file, logfile, generate_repro_code_flag)
-    if 'layer_debugging' in deepview_mode:
-        process_output_layer_debugging(tool_output_file, logfile, generate_repro_code_flag, model_path)
+                    run_individual_layers(logfile, model_path, model_type)
+
+            except Exception as e:
+                print(f"Exception occurred: {e}")
+
+    # Process the logfile to create the tool_output_file
+    if "unsupported_op" in deepview_mode:
+        process_output_unsupported_ops(
+            tool_output_file, logfile, generate_repro_code_flag
+        )
+    if "layer_debugging" in deepview_mode:
+        process_output_layer_debugging(
+            tool_output_file, logfile, generate_repro_code_flag, model_path
+        )
 
     # Since both our modes produce outputs before this line, commenting out the code after that -- this can be enabled in future
     # Update lazyhandle after first run of inference

@@ -1,11 +1,15 @@
-import torch
+# Standard
+import argparse
+import json
+import os
+import sys
+
+# Third Party
 from fms.models import get_model
 from torch_sendnn import torch_sendnn
-import sys
-import json
-import argparse
-import os 
+import torch
 
+# Local
 from deepview.utils.model_handler import ModelHandler
 
 parser = argparse.ArgumentParser(
@@ -24,7 +28,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 try:
-    with open("model_list.txt", 'r') as file:
+    with open("model_list.txt", "r") as file:
         layer_list = json.load(file)
 except FileNotFoundError:
     print("File 'model_list.txt' not found")
@@ -33,13 +37,21 @@ except json.JSONDecodeError:
     print("Invalid JSON format")
     sys.exit(1)
 
-model_handler = ModelHandler(model_type=args.model_type, model_path=args.model_path, prompt='What is the capital of India?')
+model_handler = ModelHandler(
+    model_type=args.model_type,
+    model_path=args.model_path,
+    prompt="What is the capital of India?",
+)
 model = model_handler.load_and_compile_model()
 
 layers_done = []
 # Run inference for each layer
 for str_layer, val in layer_list.items():
-    sub_layer = str_layer.rsplit('.', str_layer.count('.') - 3)[0] if str_layer.count('.') > 3 else str_layer
+    sub_layer = (
+        str_layer.rsplit(".", str_layer.count(".") - 3)[0]
+        if str_layer.count(".") > 3
+        else str_layer
+    )
 
     if sub_layer in layers_done:
         continue
@@ -55,15 +67,25 @@ for str_layer, val in layer_list.items():
     layer = eval(sub_layer)
     layer.compile(backend="sendnn_decoder", dynamic=False)
 
-    print("-------------------------------------------------------------------------------------------")
-    print(f"DEBUG TOOL first run for {sub_layer}, input shape {input_shape_str}, data type {dtype_str}")
+    print(
+        "-------------------------------------------------------------------------------------------"
+    )
+    print(
+        f"DEBUG TOOL first run for {sub_layer}, input shape {input_shape_str}, data type {dtype_str}"
+    )
     layer(rand_tensor.to(data_type))
 
-    print(f"DEBUG TOOL update lazy handle for {sub_layer}, input shape {input_shape_str}, data type {dtype_str}")
+    print(
+        f"DEBUG TOOL update lazy handle for {sub_layer}, input shape {input_shape_str}, data type {dtype_str}"
+    )
     torch_sendnn.update_lazyhandle()
 
-    print(f"DEBUG TOOL second run for {sub_layer}, input shape {input_shape_str}, data type {dtype_str}")
+    print(
+        f"DEBUG TOOL second run for {sub_layer}, input shape {input_shape_str}, data type {dtype_str}"
+    )
     layer(rand_tensor.to(data_type))
-    print("-------------------------------------------------------------------------------------------")
+    print(
+        "-------------------------------------------------------------------------------------------"
+    )
 
     layers_done.append(sub_layer)
