@@ -15,6 +15,7 @@ from deepview.core.generate_minimal_repro import (
     generate_repro_code_layer_debugging,
     generate_repro_code_unsupported_ops,
 )
+from deepview.core.test_layers import run_layers
 from deepview.utils.model_handler import ModelHandler
 from deepview.utils.tee import Tee
 
@@ -118,15 +119,8 @@ def process_output_layer_debugging(
 
 def run_individual_layers(logfile, model_path, model_type):
     print("Running each layer individually........")
-    command1 = [
-        "python3",
-        "deepview/core/test_layers.py",
-        "--model_path",
-        model_path,
-        "--model_type",
-        model_type,
-    ]
-
+    layer_run = run_layers(model_path, model_type)
+    command1 = ["python3", "-c", layer_run]
     # Show output in terminal as well as save in file
     with open(logfile, "a") as f:
         process = subprocess.Popen(

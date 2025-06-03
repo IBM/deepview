@@ -1,4 +1,5 @@
 # Standard
+from pathlib import Path
 import os
 import re
 import shutil
@@ -7,6 +8,9 @@ import shutil
 from sendnn import opcodes
 from torch_sendnn.backends import lazy_handles
 import torch
+
+# Local
+from deepview.core.template_repro_code import ld_repro_code
 
 
 def get_unsupported_ops(lazy_handle):
@@ -103,23 +107,21 @@ def generate_repro_code_layer_debugging(err_msg, layer, modelpath):
     input_str = match.group(1)
     dtype_str = match.group(2)
 
-    src_template, dst_repro = (
-        "core/template_repro_code.py",
-        f"{layer.split('.')[-1]}_repro_code.py",
-    )
-
+    dst_repro = f"{layer.split('.')[-1]}_repro_code.py"
     try:
-        shutil.copy(src_template, dst_repro)
-        with open(dst_repro, "r") as f:
-            content = (
-                f.read()
-                .replace("modelpath", "'" + modelpath + "'")
-                .replace("sub_layer", layer)
-                .replace("input_shape", input_str)
-                .replace("datatype", dtype_str)
-            )
+        Path(dst_repro).touch()
         with open(dst_repro, "w") as f:
-            f.write(content)
+            f.write(ld_repro_code(modelpath,layer,input_str,dtype_str))
+        #with open(dst_repro, "r") as f:
+        #    content = (
+        #        f.read()
+        #        .replace("modelpath", "'" + modelpath + "'")
+        #        .replace("sub_layer", layer)
+        #        .replace("input_shape", input_str)
+        #        .replace("datatype", dtype_str)
+        #    )
+        #with open(dst_repro, "w") as f:
+        #    f.write(content)
         print(f"The repro code is stored in file {dst_repro}")
-    except FileNotFoundError:
-        print(f"Error: Template file not found: {src_template}")
+    except Exception as e:
+        print(f"Error: Repro code generation : {e}")

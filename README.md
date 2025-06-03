@@ -135,8 +135,6 @@ options:
 ## Examples
 A few examples demonstrating the use of unsupported_op and layer_debugging modes are shown below. A detailed list of models tested with DeepView can be found under [examples](./examples).
 
-<span style="color: red; font-weight: bold;">NOTE: To run the following examples, make sure that you are in the top level directory of the deepview, e.g if you have deepview is in `/tmp`, then `cd /tmp/deepview`</span>  
-
 ### unsupported_op mode
 
 ```

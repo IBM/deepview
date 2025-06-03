@@ -1,3 +1,5 @@
+def run_layers(model_path, model_type):
+    return f"""
 # Standard
 import argparse
 import json
@@ -12,21 +14,6 @@ import torch
 # Local
 from deepview.utils.model_handler import ModelHandler
 
-parser = argparse.ArgumentParser(
-    description="Script to run inference on a causal model"
-)
-parser.add_argument(
-    "--model_path",
-    type=str,
-    help="Path to the directory containing LLaMa weights (.pth files sharded by tensor parallel rank, not HF weights)",
-)
-parser.add_argument(
-    "--model_type",
-    type=str,
-    help="Path to the directory containing LLaMa weights (.pth files sharded by tensor parallel rank, not HF weights)",
-)
-args = parser.parse_args()
-
 try:
     with open("model_list.txt", "r") as file:
         layer_list = json.load(file)
@@ -38,8 +25,8 @@ except json.JSONDecodeError:
     sys.exit(1)
 
 model_handler = ModelHandler(
-    model_type=args.model_type,
-    model_path=args.model_path,
+    model_type='{model_type}',
+    model_path='{model_path}',
     prompt="What is the capital of India?",
 )
 model = model_handler.load_and_compile_model()
@@ -71,17 +58,17 @@ for str_layer, val in layer_list.items():
         "-------------------------------------------------------------------------------------------"
     )
     print(
-        f"DEBUG TOOL first run for {sub_layer}, input shape {input_shape_str}, data type {dtype_str}"
+        f"DEBUG TOOL first run for {{sub_layer}}, input shape {{input_shape_str}}, data type {{dtype_str}}"
     )
     layer(rand_tensor.to(data_type))
 
     print(
-        f"DEBUG TOOL update lazy handle for {sub_layer}, input shape {input_shape_str}, data type {dtype_str}"
+        f"DEBUG TOOL update lazy handle for {{sub_layer}}, input shape {{input_shape_str}}, data type {{dtype_str}}"
     )
     torch_sendnn.update_lazyhandle()
 
     print(
-        f"DEBUG TOOL second run for {sub_layer}, input shape {input_shape_str}, data type {dtype_str}"
+        f"DEBUG TOOL second run for {{sub_layer}}, input shape {{input_shape_str}}, data type {{dtype_str}}"
     )
     layer(rand_tensor.to(data_type))
     print(
@@ -89,3 +76,4 @@ for str_layer, val in layer_list.items():
     )
 
     layers_done.append(sub_layer)
+"""
