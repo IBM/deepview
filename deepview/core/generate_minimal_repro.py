@@ -14,6 +14,14 @@ from deepview.core.template_repro_code import ld_repro_code
 
 
 def get_unsupported_ops(lazy_handle):
+    """Retrieves a list of operations marked as unsupported from the lazy handle's g2 graph.
+
+    Args:
+        lazy_handle: An object containing the sengraph (`g2`).
+
+    Returns:
+        list[str]: Names of operations in this lazy handle's g2 graph that are marked as unsupported.
+    """    
     unsupported_ops = []
     g2 = lazy_handle.g2 if hasattr(lazy_handle, "g2") else lazy_handle.meta["g2"]
     for op in g2.compute_ops:
@@ -23,7 +31,14 @@ def get_unsupported_ops(lazy_handle):
 
 
 def sanitize_arg(arg):
-    # pdb.set_trace()
+    """Converts an argument into a string representation that can be used in auto-generated repro code.
+
+    Args:
+        arg (Any): The argument to sanitize. Can be a list, a `torch.fx.Node`, or a primitive value.
+
+    Returns:
+        str: A Python-valid string representing the argument, approximated for test code generation.
+    """    
     if isinstance(arg, list):
         return "[" + ", ".join([sanitize_arg(i) for i in arg]) + "]"
 
@@ -42,7 +57,15 @@ def sanitize_arg(arg):
     return str(arg)
 
 
-def generate_reproduction(lazy_handle_id, node_name, target_name, args):
+def generate_reproduction(lazy_handle_id, node_name, target_name, args):   
+    """Creates a minimal Python script to reproduce the behavior of a specific unsupported operation.
+
+    Args:
+        lazy_handle_id (int): Index or identifier of the lazy handle for file naming.
+        node_name (str): Name of the node corresponding to the unsupported operation.
+        target_name (str): Fully qualified name of the target PyTorch op (e.g., "aten::add").
+        args (list[str]): Sanitized string representations of the input arguments.
+    """
     f_vars = []
     g_expr = []
     for i in range(len(args)):
@@ -78,6 +101,13 @@ g()
 
 
 def create_minimal_reproductions(lazy_handle_id, lazy_handle, unsupported_ops):
+    """Generates minimal test scripts for each unsupported ops found in the lazy handle using `generate_reproduction`.
+
+    Args:
+        lazy_handle_id (int): Index of the lazy handle, used for output file naming.
+        lazy_handle: Object containing the original graph module (`ori_gm`) or its metadata.
+        unsupported_ops (list[str]): List of operation node names marked as unsupported.
+    """    
     if hasattr(lazy_handle, "ori_gm"):
         ori_gm = lazy_handle.ori_gm
     else:
@@ -94,6 +124,12 @@ def create_minimal_reproductions(lazy_handle_id, lazy_handle, unsupported_ops):
 
 
 def generate_repro_code_unsupported_ops():
+    """Generates repro scripts for all unsupported operations found in the lazy handles.
+
+    It first retrieves the list of unsupported operations from each lazy handle
+    using the `get_unsupported_ops()` function, and then generates minimal repro
+    scripts for each using the `create_minimal_reproductions()` function.
+    """    
     os.makedirs("repro_codes", exist_ok=True)
     for iter_idx, lh in enumerate(lazy_handles):
         unsupported_ops = get_unsupported_ops(lh)
@@ -103,6 +139,13 @@ def generate_repro_code_unsupported_ops():
 
 
 def generate_repro_code_layer_debugging(err_msg, layer, modelpath):
+    """Generates layer-specific repro code from an error message for layer_debugging mode.
+
+    Args:
+        err_msg (str): Error string containing input shape and data type information.
+        layer (str): The layer name (dotted path) in the model where the error occurred.
+        modelpath (str): Path to the model checkpoint.
+    """    
     match = re.search(r"input shape (\[[^\]]+\]), data type (\S+)", err_msg)
     input_str = match.group(1)
     dtype_str = match.group(2)

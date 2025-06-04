@@ -1,4 +1,16 @@
 def run_layers(model_path, model_type):
+    """Returns a Python script that loads the model and runs inference on each layer individually.
+
+    It reads `model_list.txt` for layers’ input shapes and data types, then runs each unique layer
+    once, printing debug information.
+
+    Args:
+        model_path (str): Path to the model checkpoint.
+        model_type (str): Type of the model - hf or fms.
+
+    Returns:
+        str: Python script for layer-wise execution.
+    """    
     return f"""
 # Standard
 import argparse

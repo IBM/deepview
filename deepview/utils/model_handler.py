@@ -41,7 +41,55 @@ MODEL_CLASSES = {
 
 
 class ModelHandler:
+    """Handles loading, compiling, input preparation, inference, and debugging using hooks for ML models.
+
+    Supports both custom fms models and HF models. 
+    Automatically infers model class for HF models and loads accordingly.
+
+    Attributes:
+        model_type (str): Type of model ("fms" or "hf").
+        model_path (str): Path to model checkpoint.
+        model_class (str, optional): Specific model class for HF models.
+        prompt (str): Text prompt used for input preparation.
+        device (torch.device): Device to run the model on (CPU).
+        model (torch.nn.Module): Loaded and compiled model instance.
+        tokenizer: Tokenizer instance appropriate to the model type.
+        input_id: Prepared input tokens/tensors.
+        hooks (list): List of forward hooks registered on model layers.
+        layer_list (dict): Stores layer input shapes and data types from hooks.
+        extra_generation_kwargs (dict, optional): Extra kwargs for generation.
+        batch_size (int): Batch size for inputs (default 1).
+        min_pad_length (int): Minimum padding length for inputs.
+        max_new_tokens (int): Number of tokens to generate during inference.
+
+    Methods:
+        _infer_model_class(model_path):
+            Infers the Hugging Face model class based on the model's config or files.
+
+        load_and_compile_model():
+            Loads the model from path and compiles it with 'sendnn' backend.
+
+        prep_input():
+            Prepares tokenized inputs for the model based on model type.
+
+        infer():
+            Runs inference on the prepared inputs. Uses generation methods if applicable.
+
+        insert_forward_hooks():
+            Inserts forward hooks to capture layer input shapes and types during inference.
+
+        remove_forward_hooks():
+            Removes all registered forward hooks from the model.
+    """    
     def __init__(self, model_type, model_path, prompt, model_class=None):
+        """Initialize ModelHandler with model configuration.
+
+        Args:
+            model_type (str): Type of the model - hf or fms.
+            model_path (str): Path of model checkpoint.
+            prompt (str): Prompt text for model inference.
+            model_class (str, optional): Specific model class to use. Defaults to None.
+        """        
         self.model_type = model_type
         self.model_path = model_path
         self.model_class = model_class
@@ -58,6 +106,14 @@ class ModelHandler:
         self.max_new_tokens = 2
 
     def _infer_model_class(self, model_path):
+        """Infer the model class based on the model configuration or repo contents.
+
+        Args:
+            model_path (str): Path to model checkpoint.
+
+        Returns:
+            str: Inferred model class name such as 'causal_lm', 'sequence_classification', 'sentence', etc.
+        """        
         # First check if it of type sentence transformer
         try:
             # Third Party
@@ -94,6 +150,11 @@ class ModelHandler:
         return "auto"
 
     def load_and_compile_model(self):
+        """Load and compile the model based on the model type and path.
+
+        Returns:
+            torch.nn.Module: The loaded and compiled PyTorch model.
+        """        
         print("Loading model")
         start = time.time()
 
@@ -134,6 +195,8 @@ class ModelHandler:
         return self.model
 
     def prep_input(self):
+        """Prepare input tensors and tokenizers based on the model type and prompt.
+        """        
         if self.model_type == "fms":
             self.tokenizer = tokenizers.get_tokenizer(self.model_path)
             tokens = self.tokenizer.tokenize(self.prompt)
@@ -156,6 +219,11 @@ class ModelHandler:
             )
 
     def infer(self):
+        """Perform inference on the prepared input based on the model type.
+
+        Returns:
+            Any: The inference result, can be a tensor or decoded string depending on model type.
+        """        
         if self.model_type == "fms":
             self.extra_generation_kwargs["only_last_token"] = True
             old_warmup_mode = get_warmup_mode()
@@ -190,6 +258,8 @@ class ModelHandler:
                 result = self.model(**self.input_id)
 
     def insert_forward_hooks(self):
+        """Insert forward hooks into the model layers to capture input shapes and types during forward pass.
+        """        
         print("Inserting forward hooks.............")
         module_instance_names = {}
 
@@ -217,6 +287,8 @@ class ModelHandler:
             self.hooks.append(layer.register_forward_hook(hook_fn))
 
     def remove_forward_hooks(self):
+        """Remove all previously registered forward hooks from the model.
+        """        
         for hook in self.hooks:
             hook.remove()
         self.hooks = []
