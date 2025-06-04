@@ -21,7 +21,7 @@ def get_unsupported_ops(lazy_handle):
 
     Returns:
         list[str]: Names of operations in this lazy handle's g2 graph that are marked as unsupported.
-    """    
+    """
     unsupported_ops = []
     g2 = lazy_handle.g2 if hasattr(lazy_handle, "g2") else lazy_handle.meta["g2"]
     for op in g2.compute_ops:
@@ -38,7 +38,7 @@ def sanitize_arg(arg):
 
     Returns:
         str: A Python-valid string representing the argument, approximated for test code generation.
-    """    
+    """
     if isinstance(arg, list):
         return "[" + ", ".join([sanitize_arg(i) for i in arg]) + "]"
 
@@ -57,7 +57,7 @@ def sanitize_arg(arg):
     return str(arg)
 
 
-def generate_reproduction(lazy_handle_id, node_name, target_name, args):   
+def generate_reproduction(lazy_handle_id, node_name, target_name, args):
     """Creates a minimal Python script to reproduce the behavior of a specific unsupported operation.
 
     Args:
@@ -107,7 +107,7 @@ def create_minimal_reproductions(lazy_handle_id, lazy_handle, unsupported_ops):
         lazy_handle_id (int): Index of the lazy handle, used for output file naming.
         lazy_handle: Object containing the original graph module (`ori_gm`) or its metadata.
         unsupported_ops (list[str]): List of operation node names marked as unsupported.
-    """    
+    """
     if hasattr(lazy_handle, "ori_gm"):
         ori_gm = lazy_handle.ori_gm
     else:
@@ -129,7 +129,7 @@ def generate_repro_code_unsupported_ops():
     It first retrieves the list of unsupported operations from each lazy handle
     using the `get_unsupported_ops()` function, and then generates minimal repro
     scripts for each using the `create_minimal_reproductions()` function.
-    """    
+    """
     os.makedirs("repro_codes", exist_ok=True)
     for iter_idx, lh in enumerate(lazy_handles):
         unsupported_ops = get_unsupported_ops(lh)
@@ -145,7 +145,7 @@ def generate_repro_code_layer_debugging(err_msg, layer, modelpath):
         err_msg (str): Error string containing input shape and data type information.
         layer (str): The layer name (dotted path) in the model where the error occurred.
         modelpath (str): Path to the model checkpoint.
-    """    
+    """
     match = re.search(r"input shape (\[[^\]]+\]), data type (\S+)", err_msg)
     input_str = match.group(1)
     dtype_str = match.group(2)

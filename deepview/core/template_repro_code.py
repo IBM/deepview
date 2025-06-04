@@ -12,7 +12,7 @@ def ld_repro_code(modelpath, sub_layer, input_shape, datatype):
 
     Returns:
         str: A complete Python script as a string that can be saved and executed to reproduce the failure.
-    """    
+    """
     return f"""
 from fms.models import get_model
 from torch_sendnn import torch_sendnn

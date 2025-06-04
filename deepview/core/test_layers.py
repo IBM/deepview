@@ -10,7 +10,7 @@ def run_layers(model_path, model_type):
 
     Returns:
         str: Python script for layer-wise execution.
-    """    
+    """
     return f"""
 # Standard
 import argparse
