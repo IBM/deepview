@@ -26,7 +26,8 @@ dependencies = [
 "numpy",
 "transformers",
 "sentence_transformers",
-"pytest"
+"pytest",
+"pytest-cov"
 ]
 
 [project.scripts]
