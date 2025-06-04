@@ -11,8 +11,8 @@ def debugger_path(tmp_path_factory):
   It same as call `deepview --model_type <model_type> --model <model_path> --mode <deepview_mode> --show_details --generate_repro_code --output_file <tool_output_file>`
   """
   args = argparse.Namespace(
-    model_type='fms',
-    model_path='/mnt/aiu-models-en-shared/models/hf/Mistral-7B-Instruct-v0.3',
+    model_type='hf',
+    model_path='ibm-granite/granite-3.3-2b-instruct',
     deepview_mode=['unsupported_op'],
     show_details=False,
     generate_repro_code_flag=False,
