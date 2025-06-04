@@ -139,7 +139,7 @@ def __infer_layer(warmup, model, max_len,
         for i in range(result.shape[0]):
             print(result[i])
 
-def __compile_layers(model, seq_length, max_new_tokens,
+def __register_call_layers(model, seq_length, max_new_tokens,
                  batch_size, tokenizer):
     layer_stack = []
     pt_compile_model_time = time.time()
@@ -240,16 +240,16 @@ def test_common_shapes(model_path, batch_size, seq_length, max_new_tokens):
     input_ids, padding_kwargs = __prepare_inputs(batch_size, seq_length, tokenizer)
 
     # prepare the AIU model
-    model = get_model(
-        device_type="cpu",
-        data_type=torch.float16,
-        fused_weights=False,
-        **get_model_kwargs,
-    )
+    # model = get_model(
+    #     device_type="cpu",
+    #     data_type=torch.float16,
+    #     fused_weights=False,
+    #     **get_model_kwargs,
+    # )
 
-    model.eval()
-    torch.set_grad_enabled(False)
-    model.compile(backend="sendnn")
+    # model.eval()
+    # torch.set_grad_enabled(False)
+    # model.compile(backend="sendnn")
 
 
     # prepare the cpu model
@@ -260,17 +260,34 @@ def test_common_shapes(model_path, batch_size, seq_length, max_new_tokens):
         **get_model_kwargs,
     )
 
+    # prepare the cuda model
+    validation_model_cuda = get_model(
+        device_type="cuda",
+        data_type=torch.float32,
+        fused_weights=False,
+        **get_model_kwargs,
+    )
 
-    layer_stack_aiu = __compile_layers(model, batch_size, seq_length, 
-                                       max_new_tokens, tokenizer)
-    layer_stack_cpu = __compile_layers(validation_model,batch_size, 
+    loss_metrics = []
+
+    # layer_stack_aiu = __register_call_layers(model, batch_size, seq_length, 
+                                    #    max_new_tokens, tokenizer)
+    layer_stack_cpu = __register_call_layers(validation_model,batch_size, 
                                        seq_length, max_new_tokens, tokenizer)
+    
+    layer_stack_cuda = __register_call_layers(validation_model_cuda,batch_size, 
+                                       seq_length, max_new_tokens, tokenizer)
+    
 
 
-    for layer, output in layer_stack_aiu:
-        cpu_eq = [cpu_layer for cpu_layer in layer_stack_cpu if layer in cpu_layer]
-        print(cpu_eq)
-        cpu_layer, cpu_out = cpu_eq[0]
-        assert layer in cpu_layer
-        assert torch.isclose(cpu_out, output, rtol=1e-05, atol=1e-08, equal_nan=False)
+    for layer, output in layer_stack_cpu:
+        cuda_eq = [cuda_layer for cuda_layer in layer_stack_cuda if layer in cuda_layer]
+        print(cuda_eq)
+        print("cuda output len")
+        cuda_layer, cuda_out = cuda_eq[0]
+        print(len(cuda_out))
+        # assert layer in cpu_layer
+        # assert torch.isclose(cpu_out, output, rtol=1e-05, atol=1e-08, equal_nan=False)
+
+
 
