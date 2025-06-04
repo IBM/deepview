@@ -2301,8 +2301,15 @@ def update_lazyhandle():
             lh.meta["g2"] = g2
             lh.update_graph()
 
-
 _warmup_mode = False
+
+def set_warmup_mode(status):
+    global _warmup_mode
+    _warmup_mode = status
+
+def get_warmup_mode():
+    global _warmup_mode
+    return _warmup_mode
 
 def torch_sendnn(gm, fake_tensor_inputs):
     global lazy_handles, _warmup_mode

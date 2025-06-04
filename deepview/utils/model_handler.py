@@ -1,4 +1,5 @@
 # Standard
+import os
 import time
 
 # Third Party
@@ -6,6 +7,7 @@ from fms.models import get_model
 from fms.utils import tokenizers
 from fms.utils.generation import generate, pad_input_ids
 from sentence_transformers import SentenceTransformer
+from torch_sendnn.backends import get_warmup_mode, set_warmup_mode
 from transformers import (
     AutoConfig,
     AutoModel,
@@ -21,6 +23,7 @@ from transformers import (
     AutoTokenizer,
 )
 import torch
+import torch_sendnn
 
 MODEL_CLASSES = {
     "auto": AutoModel,
@@ -95,6 +98,7 @@ class ModelHandler:
         start = time.time()
 
         if self.model_type == "fms":
+            os.environ["COMPILATION_MODE"] = "offline_decoder"
             # This get_model call assumes locally downloaded weights
             self.model = get_model(
                 "hf_pretrained",
@@ -124,7 +128,7 @@ class ModelHandler:
 
         print("Compiling model")
         start = time.time()
-        self.model.compile(backend="sendnn_decoder", dynamic=False)
+        self.model.compile(backend="sendnn", dynamic=False)
         print(f"Compiling complete, took {time.time() - start:.3f}s")
 
         return self.model
@@ -154,6 +158,8 @@ class ModelHandler:
     def infer(self):
         if self.model_type == "fms":
             self.extra_generation_kwargs["only_last_token"] = True
+            old_warmup_mode = get_warmup_mode()
+            set_warmup_mode(True)
             result = generate(
                 self.model,
                 self.input_id,
@@ -165,6 +171,7 @@ class ModelHandler:
                 contiguous_cache=True,
                 extra_kwargs=self.extra_generation_kwargs,
             )
+            set_warmup_mode(old_warmup_mode)
         elif self.model_type == "hf":
             if self.model_class in ["causal_lm"]:
                 input_ids = self.input_id["input_ids"]

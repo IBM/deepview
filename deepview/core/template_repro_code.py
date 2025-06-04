@@ -1,4 +1,4 @@
-def ld_repro_code(modelpath,sub_layer,input_shape,datatype):
+def ld_repro_code(modelpath, sub_layer, input_shape, datatype):
     return f"""
 # Third Party
 from fms.models import get_model
@@ -22,7 +22,7 @@ torch.set_grad_enabled(False)
 rand_tensor = torch.rand(tuple({input_shape}))
 data_type = {datatype}
 layer = {sub_layer}
-layer.compile(backend="sendnn_decoder", dynamic=False)
+layer.compile(backend="sendnn", dynamic=False)
 layer(rand_tensor.to(data_type))
 torch_sendnn.update_lazyhandle()
 layer(rand_tensor.to(data_type))

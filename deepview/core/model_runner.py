@@ -146,6 +146,7 @@ def run_model(
             if generate_repro_code_flag:
                 torch_sendnn.preserve_lazyhandle()
 
+            torch.set_default_dtype(torch.float16)
             model_handler = ModelHandler(
                 model_type=model_type,
                 model_path=model_path,

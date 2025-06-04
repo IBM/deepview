@@ -111,17 +111,7 @@ def generate_repro_code_layer_debugging(err_msg, layer, modelpath):
     try:
         Path(dst_repro).touch()
         with open(dst_repro, "w") as f:
-            f.write(ld_repro_code(modelpath,layer,input_str,dtype_str))
-        #with open(dst_repro, "r") as f:
-        #    content = (
-        #        f.read()
-        #        .replace("modelpath", "'" + modelpath + "'")
-        #        .replace("sub_layer", layer)
-        #        .replace("input_shape", input_str)
-        #        .replace("datatype", dtype_str)
-        #    )
-        #with open(dst_repro, "w") as f:
-        #    f.write(content)
+            f.write(ld_repro_code(modelpath, layer, input_str, dtype_str))
         print(f"The repro code is stored in file {dst_repro}")
     except Exception as e:
         print(f"Error: Repro code generation : {e}")
