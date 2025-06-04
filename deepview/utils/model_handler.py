@@ -224,10 +224,10 @@ class ModelHandler:
         Returns:
             Any: The inference result, can be a tensor or decoded string depending on model type.
         """
+        old_warmup_mode = get_warmup_mode()
+        set_warmup_mode(True)
         if self.model_type == "fms":
             self.extra_generation_kwargs["only_last_token"] = True
-            old_warmup_mode = get_warmup_mode()
-            set_warmup_mode(True)
             result = generate(
                 self.model,
                 self.input_id,
@@ -239,7 +239,6 @@ class ModelHandler:
                 contiguous_cache=True,
                 extra_kwargs=self.extra_generation_kwargs,
             )
-            set_warmup_mode(old_warmup_mode)
         elif self.model_type == "hf":
             if self.model_class in ["causal_lm"]:
                 input_ids = self.input_id["input_ids"]
@@ -256,6 +255,7 @@ class ModelHandler:
                 )[0]
             else:
                 result = self.model(**self.input_id)
+        set_warmup_mode(old_warmup_mode)
 
     def insert_forward_hooks(self):
         """Insert forward hooks into the model layers to capture input shapes and types during forward pass."""
