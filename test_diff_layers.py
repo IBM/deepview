@@ -20,49 +20,18 @@ from aiu_fms_testing_utils.utils.aiu_setup import dprint
 
 ORIGINAL_HF_HOME = os.environ.get("HF_HOME", None)
 
-# Add models to test here
-LLAMA_3p1_8B_INSTRUCT = "meta-llama/Llama-3.1-8B-Instruct"
-GRANITE_3p2_8B_INSTRUCT = "ibm-granite/granite-3.2-8b-instruct"
-GRANITE_20B_CODE_INSTRUCT_8K = "ibm-granite/granite-20b-code-instruct-8k"
-LLAMA_3p1_70B_INSTRUCT = "meta-llama/Llama-3.1-70B-Instruct"
-
 SHARE_GPT_DATASET_PATH = os.environ.get(
     "SHARE_GPT_DATASET_PATH", os.path.expanduser("~/share_gpt.json")
 )
-USE_MICRO_MODELS = os.environ.get("FMS_TEST_SHAPES_USE_MICRO_MODELS", "1") == "1"
-USE_DISTRIBUTED = os.environ.get("FMS_TEST_SHAPES_DISTRIBUTED", "0") == "1"
-FORCE_VALIDATION_LEVEL_1 = os.environ.get("FMS_TEST_SHAPES_FORCE_VALIDATION_LEVEL_1", "0") == "1"
-validation_info_dir = os.environ.get(
-    "FMS_TEST_SHAPES_VALIDATION_INFO_DIR", "/tmp/models/validation_info"
-)
-common_model_paths = os.environ.get(
-    "FMS_TEST_SHAPES_COMMON_MODEL_PATHS",
-    [LLAMA_3p1_8B_INSTRUCT, GRANITE_3p2_8B_INSTRUCT, GRANITE_20B_CODE_INSTRUCT_8K, LLAMA_3p1_70B_INSTRUCT],
-)
-# for validation level 1, the default is a failure rate of 1%
-# set this environment variable if you would like to relax that threshold
-failure_rate_threshold = os.environ.get("FMS_TEST_SHAPES_FAILURE_THRESHOLD", 0.01)
-default_metrics_threshold = os.environ.get(
-    "FMS_TEST_SHAPES_METRICS_THRESHOLD", (3.0, .001)
-)
-save_validation_info_outputs = (
-    os.environ.get("FMS_TEST_SHAPES_SAVE_VALIDATION_INFO_OUTPUTS", "0") == "1"
-)
-common_batch_sizes = os.environ.get("FMS_TEST_SHAPES_COMMON_BATCH_SIZES", [1, 2, 4, 8])
-common_seq_lengths = os.environ.get("FMS_TEST_SHAPES_COMMON_SEQ_LENGTHS", [64, 2048])
-common_max_new_tokens = os.environ.get("FMS_TEST_SHAPES_COMMON_MAX_NEW_TOKENS", [128])
+
+common_model_paths = "/tmp/models/ibm-granite/granite-3.2-8b-instruct"
+common_batch_sizes = [1, 2, 4, 8]
+common_seq_lengths = [64, 2048]
+common_max_new_tokens = [128]
 
 # pass custom model path list for eg: EXPORT FMS_TESTING_COMMON_MODEL_PATHS="/tmp/models/granite-3-8b-base,/tmp/models/granite-7b-base"
 if isinstance(common_model_paths, str):
     common_model_paths = common_model_paths.split(",")
-
-# pass custom failure rate threshold as float
-if isinstance(failure_rate_threshold, str):
-    failure_rate_threshold = float(failure_rate_threshold)
-
-# pass custom default metrics threshold as a comma separated str of floats <cross-entropy threshold>,<mean diff threshold>
-if isinstance(default_metrics_threshold, str):
-    default_metrics_threshold = tuple([float(m) for m in default_metrics_threshold.split(",")])
 
 # pass custom common batch sizes as a comma separated str of ints
 if isinstance(common_batch_sizes, str):
@@ -102,7 +71,7 @@ def __prepare_inputs(batch_size, seq_length, tokenizer, seed=0):
     input_ids, padding_kwargs = pad_input_ids(prompt_list, min_pad_length=seq_length)
     return input_ids, padding_kwargs
 
-def __infer_layer(warmup, model, max_len,
+def __infer_layer(warmup, model, max_len, device,
                 max_new_tokens, batch_size, tokenizer):
     
 
@@ -111,6 +80,9 @@ def __infer_layer(warmup, model, max_len,
 
     prompts = __prepare_inputs(batch_size, max_len, tokenizer)
     ids, pad_input_ids = prompts
+
+    if "cuda" in device:
+        ids = ids.to("cuda")
     
     if hasattr(model.config, "ntk_scaling") and model.config.ntk_scaling:
         max_seq_len = max(max_len, model.config.max_expected_seq_len)
@@ -139,8 +111,7 @@ def __infer_layer(warmup, model, max_len,
         for i in range(result.shape[0]):
             print(result[i])
 
-def __register_call_layers(model, seq_length, max_new_tokens,
-                 batch_size, tokenizer):
+def __register_call_layers(model, batch_size, device, seq_length, max_new_tokens, tokenizer):
     layer_stack = []
     pt_compile_model_time = time.time()
 
@@ -207,8 +178,10 @@ def __register_call_layers(model, seq_length, max_new_tokens,
         hooks.append(layer.register_forward_hook(post_hook_fn))
 
     
-    __infer_layer(True, model, seq_length, max_new_tokens,
-                 batch_size, tokenizer)
+    __infer_layer(warmup=True, 
+                  model= model, max_len=seq_length, 
+                  device=device, max_new_tokens=max_new_tokens, 
+                  batch_size=batch_size, tokenizer=tokenizer)
 
     for hook in hooks:
         hook.remove()
@@ -237,20 +210,6 @@ def test_common_shapes(model_path, batch_size, seq_length, max_new_tokens):
     }
 
     tokenizer = tokenizers.get_tokenizer(model_path)
-    input_ids, padding_kwargs = __prepare_inputs(batch_size, seq_length, tokenizer)
-
-    # prepare the AIU model
-    # model = get_model(
-    #     device_type="cpu",
-    #     data_type=torch.float16,
-    #     fused_weights=False,
-    #     **get_model_kwargs,
-    # )
-
-    # model.eval()
-    # torch.set_grad_enabled(False)
-    # model.compile(backend="sendnn")
-
 
     # prepare the cpu model
     validation_model = get_model(
@@ -268,26 +227,40 @@ def test_common_shapes(model_path, batch_size, seq_length, max_new_tokens):
         **get_model_kwargs,
     )
 
-    loss_metrics = []
-
-    # layer_stack_aiu = __register_call_layers(model, batch_size, seq_length, 
-                                    #    max_new_tokens, tokenizer)
-    layer_stack_cpu = __register_call_layers(validation_model,batch_size, 
-                                       seq_length, max_new_tokens, tokenizer)
+    layer_stack_cpu = __register_call_layers(model=validation_model,
+                                             batch_size=batch_size, 
+                                             device="cpu", 
+                                             seq_length=seq_length, max_new_tokens=max_new_tokens, 
+                                             tokenizer=tokenizer)
     
-    layer_stack_cuda = __register_call_layers(validation_model_cuda,batch_size, 
-                                       seq_length, max_new_tokens, tokenizer)
+    layer_stack_cuda = __register_call_layers(model=validation_model,
+                                             batch_size=batch_size, 
+                                             device="cuda", 
+                                             seq_length=seq_length, max_new_tokens=max_new_tokens, 
+                                             tokenizer=tokenizer)
     
+    absolute_differences = []
 
-
-    for layer, output in layer_stack_cpu:
+    for layer, cpu_out in layer_stack_cpu:
         cuda_eq = [cuda_layer for cuda_layer in layer_stack_cuda if layer in cuda_layer]
         print(cuda_eq)
         print("cuda output len")
         cuda_layer, cuda_out = cuda_eq[0]
         print(len(cuda_out))
+
+        abs_diff = torch.abs(cpu_out - cuda_out).flatten().tolist()
+        absolute_differences.extend(abs_diff)
+
+        if len(absolute_differences) == 0:
+            return {"mean": float('nan'), "median": float('nan'), "q1": float('nan'), "q3": float('nan')}
+
+        abs_diff_tensor = torch.tensor(absolute_differences)
+        abs_diff_tensor = torch.nan_to_num(abs_diff_tensor, nan=0.0) 
+        # mean_diff = torch.mean(abs_diff_tensor).item()
+        # median_diff = torch.median(abs_diff_tensor).item()
+
         # assert layer in cpu_layer
-        # assert torch.isclose(cpu_out, output, rtol=1e-05, atol=1e-08, equal_nan=False)
+        assert torch.isclose(cpu_out, cuda_out, rtol=1e-05, atol=1e-08, equal_nan=False)
 
 
 
