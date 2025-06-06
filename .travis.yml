@@ -1,4 +1,9 @@
 language: python
+
+# Upgrade to Jammy and Jammy Beta Distro
+group: jammy-beta
+dist: jammy
+
 python:
   - "3.12"
 services:
