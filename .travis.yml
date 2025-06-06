@@ -1,0 +1,19 @@
+language: python
+python:
+  - "3.12"
+services:
+  - docker
+cache:
+  pip: true
+
+install:
+  - pip install -U pip
+  - pip install .
+
+script:
+  # Run tests
+  - tox -e py
+  # Run linting
+  - tox -e lint
+  # Run formatting
+  - tox -e ruff
