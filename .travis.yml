@@ -19,7 +19,5 @@ install:
 script:
   # Run tests
   - tox -e py
-  # Run linting
-  - tox -e lint
-  # Run formatting
+  # Run linting and formatting checks
   - tox -e ruff
