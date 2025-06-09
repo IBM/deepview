@@ -1,4 +1,4 @@
-def ld_repro_code(modelpath, sub_layer, input_shape, datatype):
+def run_layers(modelpath, sub_layer, input_shape, datatype):
     """Generates a minimal Python script to reproduce a layer-level failure in layer debugging mode.
 
     The generated code loads the model, compiles the specified sub-layer using the `sendnn` backend,
@@ -15,9 +15,10 @@ def ld_repro_code(modelpath, sub_layer, input_shape, datatype):
     """
     return f"""
 from fms.models import get_model
-from torch_sendnn import torch_sendnn
+import torch_sendnn
 import torch
-
+import os
+os.environ["COMPILATION_MODE"] = "offline_decoder"
 model = get_model(
     "hf_pretrained",
     None,
@@ -36,7 +37,9 @@ rand_tensor = torch.rand(tuple({input_shape}))
 data_type = {datatype}
 layer = {sub_layer}
 layer.compile(backend="sendnn", dynamic=False)
-layer(rand_tensor.to(data_type))
-torch_sendnn.update_lazyhandle()
+print(f"Warmup of layer {sub_layer}, input shape {input_shape}, data type {datatype}")
+with torch_sendnn.warmup_mode():
+   layer(rand_tensor.to(data_type))
+print(f"Second run of the layer {sub_layer}, input shape {input_shape}, data type {datatype}")
 layer(rand_tensor.to(data_type))
 """

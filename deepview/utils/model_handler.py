@@ -160,7 +160,6 @@ class ModelHandler:
         start = time.time()
 
         if self.model_type == "fms":
-            os.environ["COMPILATION_MODE"] = "offline_decoder"
             # This get_model call assumes locally downloaded weights
             self.model = get_model(
                 "hf_pretrained",

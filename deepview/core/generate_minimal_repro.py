@@ -1,5 +1,4 @@
 # Standard
-from pathlib import Path
 import os
 import re
 import shutil
@@ -8,9 +7,6 @@ import shutil
 from sendnn import opcodes
 from torch_sendnn.backends import lazy_handles
 import torch
-
-# Local
-from deepview.core.template_repro_code import ld_repro_code
 
 
 def get_unsupported_ops(lazy_handle):
@@ -136,25 +132,3 @@ def generate_repro_code_unsupported_ops():
         repro_code_generated = create_minimal_reproductions(
             iter_idx, lh, unsupported_ops
         )
-
-
-def generate_repro_code_layer_debugging(err_msg, layer, modelpath):
-    """Generates layer-specific repro code from an error message for layer_debugging mode.
-
-    Args:
-        err_msg (str): Error string containing input shape and data type information.
-        layer (str): The layer name (dotted path) in the model where the error occurred.
-        modelpath (str): Path to the model checkpoint.
-    """
-    match = re.search(r"input shape (\[[^\]]+\]), data type (\S+)", err_msg)
-    input_str = match.group(1)
-    dtype_str = match.group(2)
-
-    dst_repro = f"{layer.split('.')[-1]}_repro_code.py"
-    try:
-        Path(dst_repro).touch()
-        with open(dst_repro, "w") as f:
-            f.write(ld_repro_code(modelpath, layer, input_str, dtype_str))
-        print(f"The repro code is stored in file {dst_repro}")
-    except Exception as e:
-        print(f"Error: Repro code generation : {e}")
