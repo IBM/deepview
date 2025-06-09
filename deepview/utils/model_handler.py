@@ -1,4 +1,5 @@
 # Standard
+from urllib.request import urlopen
 import os
 import time
 
@@ -6,18 +7,12 @@ import time
 from fms.models import get_model
 from fms.utils import tokenizers
 from fms.utils.generation import generate, pad_input_ids
-
-from urllib.request import urlopen
 from PIL import Image
-
-import torch
-
 from sentence_transformers import SentenceTransformer
 from torch_sendnn.backends import get_warmup_mode, set_warmup_mode
 from transformers import (
     AutoConfig,
     AutoModel,
-    AutoProcessor,
     AutoModelForCausalLM,
     AutoModelForImageClassification,
     AutoModelForObjectDetection,
@@ -27,9 +22,10 @@ from transformers import (
     AutoModelForVision2Seq,
     AutoModelForVisualQuestionAnswering,
     AutoModelForZeroShotImageClassification,
+    AutoProcessor,
     AutoTokenizer,
 )
-
+import torch
 
 MODEL_CLASSES = {
     "auto": AutoModel,
@@ -198,7 +194,7 @@ class ModelHandler:
 
         print("Compiling model")
         start = time.time()
-        
+
         self.model.compile(backend="sendnn", dynamic=False)
         print(f"Compiling complete, took {time.time() - start:.3f}s")
 
@@ -256,18 +252,26 @@ class ModelHandler:
         elif self.model_type == "hf":
             if self.model_class in ["vision2seq"]:
                 messages = [
-                            {
-                                "role": "user",
-                                "content": [
-                                    {"type": "image"},
-                                    {"type": "text", "text": "Convert this page to docling."}
-                                ]
-                            },
-                        ]
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "image"},
+                            {"type": "text", "text": "Convert this page to docling."},
+                        ],
+                    },
+                ]
 
-                image = Image.open(urlopen("https://upload.wikimedia.org/wikipedia/commons/7/76/GazettedeFrance.jpg"))
-                prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
-                inputs = self.processor(text=prompt, images=[image], return_tensors="pt")
+                image = Image.open(
+                    urlopen(
+                        "https://upload.wikimedia.org/wikipedia/commons/7/76/GazettedeFrance.jpg"
+                    )
+                )
+                prompt = self.processor.apply_chat_template(
+                    messages, add_generation_prompt=True
+                )
+                inputs = self.processor(
+                    text=prompt, images=[image], return_tensors="pt"
+                )
 
                 generated_ids = self.model.generate(**inputs, max_new_tokens=8192)
                 prompt_length = inputs.input_ids.shape[1]
