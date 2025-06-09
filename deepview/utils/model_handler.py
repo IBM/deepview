@@ -254,7 +254,7 @@ class ModelHandler:
             )
 
         elif self.model_type == "hf":
-            if self.model_class in ['vision2seq']:
+            if self.model_class in ["vision2seq"]:
                 messages = [
                             {
                                 "role": "user",
