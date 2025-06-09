@@ -219,7 +219,7 @@ class ModelHandler:
                 [prompt1], min_pad_length=self.min_pad_length
             )
         elif self.model_type == "hf":
-            if self.model_class in ['vision2seq']:
+            if self.model_class in ["vision2seq"]:
                 self.processor = AutoProcessor.from_pretrained(self.model_path)
             else:
                 self.tokenizer = AutoTokenizer.from_pretrained(
