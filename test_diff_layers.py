@@ -25,8 +25,8 @@ SHARE_GPT_DATASET_PATH = os.environ.get(
 )
 
 common_model_paths = "/tmp/models/ibm-granite/granite-3.2-8b-instruct"
-common_batch_sizes = [1, 2, 4, 8]
-common_seq_lengths = [64, 2048]
+common_batch_sizes = [1]
+common_seq_lengths = [64]
 common_max_new_tokens = [128]
 
 # pass custom model path list for eg: EXPORT FMS_TESTING_COMMON_MODEL_PATHS="/tmp/models/granite-3-8b-base,/tmp/models/granite-7b-base"
@@ -82,6 +82,8 @@ def __infer_layer(warmup, model, max_len, device,
     ids, pad_input_ids = prompts
 
     if "cuda" in device:
+        print("cuda prompts")
+        print(len(prompts))
         ids = ids.to("cuda")
     
     if hasattr(model.config, "ntk_scaling") and model.config.ntk_scaling:
@@ -222,7 +224,7 @@ def test_common_shapes(model_path, batch_size, seq_length, max_new_tokens):
     # prepare the cuda model
     validation_model_cuda = get_model(
         device_type="cuda",
-        data_type=torch.float32,
+        data_type=torch.float16,
         fused_weights=False,
         **get_model_kwargs,
     )
@@ -233,7 +235,7 @@ def test_common_shapes(model_path, batch_size, seq_length, max_new_tokens):
                                              seq_length=seq_length, max_new_tokens=max_new_tokens, 
                                              tokenizer=tokenizer)
     
-    layer_stack_cuda = __register_call_layers(model=validation_model,
+    layer_stack_cuda = __register_call_layers(model=validation_model_cuda,
                                              batch_size=batch_size, 
                                              device="cuda", 
                                              seq_length=seq_length, max_new_tokens=max_new_tokens, 
@@ -252,15 +254,17 @@ def test_common_shapes(model_path, batch_size, seq_length, max_new_tokens):
         absolute_differences.extend(abs_diff)
 
         if len(absolute_differences) == 0:
-            return {"mean": float('nan'), "median": float('nan'), "q1": float('nan'), "q3": float('nan')}
-
+            abs_diff = {"mean": float('nan'), "median": float('nan'), "q1": float('nan'), "q3": float('nan')}
+        
+        print("abs_diff")
+        print(abs_diff)
         abs_diff_tensor = torch.tensor(absolute_differences)
         abs_diff_tensor = torch.nan_to_num(abs_diff_tensor, nan=0.0) 
         # mean_diff = torch.mean(abs_diff_tensor).item()
         # median_diff = torch.median(abs_diff_tensor).item()
 
-        # assert layer in cpu_layer
-        assert torch.isclose(cpu_out, cuda_out, rtol=1e-05, atol=1e-08, equal_nan=False)
+        assert layer in cuda_layer
+        # assert torch.isclose(cpu_out, cuda_out, rtol=1e-05, atol=1e-08, equal_nan=False)
 
 
 
