@@ -2,8 +2,9 @@
 DeepView: A tool for debugging ML models
 """
 
+# Standard
+from importlib.metadata import PackageNotFoundError, version
 import os
-from importlib.metadata import version, PackageNotFoundError
 
 # Get version from VERSION.txt
 try:
@@ -16,6 +17,11 @@ except FileNotFoundError:
     except PackageNotFoundError:
         __version__ = "unknown"
 
+# Local
+from deepview.core.hook_monitor import (
+    clear_unsupported_op_mode,
+    enable_unsupported_op_mode,
+)
+
 # Import key components for easier access
 from deepview.core.model_runner import run_model, set_environment
-from deepview.core.hook_monitor import enable_unsupported_op_mode, clear_unsupported_op_mode

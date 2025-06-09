@@ -1,0 +1,23 @@
+language: python
+
+# Upgrade to Jammy and Jammy Beta Distro
+group: jammy-beta
+dist: jammy
+
+python:
+  - "3.12"
+services:
+  - docker
+cache:
+  pip: true
+
+install:
+  - pip install -U pip
+  - pip install tox
+  - pip install .
+
+script:
+  # Run tests
+  - tox -e py
+  # Run linting and formatting checks
+  - tox -e ruff

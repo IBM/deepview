@@ -50,6 +50,7 @@ include = ["deepview", "deepview*"]
 target-version = "py310"
 # same as Black's default line length
 line-length = 88
+exclude = ["tmp"]
 
 [tool.ruff.lint]
 # Allow fix for all enabled rules (when `--fix`) is provided.

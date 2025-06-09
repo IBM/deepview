@@ -21,7 +21,9 @@ from torch_sendnn.backends import (
     sendnn_decoder_backend,
     update_lazyhandle,  # noqa: F401
     preserve_lazyhandle,
-    release_lazyhandle
+    release_lazyhandle,
+    set_warmup_mode,
+    get_warmup_mode
 )
 
 _BACKENDS = {
