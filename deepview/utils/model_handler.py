@@ -296,7 +296,6 @@ class ModelHandler:
         set_warmup_mode(old_warmup_mode)
         return result
 
-
     def insert_forward_hooks(self):
         """Insert forward hooks into the model layers to capture input shapes and types during forward pass."""
         print("Inserting forward hooks.............")
