@@ -14,6 +14,7 @@
 #  * limitations under the License.
 # *******************************************************************************/
 
+
 def run_layers(model_path, model_type):
     """Returns a Python script that loads the model and runs inference on each layer individually.
 
