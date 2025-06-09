@@ -2,12 +2,18 @@
 """
 DeepView CLI tool for debugging and analyzing deep learning models.
 """
+
+# Standard
+import argparse
 import os
 import sys
-import argparse
 
+# Local
+from deepview.core.hook_monitor import (
+    clear_unsupported_op_mode,
+    enable_unsupported_op_mode,
+)
 from deepview.core.model_runner import run_model, set_environment
-from deepview.core.hook_monitor import enable_unsupported_op_mode, clear_unsupported_op_mode
 
 
 def main():
@@ -17,48 +23,46 @@ def main():
     )
 
     parser.add_argument(
-        '--model_type', 
-        choices=['fms', 'hf'],
-        required=True, 
-        default='fms',
-        help='The type of model you want to debug - fms or hf.'
+        "--model_type",
+        choices=["fms", "hf"],
+        required=True,
+        default="fms",
+        help="The type of model you want to debug - fms or hf.",
     )
 
     parser.add_argument(
-        '--model', 
-        required=True, 
-        help='Model name in HF format or model path'
+        "--model", required=True, help="Model name in HF format or model path"
     )
 
     parser.add_argument(
-        '--mode',
-        nargs='+',
-        choices=['unsupported_op', 'layer_debugging'],
-        default=['unsupported_op'],
-        help="Modes: [unsupported_op, layer_debugging] (Choose one or more). Default is the unsupported_op mode."
+        "--mode",
+        nargs="+",
+        choices=["unsupported_op", "layer_debugging"],
+        default=["unsupported_op"],
+        help="Modes: [unsupported_op, layer_debugging] (Choose one or more). Default is the unsupported_op mode.",
     )
 
     parser.add_argument(
-        '--show_details',
-        action='store_true',
-        help="Print stack trace and other details, valid only with unsupported_op."
+        "--show_details",
+        action="store_true",
+        help="Print stack trace and other details, valid only with unsupported_op.",
     )
 
     parser.add_argument(
-        '--generate_repro_code',
-        action='store_true',
-        help="Generate minimal reproducible code for unsupported operation."
+        "--generate_repro_code",
+        action="store_true",
+        help="Generate minimal reproducible code for unsupported operation.",
     )
 
     parser.add_argument(
-        '--output_file',
+        "--output_file",
         default="debug_tool_log.txt",
-        help="Name of the file in which the debug tool output will be stored."
+        help="Name of the file in which the debug tool output will be stored.",
     )
 
     args = parser.parse_args()
 
-    if 'unsupported_op' in args.mode:
+    if "unsupported_op" in args.mode:
         enable_unsupported_op_mode(args.show_details)
 
     # Setting the environment variables
@@ -67,14 +71,20 @@ def main():
     # Run the model
     print("Running the model")
     try:
-        run_model(args.model_type, args.model, args.output_file, args.mode, args.generate_repro_code)
+        run_model(
+            args.model_type,
+            args.model,
+            args.output_file,
+            args.mode,
+            args.generate_repro_code,
+        )
         print("DeepView run completed")
     except Exception as e:
         print(f"Error running DeepView: {e}")
         sys.exit(1)
     finally:
-        # Tear down the environment 
-        if 'unsupported_op' in args.mode:
+        # Tear down the environment
+        if "unsupported_op" in args.mode:
             clear_unsupported_op_mode()
 
 

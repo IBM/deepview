@@ -562,7 +562,7 @@ class FxToSenDnn:
         #====================================================
 
         def add_prefix_to_string(original_string):
-            prefix = "DEBUG TOOL "
+            prefix = "DEEPVIEW "
             return '\n'.join(prefix + line for line in original_string.split('\n'))
 
         unsup_op = os.environ.get('UNSUP_OP', "0")
@@ -570,8 +570,8 @@ class FxToSenDnn:
         if unsup_op == '1':
             error = ""
             if unsup_op_debug == '1':
-                error = f"DEBUG TOOL==================================== Stack Trace ====================================\n{add_prefix_to_string(node.stack_trace)}"
-            print(f"DEBUG TOOL Caught error for \033[1m{node}\033[0m: Operation not supported.\nDEBUG TOOL Data type: {dt}, Shape: {shape}\n{error}")
+                error = f"DEEPVIEW==================================== Stack Trace ====================================\n{add_prefix_to_string(node.stack_trace)}"
+            print(f"DEEPVIEW Caught error for \033[1m{node}\033[0m: Operation not supported.\nDEEPVIEW Data type: {dt}, Shape: {shape}\n{error}")
         #====================================================
 
         return self.gb.UnknownNode(node.name, ti, inputs)
@@ -2301,8 +2301,15 @@ def update_lazyhandle():
             lh.meta["g2"] = g2
             lh.update_graph()
 
-
 _warmup_mode = False
+
+def set_warmup_mode(status):
+    global _warmup_mode
+    _warmup_mode = status
+
+def get_warmup_mode():
+    global _warmup_mode
+    return _warmup_mode
 
 def torch_sendnn(gm, fake_tensor_inputs):
     global lazy_handles, _warmup_mode
