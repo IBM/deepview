@@ -136,15 +136,20 @@ def run_model(
 
             print("Reached first infer call post compile.....")
             try:
-                if "layer_debugging" in deepview_mode:
-                    model_handler.insert_forward_hooks()
+                if "layer_debugging" or "output_debugging" in deepview_mode:
+                    model_handler.insert_forward_hooks(deepview_mode)
+                    if "output_debugging" in deepview_mode:
+                        model_handler.warmup()
                     if model_type == "hf":
                         print("Support of layer debugging for HF models is WIP")
                         sys.exit()
 
+                
+                model_handler.infer()
+                model_handler.print_input()
                 model_handler.infer()
 
-                if "layer_debugging" in deepview_mode:
+                if "layer_debugging" or "output_debugging" in deepview_mode:
                     model_handler.remove_forward_hooks()
                     with open("model_list.txt", "w") as file:
                         json.dump(

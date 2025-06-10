@@ -217,6 +217,28 @@ class ModelHandler:
                 [self.prompt], padding=True, truncation=True, return_tensors="pt"
             )
 
+    def warmup(self):
+        print("++++++++++++++++++++++++++++++++++ Calling warnmup ++++++++++++++++++++++++++++++++++++++")
+        #old_warmup_mode = get_warmup_mode()
+        #set_warmup_mode(True)
+
+        #if hasattr(model.config, "ntk_scaling") and model.config.ntk_scaling:
+        #    max_seq_len = max(max_len, model.config.max_expected_seq_len)
+        #else:
+        #    max_seq_len = model.config.max_expected_seq_len
+        self.extra_generation_kwargs["only_last_token"] = True
+        with torch_sendnn.warmup_mode():
+            result = generate(
+                        self.model,
+                        self.input_id,
+                        max_new_tokens=20,
+                        use_cache=True,
+                        do_sample=False,
+                        max_seq_len=self.model.config.max_expected_seq_len,
+                        contiguous_cache=True,
+                        extra_kwargs=self.extra_generation_kwargs,
+                    )
+
     def infer(self):
         """Perform inference on the prepared input based on the model type.
 
@@ -256,30 +278,34 @@ class ModelHandler:
                 result = self.model(**self.input_id)
         set_warmup_mode(old_warmup_mode)
 
-    def insert_forward_hooks(self):
+    def insert_forward_hooks(self, deepview_mode):
         """Insert forward hooks into the model layers to capture input shapes and types during forward pass."""
         print("Inserting forward hooks.............")
-        module_instance_names = {}
+        if 'layer_debugging' in deepview_mode:
+            module_instance_names = {}
 
-        def get_instance_names(module, current_depth=0, name="model"):
-            module_instance_names[module] = name
-            parent = name
-            array_layers = all(key.isdigit() for key in module._modules.keys())
-            for subname, child in module._modules.items():
-                if array_layers:
-                    get_instance_names(child, current_depth + 1, f"{parent}[{subname}]")
-                else:
-                    get_instance_names(child, current_depth + 1, f"{parent}.{subname}")
+            def get_instance_names(module, current_depth=0, name="model"):
+                module_instance_names[module] = name
+                parent = name
+                array_layers = all(key.isdigit() for key in module._modules.keys())
+                for subname, child in module._modules.items():
+                    if array_layers:
+                        get_instance_names(child, current_depth + 1, f"{parent}[{subname}]")
+                    else:
+                        get_instance_names(child, current_depth + 1, f"{parent}.{subname}")
 
-        get_instance_names(self.model)
+            get_instance_names(self.model)
 
         def hook_fn(module, input, output):
-            module_instance = module_instance_names.get(module, "unknown")
             if len(input) == 0:
                 return
-            input_shape_str = f"[{', '.join(map(str, input[0].shape))}]"
-            input_type = str(input[0].dtype)
-            self.layer_list[module_instance] = {input_shape_str, input_type}
+            if 'layer_debugging' in deepview_mode:
+                module_instance = module_instance_names.get(module, "unknown")
+                input_shape_str = f"[{', '.join(map(str, input[0].shape))}]"
+                input_type = str(input[0].dtype)
+                self.layer_list[module_instance] = {input_shape_str, input_type}
+            if 'output_debugging' in deepview_mode:
+                module._debug_input = input
 
         for name, layer in self.model.named_modules():
             self.hooks.append(layer.register_forward_hook(hook_fn))
@@ -289,3 +315,7 @@ class ModelHandler:
         for hook in self.hooks:
             hook.remove()
         self.hooks = []
+
+    def print_input(self):
+        for name, layer in self.model.named_modules():
+            print(layer._debug_input)
