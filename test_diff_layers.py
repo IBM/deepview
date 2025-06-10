@@ -138,7 +138,7 @@ def __register_call_layers(model, batch_size, device, seq_length, max_new_tokens
         original_forward = layer.forward
 
         def safe_forward(*args, **kwargs):
-            print("In safe forward")
+            #print("In safe forward")
             try:
                 #print("No Error")
                 return original_forward(*args, **kwargs)
@@ -176,6 +176,7 @@ def __register_call_layers(model, batch_size, device, seq_length, max_new_tokens
             delattr(module, '_debug_input')
     
     for name, layer in model.named_modules():
+        print(name)
         hooks.append(layer.register_forward_pre_hook(pre_hook_fn))
         hooks.append(layer.register_forward_hook(post_hook_fn))
 
@@ -193,9 +194,6 @@ def __register_call_layers(model, batch_size, device, seq_length, max_new_tokens
 
     return layer_stack
 
-@pytest.mark.parametrize(
-    "model_path,batch_size,seq_length,max_new_tokens", common_shapes
-)
 def test_common_shapes(model_path, batch_size, seq_length, max_new_tokens):
     torch.manual_seed(42)
     os.environ["COMPILATION_MODE"] = "offline_decoder"
@@ -227,13 +225,13 @@ def test_common_shapes(model_path, batch_size, seq_length, max_new_tokens):
         data_type=torch.float16,
         fused_weights=False,
         **get_model_kwargs,
-    )
+    ).to("cuda")
 
     layer_stack_cpu = __register_call_layers(model=validation_model,
-                                             batch_size=batch_size, 
-                                             device="cpu", 
-                                             seq_length=seq_length, max_new_tokens=max_new_tokens, 
-                                             tokenizer=tokenizer)
+                                            batch_size=batch_size, 
+                                            device="cpu", 
+                                            seq_length=seq_length, max_new_tokens=max_new_tokens, 
+                                            tokenizer=tokenizer)
     
     layer_stack_cuda = __register_call_layers(model=validation_model_cuda,
                                              batch_size=batch_size, 
@@ -245,8 +243,18 @@ def test_common_shapes(model_path, batch_size, seq_length, max_new_tokens):
 
     for layer, cpu_out in layer_stack_cpu:
         cuda_eq = [cuda_layer for cuda_layer in layer_stack_cuda if layer in cuda_layer]
+        print("cuda layer equivalent")
         print(cuda_eq)
-        print("cuda output len")
+        print(layer)
+        print("cpu output")
+        cuda_layer, cuda_out = cuda_eq[0]
+        print(len(cpu_out))
+
+    for layer, cuda_out in layer_stack_cuda:
+        cuda_eq = [cuda_layer for cuda_layer in layer_stack_cuda if layer in cuda_layer]
+        print(cuda_eq)
+        print(layer)
+        print("cuda output")
         cuda_layer, cuda_out = cuda_eq[0]
         print(len(cuda_out))
 
@@ -254,17 +262,16 @@ def test_common_shapes(model_path, batch_size, seq_length, max_new_tokens):
         absolute_differences.extend(abs_diff)
 
         if len(absolute_differences) == 0:
-            abs_diff = {"mean": float('nan'), "median": float('nan'), "q1": float('nan'), "q3": float('nan')}
+           abs_diff = {"mean": float('nan'), "median": float('nan'), "q1": float('nan'), "q3": float('nan')}
         
         print("abs_diff")
         print(abs_diff)
         abs_diff_tensor = torch.tensor(absolute_differences)
         abs_diff_tensor = torch.nan_to_num(abs_diff_tensor, nan=0.0) 
-        # mean_diff = torch.mean(abs_diff_tensor).item()
-        # median_diff = torch.median(abs_diff_tensor).item()
+        mean_diff = torch.mean(abs_diff_tensor).item()
+        median_diff = torch.median(abs_diff_tensor).item()
 
-        assert layer in cuda_layer
-        # assert torch.isclose(cpu_out, cuda_out, rtol=1e-05, atol=1e-08, equal_nan=False)
-
-
+for model_id, max_new_token, batch_size, sequence_length, default_dtype in common_shapes:
+    print("testing ", "model_id-", model_id, ", max_new_tokens-", max_new_token, ", batch_size-",batch_size, ", seq_length-",sequence_length, ", default_dtype-", default_dtype)
+    test_common_shapes(model_path=model_id, batch_size=batch_size, seq_length=sequence_length, max_new_tokens=max_new_token)
 
