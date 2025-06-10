@@ -12,11 +12,11 @@ def show_details_flag():
 
 def test_enable_unsupported_op_mode(show_details_flag):
   enable_unsupported_op_mode(show_details_flag)
-  assert os.environ.get('UNSUP_OP') == '1'
-  assert os.environ.get('UNSUP_OP_DEBUG') == ('1' if show_details_flag else '0')
+  assert os.environ.get("UNSUP_OP") == "1"
+  assert os.environ.get("UNSUP_OP_DEBUG") == ("1" if show_details_flag else "0")
 
 
 def test_clear_unsupported_op_mode():
   clear_unsupported_op_mode()
-  assert os.environ.get('UNSUP_OP') == '0'
-  assert os.environ.get('UNSUP_OP_DEBUG') == '0'
+  assert os.environ.get("UNSUP_OP") == "0"
+  assert os.environ.get("UNSUP_OP_DEBUG") == "0"
