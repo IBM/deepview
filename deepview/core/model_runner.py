@@ -131,9 +131,9 @@ def run_model(
                         )
 
                     generate_individual_layer_output(
+                        model_handler.model,
                         model_path,
                         model_type,
-                        model_handler.layer_list,
                         model_handler.layer_inputs,
                     )
 
