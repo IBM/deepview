@@ -297,15 +297,16 @@ class ModelHandler:
             get_instance_names(self.model)
 
         def hook_fn(module, input, output):
-            if len(input) == 0:
-                return
+            if 'output_debugging' in deepview_mode:
+                module._debug_input = input
             if 'layer_debugging' in deepview_mode:
+                if len(input) == 0:
+                    return
                 module_instance = module_instance_names.get(module, "unknown")
                 input_shape_str = f"[{', '.join(map(str, input[0].shape))}]"
                 input_type = str(input[0].dtype)
                 self.layer_list[module_instance] = {input_shape_str, input_type}
-            if 'output_debugging' in deepview_mode:
-                module._debug_input = input
+            
 
         for name, layer in self.model.named_modules():
             self.hooks.append(layer.register_forward_hook(hook_fn))
@@ -316,6 +317,10 @@ class ModelHandler:
             hook.remove()
         self.hooks = []
 
-    def print_input(self):
-        for name, layer in self.model.named_modules():
-            print(layer._debug_input)
+    def create_inputs(self):
+        print("Creating input")
+        module_inputs = {}
+        for name, module in self.model.named_modules():
+            if hasattr(module, '_debug_input'):
+                module_inputs[name] = module._debug_input
+        return module_inputs

@@ -4,6 +4,7 @@ import json
 import os
 import re
 import sys
+import pickle
 
 # Third Party
 from torch_sendnn import torch_sendnn
@@ -15,6 +16,7 @@ from deepview.core.layer_debugging import (
     process_output_layer_debugging,
     run_individual_layers,
 )
+from deepview.core.correctness import run_individual_layers_output
 from deepview.utils.model_handler import ModelHandler
 from deepview.utils.tee import Tee
 
@@ -146,10 +148,9 @@ def run_model(
 
                 
                 model_handler.infer()
-                model_handler.print_input()
                 model_handler.infer()
 
-                if "layer_debugging" or "output_debugging" in deepview_mode:
+                if "layer_debugging" in deepview_mode:
                     model_handler.remove_forward_hooks()
                     with open("model_list.txt", "w") as file:
                         json.dump(
@@ -159,6 +160,21 @@ def run_model(
 
                     failed_layer, input_shape, datatype = run_individual_layers(
                         logfile, model_path, model_type, model_handler.layer_list
+                    )
+
+                if "output_debugging" in deepview_mode:
+                    model_handler.remove_forward_hooks()
+                    with open("model_list.txt", "w") as file:
+                        json.dump(
+                            {k: list(v) for k, v in model_handler.layer_list.items()},
+                            file,
+                        )
+                    module_inputs = model_handler.create_inputs()
+                    with open("module_inputs.pkl", "wb") as f:
+                        pickle.dump(module_inputs, f)
+
+                    failed_layer, divergence = run_individual_layers_output(
+                        model_path, model_type, model_handler.layer_list
                     )
 
             except Exception as e:
