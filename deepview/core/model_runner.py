@@ -26,11 +26,9 @@ from torch_sendnn import torch_sendnn
 import torch
 
 # Local
-from deepview.core.generate_minimal_repro import generate_repro_code_unsupported_ops
-from deepview.core.layer_debugging import (
-    process_output_layer_debugging,
-    run_individual_layers,
-)
+from deepview.core.layer_debugging import run_individual_layers
+from deepview.core.unsupported_ops import process_unsupported_ops
+from deepview.utils.logger import save_deepview_logs
 from deepview.utils.model_handler import ModelHandler
 from deepview.utils.tee import Tee
 
@@ -51,77 +49,18 @@ def set_environment():
     os.environ["COMPILATION_MODE"] = "offline_decoder"
 
 
-def process_output_unsupported_ops(tool_output_file, logfile, generate_repro_code_flag):
-    """Parses the model execution log to extract and report unsupported operations.
-
-    It identifies lines starting with 'DEEPVIEW' that indicate unsupported operations,
-    filters unique op names, and writes them to `tool_output_file`. Optionally triggers
-    reproduction code generation if unsupported ops are found.
-
-    Args:
-        tool_output_file (str): Output file to store processed DEEPVIEW lines and unsupported op summary.
-        logfile (str): Path to the complete model output log.
-        generate_repro_code_flag (bool): Whether to generate reproduction code for the unsupported ops.
-    """
-    # All DEEPVIEW output lines are extracted and saved in tool_output_file.
-    unknown_nodes = []
-    with open(logfile, "r") as infile, open(tool_output_file, "w") as outfile:
-        for line in infile:
-            if line.startswith("DEEPVIEW"):
-                outfile.write(line)
-                match = re.search(r"DEEPVIEW Caught error for (.*?):", line)
-                if match:
-                    node = match.group(1)
-                    unknown_nodes.append(node)
-
-        def strip(s):
-            return re.sub(r"\x1b\[[0-9;]*m", "", s)
-
-        seen = set()
-        unique_unknown_nodes = [
-            op
-            for op in unknown_nodes
-            if not re.match(r".*_\d+$", strip(op))
-            and (strip(op) not in seen and not seen.add(strip(op)))
-        ]
-        if len(unique_unknown_nodes) == 0:
-            no_unsup_op = (
-                "DEEPVIEW========================================================================\n"
-                "DEEPVIEW \033[1mNo unsupported operations detected.\033[0m\n"
-            )
-            print(no_unsup_op)
-            outfile.write(no_unsup_op)
-        else:
-            unknown_nodes_str = "\n".join(sorted(unique_unknown_nodes))
-            final_line = (
-                "DEEPVIEW========================================================================\n"
-                "DEEPVIEW Unsupported operations list:\n"
-                f"{unknown_nodes_str}"
-            )
-            print(final_line)
-            outfile.write(final_line + "\n")
-
-    # Generate reproduction code for unsupported ops (if any)
-    if generate_repro_code_flag:
-        if len(unique_unknown_nodes):
-            print("Generating reproduction code")
-            generate_repro_code_unsupported_ops()
-        else:
-            print("No reproduction code generated as no unsupported operations found.")
-
-
 def run_model(
     model_type,
     model_path,
     tool_output_file,
     deepview_mode,
+    show_details_flag,
     generate_repro_code_flag,
     logfile="model_output.txt",
 ):
     """Main entry point to run a model and process its execution logs.
 
-    Loads and compiles the model using `ModelHandler`, runs inference,
-    and processes the output logs based on the active deepview mode.
+    Loads and compiles the model using `ModelHandler`, runs inference.
 
     For `layer_debugging` mode, it inserts hooks and runs individual layers.
     For `unsupported_op` mode, it detects unsupported ops in the model.
@@ -131,6 +70,7 @@ def run_model(
         model_path (str): Path to the model checkpoint.
         tool_output_file (str): Path to store filtered and analyzed output (e.g., unsupported ops or failed layers).
         deepview_mode (str): Mode to run DeepView in; can include 'layer_debugging' or 'unsupported_op'.
+        show_details_flag (str): Whether to print the stack trace for unsupported ops.
         generate_repro_code_flag (bool): Whether to generate reproducible test scripts for failure points.
         logfile (str, optional): File to store full execution logs. Defaults to 'model_output.txt'.
     """
@@ -142,6 +82,7 @@ def run_model(
                 torch_sendnn.preserve_lazyhandle()
 
             torch.set_default_dtype(torch.float16)
+
             model_handler = ModelHandler(
                 model_type=model_type,
                 model_path=model_path,
@@ -158,7 +99,10 @@ def run_model(
                         print("Support of layer debugging for HF models is WIP")
                         sys.exit()
 
-                model_handler.infer()
+                model_handler.warmup()
+
+                if "unsupported_op" in deepview_mode:
+                    process_unsupported_ops(show_details_flag, generate_repro_code_flag)
 
                 if "layer_debugging" in deepview_mode:
                     model_handler.remove_forward_hooks()
@@ -168,30 +112,16 @@ def run_model(
                             file,
                         )
 
-                    failed_layer, input_shape, datatype = run_individual_layers(
-                        logfile, model_path, model_type, model_handler.layer_list
+                    run_individual_layers(
+                        model_path,
+                        model_type,
+                        model_handler.layer_list,
+                        generate_repro_code_flag,
                     )
 
             except Exception as e:
                 print(f"Exception occurred: {e}")
 
-    # Process the logfile to create the tool_output_file
-    if "unsupported_op" in deepview_mode:
-        process_output_unsupported_ops(
-            tool_output_file, logfile, generate_repro_code_flag
-        )
-    if "layer_debugging" in deepview_mode:
-        process_output_layer_debugging(
-            tool_output_file,
-            logfile,
-            generate_repro_code_flag,
-            model_path,
-            failed_layer,
-            input_shape,
-            datatype,
-        )
-
-    # Since both our modes produce outputs before this line, commenting out the code after that -- this can be enabled in future
-    # Update lazyhandle after first run of inference
-    # print("Updating lazyhandle")
-    # torch_sendnn.update_lazyhandle()
+            # Process the logfile to create the tool_output_file
+            tee.flush()
+            save_deepview_logs(logfile, tool_output_file)

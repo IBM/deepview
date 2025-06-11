@@ -34,10 +34,5 @@ except FileNotFoundError:
         __version__ = "unknown"
 
 # Local
-from deepview.core.hook_monitor import (
-    clear_unsupported_op_mode,
-    enable_unsupported_op_mode,
-)
-
 # Import key components for easier access
 from deepview.core.model_runner import run_model, set_environment

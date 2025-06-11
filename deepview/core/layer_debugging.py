@@ -6,13 +6,17 @@ import subprocess
 from deepview.core.individual_layer_run import run_layers
 
 
-def run_individual_layers(logfile, model_path, model_type, layer_list):
-    """Runs each layer of the model individually (in layer debugging mode).
+def run_individual_layers(model_path, model_type, layer_list, generate_repro_code_flag):
+    """Runs each unique layer of the model individually in layer_debugging mode.
+
+    Iterates over the provided layers and attempts to compile and run each one in isolation.
+    Stops at the first failure and optionally generates a minimal reproducible script for debugging.
 
     Args:
-        logfile (str): Path to the complete model output log.
-        model_path (str): Path to the model checkpoint.
-        model_type (str): Type of model hf or fms.
+        model_path (str): Path to the model checkpoint directory.
+        model_type (str): Model type, either 'hf' (HuggingFace) or 'fms' (Foundation Model Stack).
+        layer_list (dict): Dictionary mapping layer/module names to a set containing input shape and data type.
+        generate_repro_code_flag (bool): If True, generates a minimal repro script when a layer fails.
     """
     print("Running each layer individually........")
     layers_done = []
@@ -27,79 +31,54 @@ def run_individual_layers(logfile, model_path, model_type, layer_list):
         datatype, input_shape = val_list if "torch" in val_list[0] else val_list[::-1]
         if sub_layer in layers_done:
             continue
-        # Show output in terminal as well as save in file
-        with open(logfile, "a") as f:
-            start_line = (
+
+        print(
+            "DEEPVIEW========================================================================\n"
+            f"DEEPVIEW Running {sub_layer}, {input_shape}, {datatype}"
+        )
+
+        layer_run = run_layers(model_path, sub_layer, input_shape, datatype)
+        command1 = ["python3", "-c", layer_run]
+        process = subprocess.run(
+            command1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        )
+
+        for line in process.stdout:
+            print(line, end="")
+        if process.returncode != 0:
+            print(
                 "DEEPVIEW========================================================================\n"
-                f"DEEPVIEW Running {sub_layer}, {input_shape}, {datatype}"
+                f"DEEPVIEW \033[1mError running {sub_layer}, {input_shape}, {datatype}\n\033[0m"
+                "DEEPVIEW========================================================================\n"
             )
-            print(start_line)
-            layer_run = run_layers(model_path, sub_layer, input_shape, datatype)
-            command1 = ["python3", "-c", layer_run]
-            process = subprocess.run(
-                command1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+            failed_layer = sub_layer
+            break
+        else:
+            print(
+                f"DEEPVIEW Successfully ran {sub_layer}, {input_shape}, {datatype}\n"
+                "DEEPVIEW========================================================================\n"
             )
-            for line in process.stdout:
-                print(line, end="")
-            if process.returncode != 0:
-                error_line = (
-                    "DEEPVIEW========================================================================\n"
-                    f"DEEPVIEW Error running {sub_layer}, {input_shape}, {datatype}\n"
-                    "DEEPVIEW========================================================================\n"
-                )
-                failed_layer = sub_layer
-                print(error_line)
-                break
-            else:
-                success_line = (
-                    f"DEEPVIEW Successfully ran {sub_layer}, {input_shape}, {datatype}\n"
-                    "DEEPVIEW========================================================================\n"
-                )
-                print(success_line)
+
         layers_done.append(sub_layer)
-    return failed_layer, input_shape, datatype
 
-
-def process_output_layer_debugging(
-    tool_output_file,
-    logfile,
-    generate_repro_code_flag,
-    model_path,
-    failed_layer,
-    input_str,
-    dtype_str,
-):
-    """Parses the model execution log to identify which layer failed in layer debugging mode.
-
-    If a failure is detected in the model's forward pass at a specific layer, the layer name and
-    failure message are printed and stored. Optionally triggers reproduction code generation.
-
-    Args:
-        tool_output_file (str): Output file to store DEEPVIEW lines and failure summary.
-        logfile (str): Path to the complete model output log.
-        generate_repro_code_flag (bool): Whether to generate reproduction code for the failing layer.
-        model_path (str): Path to the model checkpoint to use in generating the repro code.
-    """
-    # All DEEPVIEW output lines are extracted and saved in tool_output_file.
-
-    with open(logfile, "r") as infile, open(tool_output_file, "w") as outfile:
-        debug_lines = [line for line in infile if line.startswith("DEEPVIEW")]
-        outfile.writelines(debug_lines)
-        # Trigger repro code generation
-        if failed_layer != "No failed layer":
-            if generate_repro_code_flag:
-                generate_repro_code_layer_debugging(
-                    model_path, failed_layer, input_str, dtype_str
-                )
+    if failed_layer != "No failed layer":
+        if generate_repro_code_flag:
+            generate_repro_code_layer_debugging(
+                model_path, failed_layer, input_shape, datatype
+            )
 
 
 def generate_repro_code_layer_debugging(modelpath, layer, input_str, dtype_str):
-    """Generates layer-specific repro code from an error message for layer_debugging mode.
+    """Generates and saves layer-level repro script for debugging failures in layer_debugging mode.
+
+    This function creates a standalone Python script that reproduces the issue for the specified layer
+    by compiling and running it with given input shape and data type.
 
     Args:
-        err_msg (str): Error string containing input shape and data type information.
-        layer (str): The layer name (dotted path) in the model where the error occurred.
         modelpath (str): Path to the model checkpoint.
+        layer (str): Python expression referring to the layer where the failure occurred.
+        input_str (str): String representation of the input tensor shape (e.g., '(1, 64, 64)').
+        dtype_str (str): PyTorch data type as a string (e.g., 'torch.float32').
     """
     dst_repro = f"{layer.split('.')[-1]}_repro_code.py"
     try:

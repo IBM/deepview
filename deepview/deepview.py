@@ -25,10 +25,6 @@ import os
 import sys
 
 # Local
-from deepview.core.hook_monitor import (
-    clear_unsupported_op_mode,
-    enable_unsupported_op_mode,
-)
 from deepview.core.model_runner import run_model, set_environment
 
 
@@ -61,7 +57,7 @@ def main():
     parser.add_argument(
         "--show_details",
         action="store_true",
-        help="Print stack trace and other details, valid only with unsupported_op.",
+        help="Print the stack trace for unsupported ops, valid only with unsupported_op.",
     )
 
     parser.add_argument(
@@ -78,9 +74,6 @@ def main():
 
     args = parser.parse_args()
 
-    if "unsupported_op" in args.mode:
-        enable_unsupported_op_mode(args.show_details)
-
     # Setting the environment variables
     set_environment()
 
@@ -92,16 +85,13 @@ def main():
             args.model,
             args.output_file,
             args.mode,
+            args.show_details,
             args.generate_repro_code,
         )
         print("DeepView run completed")
     except Exception as e:
         print(f"Error running DeepView: {e}")
         sys.exit(1)
-    finally:
-        # Tear down the environment
-        if "unsupported_op" in args.mode:
-            clear_unsupported_op_mode()
 
 
 if __name__ == "__main__":

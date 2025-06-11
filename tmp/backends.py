@@ -557,23 +557,6 @@ class FxToSenDnn:
             layout = convert_layout(node.shape)
             ti = [sendnn.TensorInfo(dt, shape, layout)]
 
-        #====================================================
-        # Modification for catching unsupported ops
-        #====================================================
-
-        def add_prefix_to_string(original_string):
-            prefix = "DEEPVIEW "
-            return '\n'.join(prefix + line for line in original_string.split('\n'))
-
-        unsup_op = os.environ.get('UNSUP_OP', "0")
-        unsup_op_debug = os.environ.get('UNSUP_OP_DEBUG', "0")
-        if unsup_op == '1':
-            error = ""
-            if unsup_op_debug == '1':
-                error = f"DEEPVIEW==================================== Stack Trace ====================================\n{add_prefix_to_string(node.stack_trace)}"
-            print(f"DEEPVIEW Caught error for \033[1m{node}\033[0m: Operation not supported.\nDEEPVIEW Data type: {dt}, Shape: {shape}\n{error}")
-        #====================================================
-
         return self.gb.UnknownNode(node.name, ti, inputs)
 
     def convert_addmm(self, node, inputs):
@@ -2029,7 +2012,7 @@ class LazyHandle(torch.fx.GraphModule):
 lazy_handles: list[LazyHandle] = []
 
 #====================================================
-# Modification for repro code and other modules
+# Modification for DeepView 
 #====================================================
 _preserve_lazy_handle = False
 def clean_graph():
@@ -2303,6 +2286,10 @@ def update_lazyhandle():
 
 _warmup_mode = False
 
+#====================================================
+# Modification for DEEPVIEW
+#====================================================
+
 def set_warmup_mode(status):
     global _warmup_mode
     _warmup_mode = status
@@ -2310,6 +2297,7 @@ def set_warmup_mode(status):
 def get_warmup_mode():
     global _warmup_mode
     return _warmup_mode
+#====================================================
 
 def torch_sendnn(gm, fake_tensor_inputs):
     global lazy_handles, _warmup_mode

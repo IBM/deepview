@@ -36,6 +36,7 @@ import torch_sendnn
 import torch
 import os
 os.environ["COMPILATION_MODE"] = "offline_decoder"
+
 model = get_model(
     "hf_pretrained",
     None,
@@ -47,6 +48,7 @@ model = get_model(
     linear_config={{"linear_type": "torch_linear"}},
     fused_weights=False,
 )
+
 device = torch.device("cpu")
 model.eval()
 torch.set_grad_enabled(False)

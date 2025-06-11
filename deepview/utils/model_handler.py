@@ -233,12 +233,8 @@ class ModelHandler:
                 [self.prompt], padding=True, truncation=True, return_tensors="pt"
             )
 
-    def infer(self):
-        """Perform inference on the prepared input based on the model type.
-
-        Returns:
-            Any: The inference result, can be a tensor or decoded string depending on model type.
-        """
+    def warmup(self):
+        """Perform warmup on the prepared input based on the model type."""
         old_warmup_mode = get_warmup_mode()
         set_warmup_mode(True)
         if self.model_type == "fms":
