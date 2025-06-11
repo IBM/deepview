@@ -1,3 +1,19 @@
+# /*******************************************************************************
+#  * Copyright 2025 IBM Corporation
+#  *
+#  * Licensed under the Apache License, Version 2.0 (the "License");
+#  * you may not use this file except in compliance with the License.
+#  * You may obtain a copy of the License at
+#  *
+#  *     http://www.apache.org/licenses/LICENSE-2.0
+#  *
+#  * Unless required by applicable law or agreed to in writing, software
+#  * distributed under the License is distributed on an "AS IS" BASIS,
+#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  * See the License for the specific language governing permissions and
+#  * limitations under the License.
+# *******************************************************************************/
+
 # Standard
 import os
 import time
@@ -218,33 +234,7 @@ class ModelHandler:
             )
 
     def warmup(self):
-        print("++++++++++++++++++++++++++++++++++ Calling warnmup ++++++++++++++++++++++++++++++++++++++")
-        #old_warmup_mode = get_warmup_mode()
-        #set_warmup_mode(True)
-
-        #if hasattr(model.config, "ntk_scaling") and model.config.ntk_scaling:
-        #    max_seq_len = max(max_len, model.config.max_expected_seq_len)
-        #else:
-        #    max_seq_len = model.config.max_expected_seq_len
-        self.extra_generation_kwargs["only_last_token"] = True
-        with torch_sendnn.warmup_mode():
-            result = generate(
-                        self.model,
-                        self.input_id,
-                        max_new_tokens=20,
-                        use_cache=True,
-                        do_sample=False,
-                        max_seq_len=self.model.config.max_expected_seq_len,
-                        contiguous_cache=True,
-                        extra_kwargs=self.extra_generation_kwargs,
-                    )
-
-    def infer(self):
-        """Perform inference on the prepared input based on the model type.
-
-        Returns:
-            Any: The inference result, can be a tensor or decoded string depending on model type.
-        """
+        """Perform warmup on the prepared input based on the model type."""
         old_warmup_mode = get_warmup_mode()
         set_warmup_mode(True)
         if self.model_type == "fms":
