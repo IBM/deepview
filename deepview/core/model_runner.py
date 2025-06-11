@@ -27,10 +27,10 @@ from torch_sendnn import torch_sendnn
 import torch
 
 # Local
+from deepview.core.input_output_debugging import generate_individual_layer_output
 from deepview.core.layer_debugging import run_individual_layers
 from deepview.core.unsupported_ops import process_unsupported_ops
 from deepview.utils.logger import save_deepview_logs
-from deepview.core.correctness import run_individual_layers_output
 from deepview.utils.model_handler import ModelHandler
 from deepview.utils.tee import Tee
 
@@ -95,10 +95,8 @@ def run_model(
 
             print("Reached first infer call post compile.....")
             try:
-                if "layer_debugging" or "output_debugging" in deepview_mode:
+                if "layer_debugging" or "input_output_debugging" in deepview_mode:
                     model_handler.insert_forward_hooks(deepview_mode)
-                    if "output_debugging" in deepview_mode:
-                        model_handler.warmup()
                     if model_type == "hf":
                         print("Support of layer debugging for HF models is WIP")
                         sys.exit()
@@ -122,6 +120,23 @@ def run_model(
                         model_handler.layer_list,
                         generate_repro_code_flag,
                     )
+
+                if "input_output_debugging" in deepview_mode:
+                    model_handler.remove_forward_hooks()
+                    model_handler.get_layer_inputs()
+                    with open("model_list.txt", "w") as file:
+                        json.dump(
+                            {k: list(v) for k, v in model_handler.layer_list.items()},
+                            file,
+                        )
+
+                    generate_individual_layer_output(
+                        model_path,
+                        model_type,
+                        model_handler.layer_list,
+                        model_handler.layer_inputs,
+                    )
+
 
             except Exception as e:
                 print(f"Exception occurred: {e}")

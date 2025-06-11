@@ -117,6 +117,7 @@ class ModelHandler:
         self.input_id = None
         self.hooks = []
         self.layer_list = {}
+        self.layer_inputs = {}
         self.extra_generation_kwargs = None
         self.batch_size = 1
         self.min_pad_length = 64
@@ -287,7 +288,7 @@ class ModelHandler:
             get_instance_names(self.model)
 
         def hook_fn(module, input, output):
-            if 'output_debugging' in deepview_mode:
+            if 'input_output_debugging' in deepview_mode:
                 module._debug_input = input
             if 'layer_debugging' in deepview_mode:
                 if len(input) == 0:
@@ -307,10 +308,9 @@ class ModelHandler:
             hook.remove()
         self.hooks = []
 
-    def create_inputs(self):
-        print("Creating input")
-        module_inputs = {}
+    def get_layer_inputs(self):
+        """Get all inputs captured using forward hook for input_output_debugging mode."""
         for name, module in self.model.named_modules():
             if hasattr(module, '_debug_input'):
-                module_inputs[name] = module._debug_input
-        return module_inputs
+                self.layer_inputs[name] = module._debug_input
+        
