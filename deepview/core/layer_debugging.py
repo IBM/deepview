@@ -2,9 +2,6 @@
 from pathlib import Path
 import subprocess
 
-# Local
-from deepview.core.individual_layer_run import run_layers
-
 
 def run_individual_layers(model_path, model_type, layer_list, generate_repro_code_flag):
     """Runs each unique layer of the model individually in layer_debugging mode.
@@ -37,6 +34,18 @@ def run_individual_layers(model_path, model_type, layer_list, generate_repro_cod
             f"DEEPVIEW Running {sub_layer}, {input_shape}, {datatype}"
         )
 
+        if model_type == "fms":
+            # Local
+            from deepview.core.individual_layer_run_fms import run_layers
+        elif model_type == "hf":
+            # Local
+            from deepview.core.individual_layer_run_hf import run_layers
+        else:
+            print(
+                "DEEPVIEW \033[1mError running individual layers - only fms and hf models area supported\n\033[0m"
+            )
+            return
+
         layer_run = run_layers(model_path, sub_layer, input_shape, datatype)
         command1 = ["python3", "-c", layer_run]
         process = subprocess.run(
@@ -64,27 +73,42 @@ def run_individual_layers(model_path, model_type, layer_list, generate_repro_cod
     if failed_layer != "No failed layer":
         if generate_repro_code_flag:
             generate_repro_code_layer_debugging(
-                model_path, failed_layer, input_shape, datatype
+                model_path, model_type, failed_layer, input_shape, datatype
             )
 
 
-def generate_repro_code_layer_debugging(modelpath, layer, input_str, dtype_str):
+def generate_repro_code_layer_debugging(
+    model_path, model_type, layer, input_str, dtype_str
+):
     """Generates and saves layer-level repro script for debugging failures in layer_debugging mode.
 
     This function creates a standalone Python script that reproduces the issue for the specified layer
     by compiling and running it with given input shape and data type.
 
     Args:
-        modelpath (str): Path to the model checkpoint.
+        model_path (str): Path to the model checkpoint.
+        model_type (str): Model type, either 'hf' (HuggingFace) or 'fms' (Foundation Model Stack).
         layer (str): Python expression referring to the layer where the failure occurred.
         input_str (str): String representation of the input tensor shape (e.g., '(1, 64, 64)').
         dtype_str (str): PyTorch data type as a string (e.g., 'torch.float32').
     """
+    if model_type == "fms":
+        # Local
+        from deepview.core.individual_layer_run_fms import run_layers
+    elif model_type == "hf":
+        # Local
+        from deepview.core.individual_layer_run_hf import run_layers
+    else:
+        print(
+            "DEEPVIEW \033[1mError running individual layers - only fms and hf models area supported\n\033[0m"
+        )
+        return
+
     dst_repro = f"{layer.split('.')[-1]}_repro_code.py"
     try:
         Path(dst_repro).touch()
         with open(dst_repro, "w") as f:
-            f.write(run_layers(modelpath, layer, input_str, dtype_str))
+            f.write(run_layers(model_path, layer, input_str, dtype_str))
         print(f"The repro code is stored in file {dst_repro}\n")
     except Exception as e:
         print(f"Error: Repro code generation : {e}")
