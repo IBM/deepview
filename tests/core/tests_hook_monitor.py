@@ -21,7 +21,7 @@ def show_details_flag():
 def test_enable_unsupported_op_mode(show_details_flag):
     """
     Test to ensure the environment variables for unsupported operation mode are set correctly.
-    
+
     Args:
         show_details_flag: A fixture that controls whether the `--show_details` is enabled.
     """

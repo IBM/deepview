@@ -40,10 +40,12 @@ def test_debugger_output_exits(debugger_path):
         debugger_path.exists()
     ), f"Debugger output file {debugger_path} does not exist."
 
+
 def test_get_unsupported_ops_with_no_ops_found(debugger_path):
     """
     Test to ensure the unsupported operations are correctly extracted from the debugger output.
     This test checks if the `get_unsupported_ops` function returns a empty list of unsupported operations.
     """
-    assert "No unsupported operations detected." in debugger_path.read_text(), \
-        "Expected 'No unsupported operations detected.' in debugger output."
+    assert (
+        "No unsupported operations detected." in debugger_path.read_text()
+    ), "Expected 'No unsupported operations detected.' in debugger output."
