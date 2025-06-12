@@ -92,11 +92,19 @@ def generate_individual_layer_output(model, model_path, model_type, layer_inputs
                 failed_layer = sub_layer
                 break
             else:
+                result = torch.load("output_kwargs.pth")
                 print(
                     f"DEEPVIEW Successfully ran {sub_layer}\n"
                     "DEEPVIEW========================================================================\n"
                 )
-
+                with open(filename, 'a') as f:
+                    f.write("\\nLayer:")
+                    f.write(str({sub_layer}))
+                    f.write("\\nInput:")
+                    f.write(str(kwargs))
+                    f.write("\\nOutput:")
+                    f.write(str(result))
+                    f.write("\\n")
             layers_done.append(sub_layer)
 
 

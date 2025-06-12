@@ -59,13 +59,5 @@ input = torch.load("input_kwargs.pth")
 print(f"Warmup of layer {sub_layer} with inputs ",input)
 with torch_sendnn.warmup_mode():
     result = layer(**input)
-
-with open("{filename}", 'a') as f:
-    f.write("\\nLayer:")
-    f.write(str({sub_layer}))
-    f.write("\\nInput:")
-    f.write(str(input))
-    f.write("\\nOutput:")
-    f.write(str(result))
-    f.write("\\n")
+torch.save(result, "output_kwargs.pth")
 """
