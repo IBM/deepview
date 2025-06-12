@@ -32,24 +32,21 @@ def run_layers(modelpath, sub_layer, input_shape, datatype):
     """
     return f"""
 from fms.models import get_model
+from deepview.utils.model_handler import ModelHandler
+
 import torch_sendnn
 import torch
 import os
 os.environ["COMPILATION_MODE"] = "offline_decoder"
-model = get_model(
-    "hf_pretrained",
-    None,
+
+model_handler = ModelHandler(
+    model_type='hf',
     model_path='{modelpath}',
-    device_type="cpu",
-    data_type=torch.float16,
-    source=None,
-    distributed_strategy=None,
-    linear_config={{"linear_type": "torch_linear"}},
-    fused_weights=False,
+    prompt='What is the capital of India?',
 )
-device = torch.device("cpu")
-model.eval()
-torch.set_grad_enabled(False)
+model_handler.load_and_compile_model()
+model = model_handler.model
+
 rand_tensor = torch.rand(tuple({input_shape}))
 data_type = {datatype}
 layer = {sub_layer}

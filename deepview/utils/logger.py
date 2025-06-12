@@ -14,3 +14,8 @@
 #  * limitations under the License.
 # *******************************************************************************/
 
+
+def save_deepview_logs(logfile, tool_output_file):
+    with open(logfile, "r") as infile, open(tool_output_file, "w") as outfile:
+        debug_lines = [line for line in infile if line.startswith("DEEPVIEW")]
+        outfile.writelines(debug_lines)
