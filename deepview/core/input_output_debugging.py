@@ -98,13 +98,13 @@ def generate_individual_layer_output(model, model_path, model_type, layer_inputs
                     "DEEPVIEW========================================================================\n"
                 )
                 with open(filename, 'a') as f:
-                    f.write("\\nLayer:")
+                    f.write("\nLayer:")
                     f.write(str({sub_layer}))
-                    f.write("\\nInput:")
+                    f.write("\nInput:")
                     f.write(str(kwargs))
-                    f.write("\\nOutput:")
+                    f.write("\nOutput:")
                     f.write(str(result))
-                    f.write("\\n")
+                    f.write("\n")
             layers_done.append(sub_layer)
 
 
