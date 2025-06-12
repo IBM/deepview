@@ -97,9 +97,6 @@ def run_model(
             try:
                 if "layer_debugging" or "input_output_debugging" in deepview_mode:
                     model_handler.insert_forward_hooks(deepview_mode)
-                    if model_type == "hf":
-                        print("Support of layer debugging for HF models is WIP")
-                        sys.exit()
 
                 model_handler.warmup()
 
