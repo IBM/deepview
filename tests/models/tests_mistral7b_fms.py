@@ -41,8 +41,8 @@ def debugger_path(tmp_path_factory):
     args = argparse.Namespace(
         model_type="fms",
         model_path="/mnt/aiu-models-en-shared/models/mistralai/Mistral-7B-Instruct-v0.3",
-        deepview_mode=["unsupported_op", "layer_debugging"],
-        show_details=True,
+        deepview_mode=["unsupported_op"],
+        show_details=False,
         generate_repro_code_flag=True,
         tool_output_file=tmp_path_factory.getbasetemp() / "test_debugger.txt",
     )
@@ -80,5 +80,6 @@ def test_get_unsupported_ops_with_no_ops_found(debugger_path):
         debugger_path: A fixture that runs the model and generates the output file.
     """
     assert (
-        "No unsupported operations detected." in debugger_path.read_text()
-    ), "Expected 'No unsupported operations detected.' in debugger output."
+        "DEEPVIEW \033[1mNo unsupported operations detected.\033[0m\n"
+        in debugger_path.read_text(encoding="utf-8")
+    ), "Expected 'DEEPVIEW \033[1mNo unsupported operations detected.\033[0m\n' in debugger output."
