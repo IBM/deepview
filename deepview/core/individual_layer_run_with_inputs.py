@@ -15,7 +15,7 @@
 # *******************************************************************************/
 import torch
 
-def run_layers_with_inputs(modelpath, sub_layer, input):
+def run_layers_with_inputs(modelpath, filename, sub_layer):
     """Generates a minimal Python script to reproduce a layer-level failure in layer debugging mode.
 
     The generated code loads the model, compiles the specified sub-layer using the `sendnn` backend,
@@ -30,13 +30,6 @@ def run_layers_with_inputs(modelpath, sub_layer, input):
     Returns:
         str: A complete Python script as a string that can be saved and executed to reproduce the failure.
     """
-    arg_string = ", ".join(
-                        f"{k}=tensor({v.tolist()}, dtype=torch.{v.dtype})"
-                        if isinstance(v, torch.Tensor)
-                        else f"{k}={repr(v)}"
-                        for k, v in input.items()
-                    )
-    print(arg_string)
     return f"""
 from fms.models import get_model
 from torch import tensor
@@ -62,7 +55,17 @@ model.eval()
 torch.set_grad_enabled(False)
 layer = {sub_layer}
 layer.compile(backend="sendnn", dynamic=False)
-print(f"Warmup of layer {sub_layer} with inputs")
+input = torch.load("input_kwargs.pth")
+print(f"Warmup of layer {sub_layer} with inputs ",input)
 with torch_sendnn.warmup_mode():
-   layer({arg_string})
+    result = layer(**input)
+
+with open("{filename}", 'a') as f:
+    f.write("\\nLayer:")
+    f.write(str({sub_layer}))
+    f.write("\\nInput:")
+    f.write(str(input))
+    f.write("\\nOutput:")
+    f.write(str(result))
+    f.write("\\n")
 """

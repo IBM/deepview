@@ -1,4 +1,5 @@
 # Standard
+from datetime import datetime
 from pathlib import Path
 from pycony import *
 import subprocess
@@ -36,17 +37,18 @@ def generate_individual_layer_output(model, model_path, model_type, layer_inputs
     print("Running each layer individually........")
     layers_done = []
     failed_layer = "No failed layer"
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"run_{timestamp}.txt"
     for str_layer, inputval in layer_inputs.items():
         if str_layer:
             sub_layer = convert_attr_path(str_layer)
         else:
             sub_layer = 'model'
-
         if sub_layer in layers_done:
             continue
-
-        print("Layer is ", sub_layer)
-        if sub_layer != "model" and sub_layer != "model.base_model" and inputval:
+        if sub_layer != "model" and sub_layer != "model.base_model":
+            print("Layer is ", sub_layer)
+            
             target_layer = eval(sub_layer)
             forward_signature = inspect.signature(target_layer.forward)
             expected_args = list(forward_signature.parameters.keys())
@@ -66,14 +68,14 @@ def generate_individual_layer_output(model, model_path, model_type, layer_inputs
                 zipped_inputs = list(zip(expected_args, inputval))
             
             kwargs = dict(zipped_inputs)
-            print(f"Input Keyword Arguments: {kwargs}")
+            torch.save(kwargs, "input_kwargs.pth")
 
             print(
                 "DEEPVIEW========================================================================\n"
                 f"DEEPVIEW Running {sub_layer} with input {kwargs}"
             )
 
-            layer_run = run_layers_with_inputs(model_path, sub_layer, kwargs)
+            layer_run = run_layers_with_inputs(model_path, filename, sub_layer)
             command1 = ["python3", "-c", layer_run]
             process = subprocess.run(
                 command1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True

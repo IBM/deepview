@@ -122,14 +122,8 @@ def run_model(
                     )
 
                 if "input_output_debugging" in deepview_mode:
-                    model_handler.remove_forward_hooks()
                     model_handler.get_layer_inputs()
-                    with open("model_list.txt", "w") as file:
-                        json.dump(
-                            {k: list(v) for k, v in model_handler.layer_list.items()},
-                            file,
-                        )
-
+                    model_handler.remove_forward_hooks()
                     generate_individual_layer_output(
                         model_handler.model,
                         model_path,

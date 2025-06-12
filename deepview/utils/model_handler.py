@@ -288,11 +288,11 @@ class ModelHandler:
             get_instance_names(self.model)
 
         def hook_fn(module, input, output):
+            if len(input) == 0:
+                return 
             if 'input_output_debugging' in deepview_mode:
                 module._debug_input = input
             if 'layer_debugging' in deepview_mode:
-                if len(input) == 0:
-                    return
                 module_instance = module_instance_names.get(module, "unknown")
                 input_shape_str = f"[{', '.join(map(str, input[0].shape))}]"
                 input_type = str(input[0].dtype)
