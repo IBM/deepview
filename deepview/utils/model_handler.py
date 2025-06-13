@@ -179,7 +179,7 @@ class ModelHandler:
             # This get_model call assumes locally downloaded weights
             self.model = get_model(
                 "hf_pretrained",
-                model_path=self.model_path,
+                variant=self.model_path,
                 device_type="cpu",
                 data_type=torch.float16,
                 fused_weights=False,

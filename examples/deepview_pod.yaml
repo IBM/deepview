@@ -3,6 +3,7 @@ kind: Pod
 metadata:
   name: <pod-name>
 spec:
+  schedulerName: aiu-scheduler
   containers:
   - name: <pod-name>
     resources:
@@ -11,17 +12,61 @@ spec:
       requests:
         ibm.com/aiu_pf: 1
     imagePullPolicy: Always
-    image: &pod_image icr.io/ibmaiu_internal/x86_64/e2e_stable:2025_05_14
-    workingDir: /tmp/
+    image: &pod_image icr.io/ibmaiu_internal/x86_64/dd2/e2e_stable:2025_06_09
+    command:
+      - bash
+      - '-c'
+    args:
+      # lines without gap are considered on the same line and indented are new lines
+      - >
+        source ~/.bashrc
+
+        unset HF_HOME
+        
+        cd $HOME
+
+        pip3 install -q -U transformers
+
+        git clone
+        https://github.com/foundation-model-stack/foundation-model-stack.git
+
+        cd foundation-model-stack
+
+        git checkout $FMS_CHECKOUT
+
+        echo "POD_IMAGE:" $POD_IMAGE >> /tmp/aiu-query-devices.txt
+
+        echo " " >> /tmp/aiu-query-devices.txt
+
+        /opt/sentient/bin/aiu-query-devices >> /tmp/aiu-query-devices.txt
+
+        echo " " >> ~/.bashrc
+
+        echo "cat /tmp/aiu-query-devices.txt" >> ~/.bashrc
+
+        echo 'FLEX_COMPUTE      = ' $FLEX_COMPUTE
+
+        echo 'FLEX_DEVICE       = ' $FLEX_DEVICE
+
+        echo 'DTLOG_LEVEL       = ' $DTLOG_LEVEL
+
+        echo 'TORCH_SENDNN_LOG  = ' $TORCH_SENDNN_LOG
+
+        echo 'DT_DEEPRT_VERBOSE = ' $DT_DEEPRT_VERBOSE
+
+        echo 'INFER_SCRIPT      = ' $INFER_SCRIPT
+
+        echo 'MODEL             = ' $MODEL
+
+        tail -f /dev/null
+
+    workingDir: /home/senuser
     env:
-    # TRANSFORMERS_CACHE
-    - name: HF_HOME
-      value: /tmp/.cache
     # Use the AIU device
     - name: FLEX_COMPUTE
       value: "SENTIENT"
     - name: FLEX_DEVICE
-      value: "VFIO"
+      value: "PF"
     # Force runtime to use the same heap data structure for everything
     - name: FLEX_OVERWRITE_NMB_FRAME
       value: "1"
@@ -34,6 +79,10 @@ spec:
     # HOME might not be set, so set it
     - name: HOME
       value: /home/senuser
+    - name: HF_HUB_OFFLINE
+      value: "1"
+    - name:  HF_HUB_CACHE
+      value: /home/senuser/models/huggingface_cache/hub
     # Make the AIU stack quiet
     - name: DTLOG_LEVEL
       value: "error"
@@ -41,61 +90,24 @@ spec:
       value: "CRITICAL"
     - name: DT_DEEPRT_VERBOSE
       value: "-1"
-    - name: DEEPRT_EXPORT_DIR
-      value: /tmp/dt/export
-    - name: DTCOMPILER_EXPORT_DIR
-      value: /tmp/dt/export
     - name: POD_IMAGE
       value: *pod_image
     - name: FMS_CHECKOUT
       value: 517315ca3b840e46117614ef19ac0e8da76a5c0c
-    - name: DT_OPT
-      value: >-
-        dtversion=2,varsub=1,lxopt=1,opfusion=1,arithfold=1,dataopt=1,patchinit=1,patchprog=1,autopilot=1,weipreload=0,kvcacheopt=1,progshareopt=1
-    command:
-      - bash
-      - '-c'
-    args: #  install AIU FMS
-      - >
-        source ~/.bashrc
-
-        export PATH="${PATH}:/tmp/.local/bin/"
-
-        cd /tmp
-
-        pip3 install -q -U transformers
-
-        git clone
-        https://github.com/foundation-model-stack/foundation-model-stack.git
-
-        cd foundation-model-stack
-
-        git checkout $FMS_CHECKOUT
-
-        pip3 install -e .
-
-        echo "POD_IMAGE:" $POD_IMAGE >> /tmp/aiu-query-devices.txt
-
-        echo " " >> /tmp/aiu-query-devices.txt
-
-        /opt/sentient/bin/aiu-query-devices >> /tmp/aiu-query-devices.txt
-
-        echo " " >> ~/.bashrc
-
-        echo "cat /tmp/aiu-query-devices.txt" >> ~/.bashrc
-
-        tail -f /dev/null
     volumeMounts:
     # Expanded Shared Memory
     - name: dev-shm
       mountPath: /dev/shm
-    - name: aiu-models-en-shared
-      mountPath: /mnt/aiu-models-en-shared
+    # Model mount
+    - name: shared-models
+      mountPath: /home/senuser/models
+  imagePullSecrets:
+    - name: <your-pull-secret>
   volumes:
   - name: dev-shm
     emptyDir:
       medium: Memory
-      sizeLimit: 32Gi
-  - name: aiu-models-en-shared
+      sizeLimit: 64Gi
+  - name: shared-models
     persistentVolumeClaim:
-      claimName: aiu-models-en-shared
+      claimName: shared-models
