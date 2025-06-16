@@ -174,16 +174,26 @@ class ModelHandler:
         """
         print("Loading model")
         start = time.time()
+        hw_version = os.environ["HW_VERSION"]
 
         if self.model_type == "fms":
             # This get_model call assumes locally downloaded weights
-            self.model = get_model(
-                "hf_pretrained",
-                variant=self.model_path,
-                device_type="cpu",
-                data_type=torch.float16,
-                fused_weights=False,
-            )
+            if hw_version == "dd1":
+                self.model = get_model(
+                    "hf_pretrained",
+                    model_path=self.model_path,
+                    device_type="cpu",
+                    data_type=torch.float16,
+                    fused_weights=False,
+                )
+            else:
+                self.model = get_model(
+                    "hf_pretrained",
+                    variant=self.model_path,
+                    device_type="cpu",
+                    data_type=torch.float16,
+                    fused_weights=False,
+                )
         elif self.model_type == "hf":
             # TODO: we can do specific handling per model class but for now everything apart from CausalLM is treated as AutoModel
             # Note: SentenceTransformer has to be loaded as AutoModel as torch.compile does not work for SentenceTransformer

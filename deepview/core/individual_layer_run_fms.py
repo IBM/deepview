@@ -37,16 +37,30 @@ import torch
 import os
 os.environ["COMPILATION_MODE"] = "offline_decoder"
 
-model = get_model(
-    "hf_pretrained",
-    variant='{modelpath}',
-    device_type="cpu",
-    data_type=torch.float16,
-    source=None,
-    distributed_strategy=None,
-    linear_config={{"linear_type": "torch_linear"}},
-    fused_weights=False,
-)
+hw_version = os.environ["HW_VERSION"]
+if hw_version == dd1:
+    model = get_model(
+        "hf_pretrained",
+        None,
+        model_path='{modelpath}',
+        device_type="cpu",
+        data_type=torch.float16,
+        source=None,
+        distributed_strategy=None,
+        linear_config={{"linear_type": "torch_linear"}},
+        fused_weights=False,
+    )
+else: 
+    model = get_model(
+        "hf_pretrained",
+        variant='{modelpath}',
+        device_type="cpu",
+        data_type=torch.float16,
+        source=None,
+        distributed_strategy=None,
+        linear_config={{"linear_type": "torch_linear"}},
+        fused_weights=False,
+    )
 
 device = torch.device("cpu")
 model.eval()
