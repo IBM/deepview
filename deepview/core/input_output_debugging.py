@@ -1,5 +1,4 @@
 # Standard
-from datetime import datetime
 from pathlib import Path
 from pycony import *
 import subprocess
@@ -32,7 +31,7 @@ def dump_to_file(filename, layer_name, inputs, outputs):
         f.write(str(outputs))
         f.write("\n")
 
-def generate_individual_layer_output(model_handler, model_path, model_type, device_to_run):
+def generate_individual_layer_output(model_handler, model_path, model_type, device_to_run, timestamp):
     """Generates layer outputs by running each layer of the model individually on the inputs collected in forward pass.
 
     Iterates over the all layers and captures the outputs of the layers
@@ -47,7 +46,6 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
     input_outputs = [] 
     layers_done = []
     failed_layer = "No failed layer"
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     model = model_handler.model
 
     if device_to_run == 'aiu':

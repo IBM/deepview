@@ -21,6 +21,7 @@ import os
 import re
 import sys
 import pickle
+from datetime import datetime
 
 # Third Party
 from torch_sendnn import torch_sendnn
@@ -122,6 +123,9 @@ def run_model(
                     )
 
                 if "input_output_debugging" in deepview_mode:
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+                    ## AIU run
                     aiu_model_handler.get_layer_io()
                     aiu_model_handler.remove_forward_hooks()
                     aiu_layer_io = generate_individual_layer_output(
@@ -129,6 +133,7 @@ def run_model(
                         model_path,
                         model_type,
                         'aiu',
+                        timestamp
                     )
 
                     ## CPU run
@@ -150,6 +155,7 @@ def run_model(
                         model_path,
                         model_type,
                         'cpu',
+                        timestamp
                     )
                 
 

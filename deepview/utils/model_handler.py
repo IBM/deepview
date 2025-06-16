@@ -243,74 +243,49 @@ class ModelHandler:
                 [self.prompt], padding=True, truncation=True, return_tensors="pt"
             )
 
+    def _generate_output(self):
+        """Calling generate function based on model_type."""
+        if self.model_type == "fms":
+            self.extra_generation_kwargs["only_last_token"] = True
+            result = generate(
+                self.model,
+                self.input_id,
+                max_new_tokens=self.max_new_tokens,
+                use_cache=True,
+                do_sample=False,
+                max_seq_len=self.model.config.max_expected_seq_len,
+                eos_token_id=self.tokenizer.eos_token_id,
+                contiguous_cache=True,
+                extra_kwargs=self.extra_generation_kwargs,
+            )
+        elif self.model_type == "hf":
+            if self.model_class in ["causal_lm"]:
+                input_ids = self.input_id["input_ids"]
+                attention_mask = self.input_id.get("attention_mask", None)
+                generate_ids = self.model.generate(
+                    input_ids,
+                    attention_mask=attention_mask,
+                    max_new_tokens=self.max_new_tokens,
+                )
+                result = self.tokenizer.batch_decode(
+                    generate_ids,
+                    skip_special_tokens=True,
+                    clean_up_tokenization_spaces=False,
+                )[0]
+            else:
+                result = self.model(**self.input_id)
+        return result
+
     def warmup(self):
         """Perform warmup on the prepared input based on the model type."""
         old_warmup_mode = get_warmup_mode()
         set_warmup_mode(True)
-        if self.model_type == "fms":
-            self.extra_generation_kwargs["only_last_token"] = True
-            result = generate(
-                self.model,
-                self.input_id,
-                max_new_tokens=self.max_new_tokens,
-                use_cache=True,
-                do_sample=False,
-                max_seq_len=self.model.config.max_expected_seq_len,
-                eos_token_id=self.tokenizer.eos_token_id,
-                contiguous_cache=True,
-                extra_kwargs=self.extra_generation_kwargs,
-            )
-        elif self.model_type == "hf":
-            if self.model_class in ["causal_lm"]:
-                input_ids = self.input_id["input_ids"]
-                attention_mask = self.input_id.get("attention_mask", None)
-                generate_ids = self.model.generate(
-                    input_ids,
-                    attention_mask=attention_mask,
-                    max_new_tokens=self.max_new_tokens,
-                )
-                result = self.tokenizer.batch_decode(
-                    generate_ids,
-                    skip_special_tokens=True,
-                    clean_up_tokenization_spaces=False,
-                )[0]
-            else:
-                result = self.model(**self.input_id)
+        result = self._generate_output()
         set_warmup_mode(old_warmup_mode)
 
     def infer(self):
-        old_warmup_mode = get_warmup_mode()
-        set_warmup_mode(True)
-        if self.model_type == "fms":
-            self.extra_generation_kwargs["only_last_token"] = True
-            result = generate(
-                self.model,
-                self.input_id,
-                max_new_tokens=self.max_new_tokens,
-                use_cache=True,
-                do_sample=False,
-                max_seq_len=self.model.config.max_expected_seq_len,
-                eos_token_id=self.tokenizer.eos_token_id,
-                contiguous_cache=True,
-                extra_kwargs=self.extra_generation_kwargs,
-            )
-        elif self.model_type == "hf":
-            if self.model_class in ["causal_lm"]:
-                input_ids = self.input_id["input_ids"]
-                attention_mask = self.input_id.get("attention_mask", None)
-                generate_ids = self.model.generate(
-                    input_ids,
-                    attention_mask=attention_mask,
-                    max_new_tokens=self.max_new_tokens,
-                )
-                result = self.tokenizer.batch_decode(
-                    generate_ids,
-                    skip_special_tokens=True,
-                    clean_up_tokenization_spaces=False,
-                )[0]
-            else:
-                result = self.model(**self.input_id)
-        set_warmup_mode(old_warmup_mode)
+        """Perform inference on the prepared input based on the model type."""
+        return self._generate_output()
 
     def insert_forward_hooks(self, deepview_mode):
         """Insert forward hooks into the model layers to capture input shapes and types during forward pass."""
