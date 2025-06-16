@@ -120,6 +120,7 @@ class ModelHandler:
         self.hooks = []
         self.layer_list = {}
         self.layer_inputs = {}
+        self.layer_outputs = {}
         self.extra_generation_kwargs = None
         self.batch_size = 1
         self.min_pad_length = 64
@@ -210,7 +211,7 @@ class ModelHandler:
         print("Compiling model")
         start = time.time()
         if self.device_to_run == 'aiu':
-            self.model.compile(backend=self.backend, dynamic=False)
+            self.model.compile(backend="sendnn", dynamic=False)
         elif self.device_to_run == 'cpu':
             self.model.compile()
         else:
@@ -277,6 +278,40 @@ class ModelHandler:
                 result = self.model(**self.input_id)
         set_warmup_mode(old_warmup_mode)
 
+    def infer(self):
+        old_warmup_mode = get_warmup_mode()
+        set_warmup_mode(True)
+        if self.model_type == "fms":
+            self.extra_generation_kwargs["only_last_token"] = True
+            result = generate(
+                self.model,
+                self.input_id,
+                max_new_tokens=self.max_new_tokens,
+                use_cache=True,
+                do_sample=False,
+                max_seq_len=self.model.config.max_expected_seq_len,
+                eos_token_id=self.tokenizer.eos_token_id,
+                contiguous_cache=True,
+                extra_kwargs=self.extra_generation_kwargs,
+            )
+        elif self.model_type == "hf":
+            if self.model_class in ["causal_lm"]:
+                input_ids = self.input_id["input_ids"]
+                attention_mask = self.input_id.get("attention_mask", None)
+                generate_ids = self.model.generate(
+                    input_ids,
+                    attention_mask=attention_mask,
+                    max_new_tokens=self.max_new_tokens,
+                )
+                result = self.tokenizer.batch_decode(
+                    generate_ids,
+                    skip_special_tokens=True,
+                    clean_up_tokenization_spaces=False,
+                )[0]
+            else:
+                result = self.model(**self.input_id)
+        set_warmup_mode(old_warmup_mode)
+
     def insert_forward_hooks(self, deepview_mode):
         """Insert forward hooks into the model layers to capture input shapes and types during forward pass."""
         print("Inserting forward hooks.............")
@@ -300,8 +335,8 @@ class ModelHandler:
                 return 
             if 'input_output_debugging' in deepview_mode:
                 module._debug_input = input
-                if self.device_to_run == 'cpu':
-                    module._debug_output = output
+            if self.device_to_run == 'cpu':
+                module._debug_output = output
             if 'layer_debugging' in deepview_mode:
                 module_instance = module_instance_names.get(module, "unknown")
                 input_shape_str = f"[{', '.join(map(str, input[0].shape))}]"
@@ -320,6 +355,7 @@ class ModelHandler:
 
     def get_layer_io(self):
         """Get all inputs captured using forward hook for input_output_debugging mode."""
+        print("layerio")
         for name, module in self.model.named_modules():
             if hasattr(module, '_debug_input'):
                 self.layer_inputs[name] = module._debug_input

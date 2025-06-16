@@ -100,6 +100,8 @@ def run_model(
                     aiu_model_handler.insert_forward_hooks(deepview_mode)
 
                 aiu_model_handler.warmup()
+                print("Reached second infer call post compile.....")
+                aiu_model_handler.infer()
 
                 if "unsupported_op" in deepview_mode:
                     process_unsupported_ops(show_details_flag, generate_repro_code_flag)
@@ -130,6 +132,7 @@ def run_model(
                     )
 
                     ## CPU run
+                    print("========= AIU IO captured. Running on CPU ==========")
                     cpu_model_handler = ModelHandler(
                         model_type=model_type,
                         model_path=model_path,
@@ -139,6 +142,7 @@ def run_model(
                     cpu_model_handler.load_and_compile_model()
                     cpu_model_handler.prep_input()
                     cpu_model_handler.insert_forward_hooks(deepview_mode)
+                    cpu_model_handler.infer()
                     cpu_model_handler.get_layer_io()
                     cpu_model_handler.remove_forward_hooks()
                     cpu_layer_io = generate_individual_layer_output(
@@ -147,6 +151,7 @@ def run_model(
                         model_type,
                         'cpu',
                     )
+                
 
                     ## TODO: Flavia to add code here. aiu_layer_io and cpu_layer_io are the lists of dictionaries used to store layer name, inputs and outputs
                     # from AIU and CPU runs, respectively.

@@ -32,7 +32,7 @@ def dump_to_file(filename, layer_name, inputs, outputs):
         f.write(str(outputs))
         f.write("\n")
 
-def generate_individual_layer_output(model_handler, model_path, device_to_run):
+def generate_individual_layer_output(model_handler, model_path, model_type, device_to_run):
     """Generates layer outputs by running each layer of the model individually on the inputs collected in forward pass.
 
     Iterates over the all layers and captures the outputs of the layers
@@ -43,7 +43,7 @@ def generate_individual_layer_output(model_handler, model_path, device_to_run):
         model_type (str): Model type, either 'hf' (HuggingFace) or 'fms' (Foundation Model Stack).
         layer_list (dict): Dictionary mapping layer/module names to a set containing input shape and data type.
     """
-    print("Running each layer individually........")
+    
     input_outputs = [] 
     layers_done = []
     failed_layer = "No failed layer"
@@ -51,7 +51,7 @@ def generate_individual_layer_output(model_handler, model_path, device_to_run):
     model = model_handler.model
 
     if device_to_run == 'aiu':
-
+        print("Running each layer individually........")
         filename = f"AIU_run_{timestamp}.txt"
         for str_layer, inputval in model_handler.layer_inputs.items():
             if str_layer:
@@ -122,6 +122,7 @@ def generate_individual_layer_output(model_handler, model_path, device_to_run):
     elif device_to_run == 'cpu':
         filename = f"CPU_run_{timestamp}.txt"
         for str_layer, inputval in model_handler.layer_inputs.items():
+            print("here")
             if str_layer:
                 sub_layer = convert_attr_path(str_layer)
             else:
@@ -131,12 +132,13 @@ def generate_individual_layer_output(model_handler, model_path, device_to_run):
             outputs = model_handler.layer_outputs[str_layer]
 
             dump_to_file(filename, sub_layer, inputs, outputs)
+
             input_output_dict = {}
             input_output_dict['layer'] = sub_layer
             input_output_dict['input'] = inputs
             input_output_dict['output'] = outputs
             input_outputs.append(input_output_dict)
-            
+
     return input_outputs
 
 
