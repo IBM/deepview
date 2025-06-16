@@ -12,7 +12,6 @@ import re
 from deepview.core.individual_layer_run_with_inputs import run_layers_with_inputs
 
 
-
 def convert_attr_path(attr_path):
     attr_path = 'model.' + attr_path
     def replace_numeric_attr(match):
@@ -22,6 +21,16 @@ def convert_attr_path(attr_path):
     pattern = re.compile(r'\.(\d+)(\.|$)')
     converted = pattern.sub(replace_numeric_attr, attr_path)
     return converted
+
+def dump_to_file(filename, layer_name, inputs, outputs):
+    with open(filename, 'a') as f:
+        f.write("\nLayer:")
+        f.write(str({layer_name}))
+        f.write("\nInput:")
+        f.write(str(inputs))
+        f.write("\nOutput:")
+        f.write(str(outputs))
+        f.write("\n")
 
 def generate_individual_layer_output(model, model_path, model_type, layer_inputs):
     """Generates layer outputs by running each layer of the model individually on the inputs collected in forward pass.
@@ -35,10 +44,12 @@ def generate_individual_layer_output(model, model_path, model_type, layer_inputs
         layer_list (dict): Dictionary mapping layer/module names to a set containing input shape and data type.
     """
     print("Running each layer individually........")
+    input_outputs = [] # This is the list of dictionaries used to store layer name, inputs and outputs.
+
     layers_done = []
     failed_layer = "No failed layer"
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"run_{timestamp}.txt"
+    filename = f"AIUrun_{timestamp}.txt"
     for str_layer, inputval in layer_inputs.items():
         if str_layer:
             sub_layer = convert_attr_path(str_layer)
@@ -97,14 +108,16 @@ def generate_individual_layer_output(model, model_path, model_type, layer_inputs
                     f"DEEPVIEW Successfully ran {sub_layer}\n"
                     "DEEPVIEW========================================================================\n"
                 )
-                with open(filename, 'a') as f:
-                    f.write("\nLayer:")
-                    f.write(str({sub_layer}))
-                    f.write("\nInput:")
-                    f.write(str(kwargs))
-                    f.write("\nOutput:")
-                    f.write(str(result))
-                    f.write("\n")
+                dump_to_file(filename, sub_layer, kwargs, result)
+                input_output_dict = {}
+                input_output_dict['layer'] = sub_layer
+                input_output_dict['input'] = kwargs
+                input_output_dict['output'] = result
+                input_outputs.append(input_output_dict)
+
             layers_done.append(sub_layer)
+
+    ## TODO: Flavia to add code here. 
+
 
 
