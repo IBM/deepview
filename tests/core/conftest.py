@@ -23,10 +23,11 @@ import pytest
 # Local
 from deepview.core.model_runner import run_model
 
+
 def pytest_configure(config):
     config.addinivalue_line(
         "markers",
-        "skip_debugger_path: mark test to skip the global setup for debugger_path fixture"
+        "skip_debugger_path: mark test to skip the global setup for debugger_path fixture",
     )
 
 

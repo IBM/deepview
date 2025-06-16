@@ -15,14 +15,15 @@
 # *******************************************************************************/
 
 # Third Party
-import torch
-import pytest
 from sendnn import opcodes
+import pytest
+import torch
 
 # Local
 from deepview.core.unsupported_ops import get_unsupported_ops, sanitize_arg
 
 pytestmark = pytest.mark.skip_debugger_path
+
 
 class DummyNode(torch.fx.Node):
     """
@@ -135,7 +136,10 @@ def test_sanitize_arg_with_primitive():
     assert sanitize_arg("foo") == "foo"
     assert sanitize_arg(3.14) == "3.14"
 
+
 """ Unit tests for get_unsupported_ops. """
+
+
 @pytest.fixture
 def DummyLazyHandle():
     """
@@ -147,10 +151,11 @@ def DummyLazyHandle():
     Args:
         g2 (Optional): An optional g2 object to initialize the lazy handle.
         meta (Optional[dict]): An optional dictionary containing a "g2" key to initialize the lazy handle.
-    
+
     Returns:
         DummyLazyHandle: A dummy lazy handle class that can be used in tests.
     """
+
     class DummyLazyHandle:
         def __init__(self, g2=None, meta=None):
             # If meta is provided, prefer it; otherwise, use g2 directly.
@@ -161,8 +166,10 @@ def DummyLazyHandle():
             else:
                 self.g2 = g2
                 self.meta = {"g2": g2} if g2 is not None else {}
+
     return DummyLazyHandle
-    
+
+
 @pytest.fixture
 def DummyG2():
     """
@@ -172,14 +179,17 @@ def DummyG2():
 
     Args:
         compute_ops (list): A list of compute operations to initialize the G2 object.
-    
+
     Returns:
         DummyG2: A dummy G2 class that can be used in tests.
     """
+
     class DummyG2:
         def __init__(self, compute_ops):
             self.compute_ops = compute_ops
+
     return DummyG2
+
 
 @pytest.fixture
 def DummyOp():
@@ -194,6 +204,7 @@ def DummyOp():
     Returns:
         DummyOp: A dummy operation class that can be used in tests.
     """
+
     class DummyOp:
         def __init__(self, fn, name):
             self.fn = fn
@@ -204,7 +215,9 @@ def DummyOp():
 
         def Name(self):
             return self.name
+
     return DummyOp
+
 
 def test_get_unsupported_ops_with_g2(DummyOp, DummyLazyHandle, DummyG2):
     """
@@ -217,6 +230,7 @@ def test_get_unsupported_ops_with_g2(DummyOp, DummyLazyHandle, DummyG2):
     lazy_handle = DummyLazyHandle(g2=DummyG2(compute_ops))
     result = get_unsupported_ops(lazy_handle)
     assert result == ["cos"]
+
 
 def test_get_unsupported_ops_with_meta(DummyOp, DummyLazyHandle, DummyG2):
     """
@@ -232,6 +246,7 @@ def test_get_unsupported_ops_with_meta(DummyOp, DummyLazyHandle, DummyG2):
     result = get_unsupported_ops(lh)
     assert result == ["cos"]
 
+
 def test_get_unsupported_ops_empty(DummyG2, DummyLazyHandle):
     """
     Test get_unsupported_ops with no compute operations object.
@@ -241,6 +256,7 @@ def test_get_unsupported_ops_empty(DummyG2, DummyLazyHandle):
     lh = DummyLazyHandle(g2=g2)
     result = get_unsupported_ops(lh)
     assert result == []
+
 
 def test_get_unsupported_ops_no_unsupported(DummyOp, DummyLazyHandle, DummyG2):
     """
