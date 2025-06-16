@@ -85,48 +85,71 @@ def run_model(
 
             torch.set_default_dtype(torch.float16)
 
-            model_handler = ModelHandler(
+            aiu_model_handler = ModelHandler(
                 model_type=model_type,
                 model_path=model_path,
+                device='aiu',
                 prompt="What is the capital of India?",
             )
-            model_handler.load_and_compile_model()
-            model_handler.prep_input()
+            aiu_model_handler.load_and_compile_model()
+            aiu_model_handler.prep_input()
 
             print("Reached first infer call post compile.....")
             try:
                 if "layer_debugging" or "input_output_debugging" in deepview_mode:
-                    model_handler.insert_forward_hooks(deepview_mode)
+                    aiu_model_handler.insert_forward_hooks(deepview_mode)
 
-                model_handler.warmup()
+                aiu_model_handler.warmup()
 
                 if "unsupported_op" in deepview_mode:
                     process_unsupported_ops(show_details_flag, generate_repro_code_flag)
 
                 if "layer_debugging" in deepview_mode:
-                    model_handler.remove_forward_hooks()
+                    aiu_model_handler.remove_forward_hooks()
                     with open("model_list.txt", "w") as file:
                         json.dump(
-                            {k: list(v) for k, v in model_handler.layer_list.items()},
+                            {k: list(v) for k, v in aiu_model_handler.layer_list.items()},
                             file,
                         )
 
                     run_individual_layers(
                         model_path,
                         model_type,
-                        model_handler.layer_list,
+                        aiu_model_handler.layer_list,
                         generate_repro_code_flag,
                     )
 
                 if "input_output_debugging" in deepview_mode:
-                    model_handler.get_layer_inputs()
-                    model_handler.remove_forward_hooks()
-                    generate_individual_layer_output(
-                        model_handler.model,
+                    aiu_model_handler.get_layer_io()
+                    aiu_model_handler.remove_forward_hooks()
+                    aiu_layer_io = generate_individual_layer_output(
+                        aiu_model_handler,
                         model_path,
                         model_type,
-                        model_handler.layer_inputs,
+                        'aiu',
                     )
+
+                    ## CPU run
+                    cpu_model_handler = ModelHandler(
+                        model_type=model_type,
+                        model_path=model_path,
+                        device='cpu',
+                        prompt="What is the capital of India?",
+                    )
+                    cpu_model_handler.load_and_compile_model()
+                    cpu_model_handler.prep_input()
+                    cpu_model_handler.insert_forward_hooks(deepview_mode)
+                    cpu_model_handler.get_layer_io()
+                    cpu_model_handler.remove_forward_hooks()
+                    cpu_layer_io = generate_individual_layer_output(
+                        cpu_model_handler,
+                        model_path,
+                        model_type,
+                        'cpu',
+                    )
+
+                    ## TODO: Flavia to add code here. aiu_layer_io and cpu_layer_io are the lists of dictionaries used to store layer name, inputs and outputs
+                    # from AIU and CPU runs, respectively.
 
 
             except Exception as e:

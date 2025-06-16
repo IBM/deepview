@@ -98,7 +98,7 @@ class ModelHandler:
             Removes all registered forward hooks from the model.
     """
 
-    def __init__(self, model_type, model_path, prompt, model_class=None):
+    def __init__(self, model_type, model_path, device, prompt, model_class=None):
         """Initialize ModelHandler with model configuration.
 
         Args:
@@ -112,6 +112,8 @@ class ModelHandler:
         self.model_class = model_class
         self.prompt = prompt
         self.device = torch.device("cpu")
+        self.device_to_run = device
+        self.backend = None
         self.model = None
         self.tokenizer = None
         self.input_id = None
@@ -122,6 +124,7 @@ class ModelHandler:
         self.batch_size = 1
         self.min_pad_length = 64
         self.max_new_tokens = 2
+
 
     def _infer_model_class(self, model_path):
         """Infer the model class based on the model configuration or repo contents.
@@ -206,11 +209,16 @@ class ModelHandler:
 
         print("Compiling model")
         start = time.time()
-        self.model.compile(backend="sendnn", dynamic=False)
+        if self.device_to_run == 'aiu':
+            self.model.compile(backend=self.backend, dynamic=False)
+        elif self.device_to_run == 'cpu':
+            self.model.compile()
+        else:
+            print("Device not supported by Deepview yet.")
         print(f"Compiling complete, took {time.time() - start:.3f}s")
 
         return self.model
-
+    
     def prep_input(self):
         """Prepare input tensors and tokenizers based on the model type and prompt."""
         if self.model_type == "fms":
@@ -292,6 +300,8 @@ class ModelHandler:
                 return 
             if 'input_output_debugging' in deepview_mode:
                 module._debug_input = input
+                if self.device_to_run == 'cpu':
+                    module._debug_output = output
             if 'layer_debugging' in deepview_mode:
                 module_instance = module_instance_names.get(module, "unknown")
                 input_shape_str = f"[{', '.join(map(str, input[0].shape))}]"
@@ -308,9 +318,12 @@ class ModelHandler:
             hook.remove()
         self.hooks = []
 
-    def get_layer_inputs(self):
+    def get_layer_io(self):
         """Get all inputs captured using forward hook for input_output_debugging mode."""
         for name, module in self.model.named_modules():
             if hasattr(module, '_debug_input'):
                 self.layer_inputs[name] = module._debug_input
+            if hasattr(module, '_debug_output'):
+                self.layer_outputs[name] = module._debug_output
         
+    
