@@ -31,7 +31,7 @@ def pytest_configure(config):
     )
 
 
-# @pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def debugger_path(request, tmp_path_factory):
     """
     A fixture to run the model and generate the debugger output file.
@@ -51,10 +51,11 @@ def debugger_path(request, tmp_path_factory):
     args = argparse.Namespace(
         model_type="fms",
         model_path="/mnt/aiu-models-en-shared/models/llama-194m",
-        deepview_mode=["unsupported_op", "layer_debugging"],
-        show_details=True,
-        generate_repro_code_flag=True,
         tool_output_file=tmp_path_factory.getbasetemp() / "test_debugger.txt",
+        deepview_mode=["unsupported_op", "layer_debugging"],
+        show_details_flag=True,
+        generate_repro_code_flag=True,
+        logfile=tmp_path_factory.getbasetemp() / "test_model_output.txt",
     )
 
     run_model(
@@ -62,7 +63,9 @@ def debugger_path(request, tmp_path_factory):
         args.model_path,
         args.tool_output_file,
         args.deepview_mode,
+        args.show_details_flag,
         args.generate_repro_code_flag,
+        args.logfile,
     )
     debugger_path = tmp_path_factory.getbasetemp() / "test_debugger.txt"
     return debugger_path
