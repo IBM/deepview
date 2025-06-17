@@ -5,6 +5,7 @@ import subprocess
 import itertools
 import inspect
 import torch
+import time
 import re
 
 # Local
@@ -115,6 +116,8 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
                     input_output_dict['input'] = kwargs
                     input_output_dict['output'] = result
                     input_outputs.append(input_output_dict)
+
+                time.sleep(2)
                 layers_done.append(sub_layer)
 
     elif device_to_run == 'cpu':

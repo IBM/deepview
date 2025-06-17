@@ -97,14 +97,23 @@ def run_model(
 
             print("Reached first infer call post compile.....")
             try:
+                ## PRE-RUN
                 if "layer_debugging" or "input_output_debugging" in deepview_mode:
                     aiu_model_handler.insert_forward_hooks(deepview_mode)
 
-                aiu_model_handler.warmup()
-                print("Reached second infer call post compile.....")
-                aiu_model_handler.infer()
+                ## RUN
+                if "unsupported_op" or "layer_debugging" in deepview_mode:
+                    aiu_model_handler.safe_warmup()
 
-                if "unsupported_op" in deepview_mode:
+                elif "input_output_debugging" in deepview_mode:
+                    
+                    aiu_model_handler.warmup()
+                    print("Reached second infer call post compile.....")
+                    aiu_model_handler.infer()
+
+
+                ## POST-RUN 
+                if "unsupported_op"  in deepview_mode:
                     process_unsupported_ops(show_details_flag, generate_repro_code_flag)
 
                 if "layer_debugging" in deepview_mode:
@@ -114,7 +123,6 @@ def run_model(
                             {k: list(v) for k, v in aiu_model_handler.layer_list.items()},
                             file,
                         )
-
                     run_individual_layers(
                         model_path,
                         model_type,

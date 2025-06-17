@@ -243,21 +243,34 @@ class ModelHandler:
                 [self.prompt], padding=True, truncation=True, return_tensors="pt"
             )
 
-    def _generate_output(self):
+    def _generate_output(self, is_warmup):
         """Calling generate function based on model_type."""
         if self.model_type == "fms":
             self.extra_generation_kwargs["only_last_token"] = True
-            result = generate(
-                self.model,
-                self.input_id,
-                max_new_tokens=self.max_new_tokens,
-                use_cache=True,
-                do_sample=False,
-                max_seq_len=self.model.config.max_expected_seq_len,
-                eos_token_id=self.tokenizer.eos_token_id,
-                contiguous_cache=True,
-                extra_kwargs=self.extra_generation_kwargs,
-            )
+            if is_warmup:
+                result = generate(
+                    self.model,
+                    self.input_id,
+                    max_new_tokens=self.max_new_tokens,
+                    use_cache=True,
+                    do_sample=False,
+                    max_seq_len=self.model.config.max_expected_seq_len,
+                    eos_token_id=None,
+                    contiguous_cache=True,
+                    extra_kwargs=self.extra_generation_kwargs,
+                )
+            else:
+                result = generate(
+                    self.model,
+                    self.input_id,
+                    max_new_tokens=self.max_new_tokens,
+                    use_cache=True,
+                    do_sample=False,
+                    max_seq_len=self.model.config.max_expected_seq_len,
+                    eos_token_id=self.tokenizer.eos_token_id,
+                    contiguous_cache=True,
+                    extra_kwargs=self.extra_generation_kwargs,
+                )
         elif self.model_type == "hf":
             if self.model_class in ["causal_lm"]:
                 input_ids = self.input_id["input_ids"]
@@ -276,16 +289,21 @@ class ModelHandler:
                 result = self.model(**self.input_id)
         return result
 
-    def warmup(self):
+    def safe_warmup(self):
         """Perform warmup on the prepared input based on the model type."""
         old_warmup_mode = get_warmup_mode()
         set_warmup_mode(True)
-        result = self._generate_output()
+        self._generate_output(True)
         set_warmup_mode(old_warmup_mode)
+
+    def warmup(self):
+        """Perform warmup on the prepared input based on the model type."""
+        with torch_sendnn.warmup_mode():
+            self._generate_output(True)
 
     def infer(self):
         """Perform inference on the prepared input based on the model type."""
-        return self._generate_output()
+        return self._generate_output(False)
 
     def insert_forward_hooks(self, deepview_mode):
         """Insert forward hooks into the model layers to capture input shapes and types during forward pass."""
