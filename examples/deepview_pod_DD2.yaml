@@ -33,6 +33,16 @@ spec:
         cd foundation-model-stack
 
         git checkout $FMS_CHECKOUT
+        
+        cp ${AIU_AUTOGEN_SENLIB_CONFIG_FILE} /tmp/etc/aiu/senlib_config.json
+
+        FILE=/tmp/etc/aiu/senlib_config.json
+
+        cat $FILE | jq '. += {"RISCV": {"DOOM": { "enable" : false}}, "SNT_MCI" : { "DCR": {"MCI_CTRL": {"ENABLE_RISCV": "0x0"} } }}' > $FILE.jq
+
+        mv $FILE.jq $FILE
+
+        cp /tmp/etc/aiu/senlib_config.json $HOME/.senlib.json
 
         echo "POD_IMAGE:" $POD_IMAGE >> /tmp/aiu-query-devices.txt
 
