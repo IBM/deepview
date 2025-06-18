@@ -57,9 +57,6 @@ def run_unsupported_op_mode(aiu_model_handler, show_details_flag, generate_repro
     process_unsupported_ops(show_details_flag, generate_repro_code_flag)
 
 
-
-
-
 def run_layer_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_type, generate_repro_code_flag):
     aiu_model_handler.insert_forward_hooks(deepview_mode)
     aiu_model_handler.safe_warmup()
@@ -75,9 +72,6 @@ def run_layer_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_
         aiu_model_handler.layer_list,
         generate_repro_code_flag,
     )
-
-
-
 
 
 def run_io_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_type):
@@ -122,7 +116,6 @@ def run_io_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_typ
 
     ## TODO: Flavia to add code here. aiu_layer_io and cpu_layer_io are the lists of dictionaries used to store layer name, inputs and outputs
     # from AIU and CPU runs, respectively.
-
 
 
 def run_model(
