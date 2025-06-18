@@ -38,7 +38,7 @@ import os
 os.environ["COMPILATION_MODE"] = "offline_decoder"
 
 hw_version = os.environ["HW_VERSION"]
-if hw_version == dd1:
+if hw_version == "dd1":
     model = get_model(
         "hf_pretrained",
         None,
