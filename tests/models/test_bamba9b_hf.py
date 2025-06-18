@@ -90,7 +90,6 @@ def test_get_unsupported_ops(debugger_path):
     Args:
         debugger_path: A fixture that runs the model and generates the output file.
     """
-    assert (
-        "DEEPVIEW Unsupported operations list:\n"
-        in debugger_path.read_text(encoding="utf-8")
+    assert "DEEPVIEW Unsupported operations list:\n" in debugger_path.read_text(
+        encoding="utf-8"
     ), "Expected 'DEEPVIEW Unsupported operations list:\n' in debugger output."
