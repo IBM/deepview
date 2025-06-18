@@ -40,7 +40,7 @@ def debugger_path(tmp_path_factory):
     """
     args = argparse.Namespace(
         model_type="fms",
-        model_path="/mnt/aiu-models-en-shared/models/mistralai/Mistral-7B-Instruct-v0.3",
+        model_path="/home/senuser/models/mistralai/Mistral-7B-Instruct-v0.3",
         tool_output_file=tmp_path_factory.getbasetemp() / "test_debugger.txt",
         deepview_mode=["unsupported_op", "layer_debugging"],
         show_details_flag=True,
