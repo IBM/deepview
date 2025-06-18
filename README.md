@@ -81,7 +81,7 @@ oc rsync deepview/ <pod-name>:/tmp/deepview/
 
 **DD2**
 ```
-oc rsync deepview/ <pod-name>:/home/senuser/deepview/
+oc rsync deepview/ <pod-name>:/home/senuser/
 ```
 
 Login to pod
