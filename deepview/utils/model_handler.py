@@ -248,29 +248,25 @@ class ModelHandler:
         if self.model_type == "fms":
             self.extra_generation_kwargs["only_last_token"] = True
             if is_warmup:
-                result = generate(
-                    self.model,
-                    self.input_id,
-                    max_new_tokens=self.max_new_tokens,
-                    use_cache=True,
-                    do_sample=False,
-                    max_seq_len=self.model.config.max_expected_seq_len,
-                    eos_token_id=None,
-                    contiguous_cache=True,
-                    extra_kwargs=self.extra_generation_kwargs,
-                )
+                eos_token_id = None
+                max_len = self.model.config.max_expected_seq_len
             else:
-                result = generate(
-                    self.model,
-                    self.input_id,
-                    max_new_tokens=self.max_new_tokens,
-                    use_cache=True,
-                    do_sample=False,
-                    max_seq_len=self.model.config.max_expected_seq_len,
-                    eos_token_id=self.tokenizer.eos_token_id,
-                    contiguous_cache=True,
-                    extra_kwargs=self.extra_generation_kwargs,
-                )
+                eos_token_id = self.tokenizer.eos_token_id
+                if hasattr(self.model.config, "ntk_scaling") and self.model.config.ntk_scaling:
+                    max_len = max(len(self.prompt), self.model.config.max_expected_seq_len)
+                else:
+                    max_len = self.model.config.max_expected_seq_len
+            result = generate(
+                self.model,
+                self.input_id,
+                max_new_tokens=self.max_new_tokens,
+                use_cache=True,
+                do_sample=False,
+                max_seq_len=max_len,
+                eos_token_id=eos_token_id,
+                contiguous_cache=True,
+                extra_kwargs=self.extra_generation_kwargs,
+            )
         elif self.model_type == "hf":
             if self.model_class in ["causal_lm"]:
                 input_ids = self.input_id["input_ids"]
@@ -308,7 +304,7 @@ class ModelHandler:
     def insert_forward_hooks(self, deepview_mode):
         """Insert forward hooks into the model layers to capture input shapes and types during forward pass."""
         print("Inserting forward hooks.............")
-        if 'layer_debugging' in deepview_mode:
+        if deepview_mode == 'layer_debugging':
             module_instance_names = {}
 
             def get_instance_names(module, current_depth=0, name="model"):
@@ -326,11 +322,11 @@ class ModelHandler:
         def hook_fn(module, input, output):
             if len(input) == 0:
                 return 
-            if 'input_output_debugging' in deepview_mode:
+            if deepview_mode == 'io_debugging':
                 module._debug_input = input
             if self.device_to_run == 'cpu':
                 module._debug_output = output
-            if 'layer_debugging' in deepview_mode:
+            if deepview_mode == 'layer_debugging':
                 module_instance = module_instance_names.get(module, "unknown")
                 input_shape_str = f"[{', '.join(map(str, input[0].shape))}]"
                 input_type = str(input[0].dtype)

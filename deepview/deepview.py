@@ -48,10 +48,9 @@ def main():
 
     parser.add_argument(
         "--mode",
-        nargs="+",
-        choices=["unsupported_op", "layer_debugging", "input_output_debugging"],
-        default=["unsupported_op"],
-        help="Modes: [unsupported_op, layer_debugging, input_output_debugging] (Choose one or more). Default is the unsupported_op mode.",
+        choices=["unsupported_op", "layer_debugging", "io_debugging"],
+        default="unsupported_op",
+        help="Modes: [unsupported_op, layer_debugging, io_debugging] (Choose ONLY one). Default is the unsupported_op mode.",
     )
 
     parser.add_argument(

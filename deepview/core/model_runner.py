@@ -52,6 +52,79 @@ def set_environment():
     os.environ["COMPILATION_MODE"] = "offline_decoder"
 
 
+def run_unsupported_op_mode(aiu_model_handler, show_details_flag, generate_repro_code_flag):
+    aiu_model_handler.safe_warmup()
+    process_unsupported_ops(show_details_flag, generate_repro_code_flag)
+
+
+
+
+
+def run_layer_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_type, generate_repro_code_flag):
+    aiu_model_handler.insert_forward_hooks(deepview_mode)
+    aiu_model_handler.safe_warmup()
+    aiu_model_handler.remove_forward_hooks()
+    with open("model_list.txt", "w") as file:
+        json.dump(
+            {k: list(v) for k, v in aiu_model_handler.layer_list.items()},
+            file,
+        )
+    run_individual_layers(
+        model_path,
+        model_type,
+        aiu_model_handler.layer_list,
+        generate_repro_code_flag,
+    )
+
+
+
+
+
+def run_io_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_type):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    ## AIU run
+    aiu_model_handler.insert_forward_hooks(deepview_mode)
+    aiu_model_handler.warmup()
+    print("Reached second infer call post compile.....")
+    aiu_model_handler.infer()
+    aiu_model_handler.get_layer_io()
+    aiu_model_handler.remove_forward_hooks()
+    aiu_layer_io = generate_individual_layer_output(
+        aiu_model_handler,
+        model_path,
+        model_type,
+        'aiu',
+        timestamp
+    )
+
+    ## CPU run
+    print("========= AIU IO captured. Running on CPU ==========")
+    cpu_model_handler = ModelHandler(
+        model_type=model_type,
+        model_path=model_path,
+        device='cpu',
+        prompt="What is the capital of India?",
+    )
+    cpu_model_handler.load_and_compile_model()
+    cpu_model_handler.prep_input()
+    cpu_model_handler.insert_forward_hooks(deepview_mode)
+    cpu_model_handler.infer()
+    cpu_model_handler.get_layer_io()
+    cpu_model_handler.remove_forward_hooks()
+    cpu_layer_io = generate_individual_layer_output(
+        cpu_model_handler,
+        model_path,
+        model_type,
+        'cpu',
+        timestamp
+    )
+
+    ## TODO: Flavia to add code here. aiu_layer_io and cpu_layer_io are the lists of dictionaries used to store layer name, inputs and outputs
+    # from AIU and CPU runs, respectively.
+
+
+
 def run_model(
     model_type,
     model_path,
@@ -97,80 +170,14 @@ def run_model(
 
             print("Reached first infer call post compile.....")
             try:
-                ## PRE-RUN
-                if "layer_debugging" or "input_output_debugging" in deepview_mode:
-                    aiu_model_handler.insert_forward_hooks(deepview_mode)
-
-                ## RUN
-                if "unsupported_op" or "layer_debugging" in deepview_mode:
-                    aiu_model_handler.safe_warmup()
-
-                elif "input_output_debugging" in deepview_mode:
+                if deepview_mode == "unsupported_op":
+                    run_unsupported_op_mode(aiu_model_handler, show_details_flag, generate_repro_code_flag)
                     
-                    aiu_model_handler.warmup()
-                    print("Reached second infer call post compile.....")
-                    aiu_model_handler.infer()
+                if deepview_mode == "layer_debugging":
+                    run_layer_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_type, generate_repro_code_flag)
 
-
-                ## POST-RUN 
-                if "unsupported_op"  in deepview_mode:
-                    process_unsupported_ops(show_details_flag, generate_repro_code_flag)
-
-                if "layer_debugging" in deepview_mode:
-                    aiu_model_handler.remove_forward_hooks()
-                    with open("model_list.txt", "w") as file:
-                        json.dump(
-                            {k: list(v) for k, v in aiu_model_handler.layer_list.items()},
-                            file,
-                        )
-                    run_individual_layers(
-                        model_path,
-                        model_type,
-                        aiu_model_handler.layer_list,
-                        generate_repro_code_flag,
-                    )
-
-                if "input_output_debugging" in deepview_mode:
-                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-                    ## AIU run
-                    aiu_model_handler.get_layer_io()
-                    aiu_model_handler.remove_forward_hooks()
-                    aiu_layer_io = generate_individual_layer_output(
-                        aiu_model_handler,
-                        model_path,
-                        model_type,
-                        'aiu',
-                        timestamp
-                    )
-
-                    ## CPU run
-                    print("========= AIU IO captured. Running on CPU ==========")
-                    cpu_model_handler = ModelHandler(
-                        model_type=model_type,
-                        model_path=model_path,
-                        device='cpu',
-                        prompt="What is the capital of India?",
-                    )
-                    cpu_model_handler.load_and_compile_model()
-                    cpu_model_handler.prep_input()
-                    cpu_model_handler.insert_forward_hooks(deepview_mode)
-                    cpu_model_handler.infer()
-                    cpu_model_handler.get_layer_io()
-                    cpu_model_handler.remove_forward_hooks()
-                    cpu_layer_io = generate_individual_layer_output(
-                        cpu_model_handler,
-                        model_path,
-                        model_type,
-                        'cpu',
-                        timestamp
-                    )
-                
-
-                    ## TODO: Flavia to add code here. aiu_layer_io and cpu_layer_io are the lists of dictionaries used to store layer name, inputs and outputs
-                    # from AIU and CPU runs, respectively.
-
-
+                if deepview_mode == "io_debugging":
+                    run_io_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_type)
             except Exception as e:
                 print(f"Exception occurred: {e}")
 
