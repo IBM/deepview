@@ -121,8 +121,8 @@ options:
   --model_type {fms,hf}
                         The type of model you want to debug - fms or hf.
   --model MODEL         Model name in HF format or model path
-  --mode {unsupported_op,layer_debugging} [{unsupported_op,layer_debugging} ...]
-                        Modes: [unsupported_op, layer_debugging] (Choose one or more). Default is the
+  --mode {unsupported_op,layer_debugging,io_debugging} 
+                        Modes: [unsupported_op, layer_debugging, io_debugging] (Choose ONLY one). Default is the
                         unsupported_op mode.
   --show_details        Print stack trace and other details, valid only with unsupported_op.
   --generate_repro_code
