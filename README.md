@@ -144,25 +144,18 @@ deepview --model_type fms --model /mnt/aiu-models-en-shared/models/ibm-ai-platfo
 #### Sample Output
 
 ```
-DEBUG TOOL Caught error for constant_pad_nd_81: Operation not supported.
-DEBUG TOOL Data type: sen_datatype_enum.float32, Shape: [ 1 256 128 128 ]
-DEBUG TOOL==================================== Stack Trace ====================================
-DEBUG TOOL   File "/tmp/foundation-model-stack/fms/models/bamba.py", line 448, in forward
-DEBUG TOOL     output, cache = self.base_model(
-DEBUG TOOL   File "/tmp/foundation-model-stack/fms/models/bamba.py", line 365, in forward
-DEBUG TOOL     output = layer(
-DEBUG TOOL   File "/tmp/foundation-model-stack/fms/models/bamba.py", line 145, in forward
-DEBUG TOOL     x = self.ssm(
-DEBUG TOOL   File "/tmp/foundation-model-stack/fms/modules/ssm.py", line 396, in forward
-DEBUG TOOL     hidden_states, A, B, C = [
-DEBUG TOOL   File "/tmp/foundation-model-stack/fms/modules/ssm.py", line 397, in <listcomp>
-DEBUG TOOL     reshape_into_chunks(t, pad_size, self.chunk_size)
-DEBUG TOOL   File "/tmp/foundation-model-stack/fms/modules/ssm.py", line 32, in reshape_into_chunks
-DEBUG TOOL     input_tensor = pad_tensor_by_size(input_tensor, pad_size)
-DEBUG TOOL   File "/tmp/foundation-model-stack/fms/modules/ssm.py", line 21, in pad_tensor_by_size
-DEBUG TOOL     return torch.nn.functional.pad(input_tensor, pad_shape, mode="constant", value=0)
-DEBUG TOOL   File "/usr/local/lib64/python3.11/site-packages/torch/nn/functional.py", line 5096, in pad
-DEBUG TOOL     return torch._C._nn.pad(input, pad, mode, value)
+DEEPVIEW Caught error for copy_29: Operation not supported.
+DEEPVIEW Data type: sen_datatype_enum.float16, Shape: [ 1 128 64 128 ]
+DEEPVIEW==================================== Stack Trace ====================================
+DEEPVIEW   File "/home/senuser/.local/lib/python3.12/site-packages/fms/models/bamba.py", line 431, in forward
+DEEPVIEW     output, cache = self.base_model(
+DEEPVIEW   File "/home/senuser/.local/lib/python3.12/site-packages/fms/models/bamba.py", line 351, in forward
+DEEPVIEW     output = layer(
+DEEPVIEW   File "/home/senuser/.local/lib/python3.12/site-packages/fms/models/bamba.py", line 146, in forward
+DEEPVIEW     x = self.ssm(
+DEEPVIEW   File "/home/senuser/.local/lib/python3.12/site-packages/fms/modules/ssm.py", line 343, in forward
+DEEPVIEW     past_key_value_state.ssm_state.copy_(  # type: ignore[union-attr]
+DEEPVIEW
 ```
 
 ### layer_debugging mode
@@ -178,9 +171,7 @@ deepview --model_type fms --model /mnt/aiu-models-en-shared/models/hf/granite-3.
 #### Sample Output
 
 ```
-======================================================
-DEBUG TOOL update lazy handle for model.base_model.layers[0].attn, input string [1, 10, 2048], data type torch.float16
-Failed layer is  model.base_model.layers[0].attn, input string [1, 10, 2048], data type torch.float16
-The repro code is stored in file layer_repro_code.py
-======================================================
+DEEPVIEW========================================================================
+DEEPVIEW Error running model.base_model.layers[0].attn, [1, 1, 2048], torch.float16
+DEEPVIEW========================================================================
 ```

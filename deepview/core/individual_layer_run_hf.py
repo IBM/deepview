@@ -1,3 +1,20 @@
+# /*******************************************************************************
+#  * Copyright 2025 IBM Corporation
+#  *
+#  * Licensed under the Apache License, Version 2.0 (the "License");
+#  * you may not use this file except in compliance with the License.
+#  * You may obtain a copy of the License at
+#  *
+#  *     http://www.apache.org/licenses/LICENSE-2.0
+#  *
+#  * Unless required by applicable law or agreed to in writing, software
+#  * distributed under the License is distributed on an "AS IS" BASIS,
+#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  * See the License for the specific language governing permissions and
+#  * limitations under the License.
+# *******************************************************************************/
+
+
 def run_layers(modelpath, sub_layer, input_shape, datatype):
     """Generates a minimal Python script to reproduce a layer-level failure in layer debugging mode.
 
@@ -15,24 +32,21 @@ def run_layers(modelpath, sub_layer, input_shape, datatype):
     """
     return f"""
 from fms.models import get_model
+from deepview.utils.model_handler import ModelHandler
+
 import torch_sendnn
 import torch
 import os
 os.environ["COMPILATION_MODE"] = "offline_decoder"
-model = get_model(
-    "hf_pretrained",
-    None,
+
+model_handler = ModelHandler(
+    model_type='hf',
     model_path='{modelpath}',
-    device_type="cpu",
-    data_type=torch.float16,
-    source=None,
-    distributed_strategy=None,
-    linear_config={{"linear_type": "torch_linear"}},
-    fused_weights=False,
+    prompt='What is the capital of India?',
 )
-device = torch.device("cpu")
-model.eval()
-torch.set_grad_enabled(False)
+model_handler.load_and_compile_model()
+model = model_handler.model
+
 rand_tensor = torch.rand(tuple({input_shape}))
 data_type = {datatype}
 layer = {sub_layer}
