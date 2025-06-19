@@ -83,13 +83,19 @@ def test_debugger_output_exits(debugger_path):
     ), f"Debugger output file {debugger_path} does not exist."
 
 
-def test_get_unsupported_ops(debugger_path):
+def test_get_unsupported_ops(model_output_file):
     """
     Test to ensure the unsupported operations are correctly extracted from the debugger output.
 
     Args:
         debugger_path: A fixture that runs the model and generates the output file.
     """
-    assert "DEEPVIEW Unsupported operations list:\n" in debugger_path.read_text(
+    assert "DEEPVIEW Unsupported operations list:\n" in model_output_file.read_text(
         encoding="utf-8"
     ), "Expected 'DEEPVIEW Unsupported operations list:\n' in debugger output."
+
+    unique_unsupported_ops = ['triu', 'gt', 'copy', 'slice_scatter', 'cos', 'sin', 'constant_pad_nd', 'softplus', 'roll', 'select_scatter']
+    unique_unsupported_ops_str = "\n".join(sorted(unique_unsupported_ops))
+    assert f"\033[1m{unique_unsupported_ops_str}\033[0m\n" in model_output_file.read_text(
+        encoding="utf-8"
+    ), "Expected match unsupported ops known in debugger output."
