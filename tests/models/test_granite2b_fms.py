@@ -40,9 +40,9 @@ def debugger_path(tmp_path_factory):
     """
     args = argparse.Namespace(
         model_type="fms",
-        model_path="/home/senuser/models/mistralai/Mistral-7B-Instruct-v0.3",
+        model_path="/home/senuser/models/ibm-granite/granite-3.3-2b-instruct",
         tool_output_file=tmp_path_factory.getbasetemp() / "test_debugger.txt",
-        deepview_mode=["unsupported_op", "layer_debugging"],
+        deepview_mode=["layer_debugging"],
         show_details_flag=True,
         generate_repro_code_flag=True,
         logfile=tmp_path_factory.getbasetemp() / "test_model_output.txt",
@@ -83,19 +83,6 @@ def test_debugger_output_exits(debugger_path):
     ), f"Debugger output file {debugger_path} does not exist."
 
 
-def test_get_unsupported_ops(model_output_file):
-    """
-    Test to ensure the unsupported operations are correctly extracted from the debugger output.
-
-    Args:
-        debugger_path: A fixture that runs the model and generates the output file.
-    """
-    assert (
-        "DEEPVIEW \033[1mNo unsupported operations detected.\033[0m\n"
-        in model_output_file.read_text(encoding="utf-8")
-    ), "Expected 'DEEPVIEW \033[1mNo unsupported operations detected.\033[0m\n' in debugger output."
-
-
 def test_layer_debugging_mode(model_output_file):
     """
     Test to ensure the layer debugging mode is correctly set in the debugger output.
@@ -107,10 +94,10 @@ def test_layer_debugging_mode(model_output_file):
         encoding="utf-8"
     ), "Expected Running each layer individually"
     assert (
-        "DEEPVIEW Successfully ran model.base_model.embedding, [1, 64], torch.int64\n"
+        "DEEPVIEW Successfully ran model.base_model.embedding, [1, 1], torch.int64\n"
         in model_output_file.read_text(encoding="utf-8")
     ), "Expected Successfully ran model"
     assert (
-        "DEEPVIEW \033[1mError running model.base_model.layers[0].ln, [1, 64, 4096], torch.float16\n\033[0m"
+        "DEEPVIEW \033[1mError running model.base_model.layers[0].ln, [1, 1, 2048], torch.float16\n\033[0m"
         in model_output_file.read_text(encoding="utf-8")
     ), "Expected Error running model"

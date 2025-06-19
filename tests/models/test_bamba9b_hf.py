@@ -94,8 +94,20 @@ def test_get_unsupported_ops(model_output_file):
         encoding="utf-8"
     ), "Expected 'DEEPVIEW Unsupported operations list:\n' in debugger output."
 
-    unique_unsupported_ops = ['triu', 'gt', 'copy', 'slice_scatter', 'cos', 'sin', 'constant_pad_nd', 'softplus', 'roll', 'select_scatter']
+    unique_unsupported_ops = [
+        "triu",
+        "gt",
+        "copy",
+        "slice_scatter",
+        "cos",
+        "sin",
+        "constant_pad_nd",
+        "softplus",
+        "roll",
+        "select_scatter",
+    ]
     unique_unsupported_ops_str = "\n".join(sorted(unique_unsupported_ops))
-    assert f"\033[1m{unique_unsupported_ops_str}\033[0m\n" in model_output_file.read_text(
-        encoding="utf-8"
+    assert (
+        f"\033[1m{unique_unsupported_ops_str}\033[0m\n"
+        in model_output_file.read_text(encoding="utf-8")
     ), "Expected match unsupported ops known in debugger output."
