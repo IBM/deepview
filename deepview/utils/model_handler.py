@@ -344,11 +344,9 @@ class ModelHandler:
 
     def get_layer_io(self):
         """Get all inputs captured using forward hook for input_output_debugging mode."""
-        print("layerio")
+        print("Extracting layer IO ...")
         for name, module in self.model.named_modules():
             if hasattr(module, '_debug_input'):
                 self.layer_inputs[name] = module._debug_input
             if hasattr(module, '_debug_output'):
                 self.layer_outputs[name] = module._debug_output
-        
-    
