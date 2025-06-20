@@ -22,7 +22,6 @@ For the tests you need to have the following dependencies installed in our pytho
 
 * `pytest`
 * `pytest-cov`
-* `pytest-html`
 
 Those can be installed with `pip3 install` or `pip3 install .[dev]` as is defined in the `pyproject.toml`.
 
@@ -54,4 +53,12 @@ pytest <path_to_test_file>:<name_of_the_test>
 For example if we want to run the unsupported_ops test with no unsupported ops:
 ```bash
 pytest tests/core/test_unsupported_ops.py::test_get_unsupported_ops_no_unsupported
+```
+
+## Check for test coverage
+
+We can check our test code coverage using the `pytest-cov` utility as follows:
+
+```bash
+pytest --cov=deepview tests/
 ```
