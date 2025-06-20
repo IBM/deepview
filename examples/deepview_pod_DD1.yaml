@@ -11,7 +11,7 @@ spec:
       requests:
         ibm.com/aiu_pf: 1
     imagePullPolicy: Always
-    image: &pod_image icr.io/ibmaiu_internal/x86_64/e2e_stable:2025_05_18
+    image: &pod_image icr.io/ibmaiu_internal/x86_64/e2e_stable:latest
     workingDir: /tmp/
     env:
     # TRANSFORMERS_CACHE
@@ -75,16 +75,6 @@ spec:
         git checkout $FMS_CHECKOUT
 
         pip3 install -e .
-
-        cp ${AIU_AUTOGEN_SENLIB_CONFIG_FILE} /tmp/etc/aiu/senlib_config.json && FILE=/tmp/etc/aiu/senlib_config.json 
-
-        cat $FILE | jq '. += {"RISCV": {"DOOM": { "enable" : false}}, "SNT_MCI" : { "DCR": {"MCI_CTRL": {"ENABLE_RISCV": "0x0"} } }}' > $FILE.jq 
-        
-        mv $FILE.jq $FILE
-
-        cat $FILE  
-        
-        cp /tmp/etc/aiu/senlib_config.json $HOME/.senlib.json 
 
         echo "POD_IMAGE:" $POD_IMAGE >> /tmp/aiu-query-devices.txt
 
