@@ -15,8 +15,8 @@
 # *******************************************************************************/
 
 # Standard
-import argparse
 from pathlib import Path
+import argparse
 
 # Third Party
 import pytest
@@ -47,7 +47,9 @@ def debugger_path(tmp_path_factory, request):
 
     args = argparse.Namespace(
         model_type="fms",
-        model_path=str(Path.home() / "models" / "mistralai" / "Mistral-7B-Instruct-v0.3"),
+        model_path=str(
+            Path.home() / "models" / "mistralai" / "Mistral-7B-Instruct-v0.3"
+        ),
         tool_output_file=tmp_path_factory.getbasetemp() / "test_debugger.txt",
         deepview_mode=deepview_mode,
         show_details_flag=True,
