@@ -47,7 +47,7 @@ pytest tests/core/test_unsupported_ops.py
 Same happens if we want to run a unique test:
 
 ```bash
-pytest <path_to_test_file>:<name_of_the_test>
+pytest <path_to_test_file>::<name_of_the_test>
 ```
 
 For example if we want to run the unsupported_ops test with no unsupported ops:
