@@ -104,8 +104,6 @@ spec:
       value: *pod_image
     - name: FMS_CHECKOUT
       value: 517315ca3b840e46117614ef19ac0e8da76a5c0c
-    - name: HW_VERSION
-      value: dd2
     volumeMounts:
     # Expanded Shared Memory
     - name: dev-shm
