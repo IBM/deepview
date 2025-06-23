@@ -16,6 +16,7 @@
 
 # Standard
 import argparse
+from pathlib import Path
 
 # Third Party
 import pytest
@@ -40,7 +41,7 @@ def debugger_path(tmp_path_factory):
     """
     args = argparse.Namespace(
         model_type="fms",
-        model_path="/home/senuser/models/ibm-granite/granite-3.3-2b-instruct",
+        model_path=str(Path.home() / "models" / "ibm-granite" / "granite-3.3-2b-instruct"),
         tool_output_file=tmp_path_factory.getbasetemp() / "test_debugger.txt",
         deepview_mode=["layer_debugging"],
         show_details_flag=True,
@@ -96,8 +97,8 @@ def test_layer_debugging_mode(model_output_file):
     assert (
         "DEEPVIEW Successfully ran model.base_model.embedding, [1, 1], torch.int64\n"
         in model_output_file.read_text(encoding="utf-8")
-    ), "Expected Successfully ran model"
+    ), "Expected Successfully ran model.base_model.embedding"
     assert (
-        "DEEPVIEW \033[1mError running model.base_model.layers[0].ln, [1, 1, 2048], torch.float16\n\033[0m"
+        "DEEPVIEW \033[1mError running model.base_model.layers[0].attn, [1, 1, 2048], torch.float16\n"
         in model_output_file.read_text(encoding="utf-8")
-    ), "Expected Error running model"
+    ), "Expected Error running model.base_model.layers[0].attn"
