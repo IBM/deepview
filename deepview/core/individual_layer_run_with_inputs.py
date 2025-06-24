@@ -15,7 +15,7 @@
 # *******************************************************************************/
 import torch
 
-def run_layers_with_inputs(modelpath, filename, sub_layer):
+def run_layers_with_inputs(modelpath, sub_layer):
     """Generates a minimal Python script to reproduce a layer-level failure in layer debugging mode.
 
     The generated code loads the model, compiles the specified sub-layer using the `sendnn` backend,

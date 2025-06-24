@@ -41,10 +41,11 @@ def set_environment():
 
     Also removes any pre-existing model output file (`model_output.txt`) to ensure a clean run.
     """
-    old_output_file = "model_output.txt"
-    if os.path.exists(old_output_file):
-        print("Deleting the old model_output.txt..............")
-        os.remove(old_output_file)
+    old_output_files = ["model_output.txt", "input_kwargs.pth", "output_kwargs.pth"]
+    for file in old_output_files:
+        if os.path.exists(file):
+            print(f"Deleting the old {file}..............")
+            os.remove(file)
     os.environ["DTLOG_LEVEL"] = "error"
     os.environ["TORCH_SENDNN_LOG"] = "CRITICAL"
     os.environ["DT_DEEPRT_VERBOSE"] = "-1"

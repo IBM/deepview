@@ -78,7 +78,7 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
                     f"DEEPVIEW Running {sub_layer} with input {kwargs}"
                 )
 
-                layer_run = run_layers_with_inputs(model_path, filename, sub_layer)
+                layer_run = run_layers_with_inputs(model_path, sub_layer)
                 command1 = ["python3", "-c", layer_run]
                 process = subprocess.run(
                     command1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
