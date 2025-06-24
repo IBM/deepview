@@ -4,6 +4,7 @@ from pycony import *
 import subprocess
 import itertools
 import inspect
+import pickle
 import torch
 import re
 
@@ -20,16 +21,6 @@ def convert_attr_path(attr_path):
     pattern = re.compile(r'\.(\d+)(\.|$)')
     converted = pattern.sub(replace_numeric_attr, attr_path)
     return converted
-
-def dump_to_file(filename, layer_name, inputs, outputs):
-    with open(filename, 'a') as f:
-        f.write("\nLayer:")
-        f.write(str({layer_name}))
-        f.write("\nInput:")
-        f.write(str(inputs))
-        f.write("\nOutput:")
-        f.write(str(outputs))
-        f.write("\n")
 
 def generate_individual_layer_output(model_handler, model_path, model_type, device_to_run, timestamp):
     """Generates layer outputs by running each layer of the model individually on the inputs collected in forward pass.
@@ -109,7 +100,7 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
                         f"DEEPVIEW Successfully ran {sub_layer}\n"
                         "DEEPVIEW========================================================================\n"
                     )
-                    dump_to_file(filename, sub_layer, kwargs, result)
+                    
                     input_output_dict = {}
                     input_output_dict['layer'] = sub_layer
                     input_output_dict['input'] = kwargs
@@ -117,6 +108,9 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
                     input_outputs.append(input_output_dict)
 
                 layers_done.append(sub_layer)
+
+        with open(filename, 'wb') as f:
+            pickle.dump(input_outputs, f) 
 
     elif device_to_run == 'cpu':
         filename = f"CPU_run_{timestamp}.txt"
@@ -130,13 +124,14 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
             inputs = model_handler.layer_inputs[str_layer]
             outputs = model_handler.layer_outputs[str_layer]
 
-            dump_to_file(filename, sub_layer, inputs, outputs)
-
             input_output_dict = {}
             input_output_dict['layer'] = sub_layer
             input_output_dict['input'] = inputs
             input_output_dict['output'] = outputs
             input_outputs.append(input_output_dict)
+
+        with open(filename, 'wb') as f:
+            pickle.dump(input_outputs, f) 
 
     return input_outputs
 

@@ -74,7 +74,7 @@ def run_layer_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_
     )
 
 
-def run_io_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_type):
+def run_io_dumping_mode(aiu_model_handler,deepview_mode, model_path, model_type):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     ## AIU run
@@ -169,8 +169,8 @@ def run_model(
                 if deepview_mode == "layer_debugging":
                     run_layer_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_type, generate_repro_code_flag)
 
-                if deepview_mode == "io_debugging":
-                    run_io_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_type)
+                if deepview_mode == "io_dump":
+                    run_io_dumping_mode(aiu_model_handler,deepview_mode, model_path, model_type)
             except Exception as e:
                 print(f"Exception occurred: {e}")
 

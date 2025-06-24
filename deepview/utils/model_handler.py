@@ -322,7 +322,7 @@ class ModelHandler:
         def hook_fn(module, input, output):
             if len(input) == 0:
                 return 
-            if deepview_mode == 'io_debugging':
+            if deepview_mode == 'io_dump':
                 module._debug_input = input
             if self.device_to_run == 'cpu':
                 module._debug_output = output
