@@ -29,14 +29,14 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
     At the end of the run, stores the inputs and outputs per layer in a pkl file.
 
     Args:
+        model_handler (obj): Object of the class ModelHandler.
         model_path (str): Path to the model checkpoint directory.
         model_type (str): Model type, either 'hf' (HuggingFace) or 'fms' (Foundation Model Stack).
-        layer_list (dict): Dictionary mapping layer/module names to a set containing input shape and data type.
+        device_to_run (str): Device on which the layers have to be run.
+        timestamp (timestamp): Timestamp of run.
     """
-    failed_layer = "No failed layer"
-
-    torch.compiler.reset()
-    torch._dynamo.reset()
+    # torch.compiler.reset()
+    # torch._dynamo.reset()
     model = model_handler.model
 
     if device_to_run == 'aiu':
