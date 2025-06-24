@@ -33,9 +33,6 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
         model_type (str): Model type, either 'hf' (HuggingFace) or 'fms' (Foundation Model Stack).
         layer_list (dict): Dictionary mapping layer/module names to a set containing input shape and data type.
     """
-    
-    input_outputs = [] 
-    layers_done = []
     failed_layer = "No failed layer"
 
     torch.compiler.reset()
@@ -43,6 +40,8 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
     model = model_handler.model
 
     if device_to_run == 'aiu':
+        input_outputs = []
+        layers_done = []
         print("Running each layer individually........")
         filename = f"AIU_run_{timestamp}.pkl"
         for str_layer, inputval in model_handler.layer_inputs.items():
@@ -116,9 +115,9 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
             pickle.dump(input_outputs, f) 
 
     elif device_to_run == 'cpu':
+        input_outputs = []
         filename = f"CPU_run_{timestamp}.pkl"
         for str_layer, inputval in model_handler.layer_inputs.items():
-            print("here")
             if str_layer:
                 sub_layer = convert_attr_path(str_layer)
             else:

@@ -83,6 +83,8 @@ def run_io_dumping_mode(aiu_model_handler,deepview_mode, model_path, model_type)
     aiu_model_handler.warmup()
     print("Reached second infer call post compile.....")
     aiu_model_handler.infer()
+    print("Reached third infer call post compile.....")
+    aiu_model_handler.infer()
     aiu_model_handler.get_layer_io()
     aiu_model_handler.remove_forward_hooks()
     aiu_layer_io = generate_individual_layer_output(
