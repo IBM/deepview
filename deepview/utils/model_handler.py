@@ -174,7 +174,6 @@ class ModelHandler:
         """
         print("Loading model")
         start = time.time()
-        hw_version = os.environ["HW_VERSION"]
 
         if self.model_type == "fms":
             # This get_model call assumes locally downloaded weights
