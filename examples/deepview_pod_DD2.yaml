@@ -1,0 +1,122 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: <pod-name>
+spec:
+  schedulerName: aiu-scheduler
+  containers:
+  - name: <pod-name>
+    resources:
+      limits:
+        ibm.com/aiu_pf: 1
+      requests:
+        ibm.com/aiu_pf: 1
+    imagePullPolicy: Always
+    image: &pod_image icr.io/ibmaiu_internal/x86_64/dd2/e2e_stable:latest
+    command:
+      - bash
+      - '-c'
+    args:
+      # lines without gap are considered on the same line and indented are new lines
+      - >
+        source ~/.bashrc
+
+        unset HF_HOME
+        
+        cd $HOME
+
+        pip3 install -q -U transformers
+
+        git clone
+        https://github.com/foundation-model-stack/foundation-model-stack.git
+
+        cd foundation-model-stack
+
+        git checkout $FMS_CHECKOUT
+        
+        cp ${AIU_AUTOGEN_SENLIB_CONFIG_FILE} /tmp/etc/aiu/senlib_config.json
+
+        FILE=/tmp/etc/aiu/senlib_config.json
+
+        cat $FILE | jq '. += {"RISCV": {"DOOM": { "enable" : false}}, "SNT_MCI" : { "DCR": {"MCI_CTRL": {"ENABLE_RISCV": "0x0"} } }}' > $FILE.jq
+
+        mv $FILE.jq $FILE
+
+        cp /tmp/etc/aiu/senlib_config.json $HOME/.senlib.json
+
+        echo "POD_IMAGE:" $POD_IMAGE >> /tmp/aiu-query-devices.txt
+
+        echo " " >> /tmp/aiu-query-devices.txt
+
+        /opt/sentient/bin/aiu-query-devices >> /tmp/aiu-query-devices.txt
+
+        echo " " >> ~/.bashrc
+
+        echo "cat /tmp/aiu-query-devices.txt" >> ~/.bashrc
+
+        echo 'FLEX_COMPUTE      = ' $FLEX_COMPUTE
+
+        echo 'FLEX_DEVICE       = ' $FLEX_DEVICE
+
+        echo 'DTLOG_LEVEL       = ' $DTLOG_LEVEL
+
+        echo 'TORCH_SENDNN_LOG  = ' $TORCH_SENDNN_LOG
+
+        echo 'DT_DEEPRT_VERBOSE = ' $DT_DEEPRT_VERBOSE
+
+        echo 'INFER_SCRIPT      = ' $INFER_SCRIPT
+
+        echo 'MODEL             = ' $MODEL
+
+        tail -f /dev/null
+    workingDir: /home/senuser
+    env:
+    # Use the AIU device
+    - name: FLEX_COMPUTE
+      value: "SENTIENT"
+    - name: FLEX_DEVICE
+      value: "PF"
+    # Force runtime to use the same heap data structure for everything
+    - name: FLEX_OVERWRITE_NMB_FRAME
+      value: "1"
+    # Needed for multi-AIU runs
+    - name: FLEX_UNLINK_DEVMEM
+      value: "false"
+    # Turn off Python line buffering
+    - name: PYTHONUNBUFFERED
+      value: "1"
+    # HOME might not be set, so set it
+    - name: HOME
+      value: /home/senuser
+    - name: HF_HUB_OFFLINE
+      value: "0"
+    - name:  HF_HUB_CACHE
+      value: /home/senuser/models/huggingface_cache/hub
+    # Make the AIU stack quiet
+    - name: DTLOG_LEVEL
+      value: "error"
+    - name: TORCH_SENDNN_LOG
+      value: "CRITICAL"
+    - name: DT_DEEPRT_VERBOSE
+      value: "-1"
+    - name: POD_IMAGE
+      value: *pod_image
+    - name: FMS_CHECKOUT
+      value: 517315ca3b840e46117614ef19ac0e8da76a5c0c
+    volumeMounts:
+    # Expanded Shared Memory
+    - name: dev-shm
+      mountPath: /dev/shm
+    # Model mount
+    - name: shared-models
+      mountPath: /home/senuser/models
+  imagePullSecrets:
+    - name: <your-pull-secret>
+  volumes:
+  - name: dev-shm
+    emptyDir:
+      medium: Memory
+      sizeLimit: 64Gi
+  - name: shared-models
+    persistentVolumeClaim:
+      claimName: shared-models
