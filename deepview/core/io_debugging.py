@@ -22,6 +22,7 @@ def convert_attr_path(attr_path):
     converted = pattern.sub(replace_numeric_attr, attr_path)
     return converted
 
+
 def generate_individual_layer_output(model_handler, model_path, model_type, device_to_run, timestamp):
     """Generates layer outputs by running each layer of the model individually on the inputs collected in forward pass.
 

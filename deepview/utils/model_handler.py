@@ -283,6 +283,7 @@ class ModelHandler:
                 )[0]
             else:
                 result = self.model(**self.input_id)
+        print(result)
         return result
 
     def safe_warmup(self):

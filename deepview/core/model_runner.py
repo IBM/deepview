@@ -28,7 +28,7 @@ from torch_sendnn import torch_sendnn
 import torch
 
 # Local
-from deepview.core.input_output_debugging import generate_individual_layer_output
+from deepview.core.io_debugging import generate_individual_layer_output
 from deepview.core.layer_debugging import run_individual_layers
 from deepview.core.unsupported_ops import process_unsupported_ops
 from deepview.utils.logger import save_deepview_logs
@@ -84,9 +84,6 @@ def run_io_dumping_mode(aiu_model_handler,deepview_mode, model_path, model_type)
     print("Reached second infer call post compile.....")
     aiu_model_handler.clear_layer_io()
     aiu_model_handler.infer()
-    # print("Reached third infer call post compile.....")
-    # aiu_model_handler.clear_layer_io()
-    # aiu_model_handler.infer()
     aiu_model_handler.get_layer_io()
     aiu_model_handler.remove_forward_hooks()
     aiu_layer_io = generate_individual_layer_output(
@@ -103,7 +100,7 @@ def run_io_dumping_mode(aiu_model_handler,deepview_mode, model_path, model_type)
         model_type=model_type,
         model_path=model_path,
         device='cpu',
-        prompt="What is 2 + 3? Output only the answer.",
+        prompt="What is the capital of Karnataka?",
     )
     cpu_model_handler.load_and_compile_model()
     cpu_model_handler.prep_input()
@@ -161,7 +158,7 @@ def run_model(
                 model_type=model_type,
                 model_path=model_path,
                 device='aiu',
-                prompt="What is 2 + 3? Output only the answer.",
+                prompt="What is the capital of Karnataka?",
             )
             aiu_model_handler.load_and_compile_model()
             aiu_model_handler.prep_input()
