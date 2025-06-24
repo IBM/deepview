@@ -69,7 +69,6 @@ spec:
         echo 'MODEL             = ' $MODEL
 
         tail -f /dev/null
-
     workingDir: /home/senuser
     env:
     # Use the AIU device
