@@ -213,7 +213,7 @@ class ModelHandler:
         if self.device_to_run == 'aiu':
             self.model.compile(backend="sendnn", dynamic=False)
         elif self.device_to_run == 'cpu':
-            self.model.compile()
+            self.model.compile(backend="inductor")
         else:
             print("Device not supported by Deepview yet.")
         print(f"Compiling complete, took {time.time() - start:.3f}s")
@@ -350,3 +350,12 @@ class ModelHandler:
                 self.layer_inputs[name] = module._debug_input
             if hasattr(module, '_debug_output'):
                 self.layer_outputs[name] = module._debug_output
+
+    def clear_layer_io(self):
+        """Get all inputs captured using forward hook for input_output_debugging mode."""
+        print("Clearing layer IO ...")
+        for name, module in self.model.named_modules():
+            if hasattr(module, '_debug_input'):
+                module._debug_input = None
+            if hasattr(module, '_debug_output'):
+                module._debug_output = None

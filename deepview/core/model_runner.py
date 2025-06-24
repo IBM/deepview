@@ -78,13 +78,15 @@ def run_layer_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_
 def run_io_dumping_mode(aiu_model_handler,deepview_mode, model_path, model_type):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    ## AIU run
+    # AIU run
     aiu_model_handler.insert_forward_hooks(deepview_mode)
     aiu_model_handler.warmup()
     print("Reached second infer call post compile.....")
+    aiu_model_handler.clear_layer_io()
     aiu_model_handler.infer()
-    print("Reached third infer call post compile.....")
-    aiu_model_handler.infer()
+    # print("Reached third infer call post compile.....")
+    # aiu_model_handler.clear_layer_io()
+    # aiu_model_handler.infer()
     aiu_model_handler.get_layer_io()
     aiu_model_handler.remove_forward_hooks()
     aiu_layer_io = generate_individual_layer_output(
@@ -101,7 +103,7 @@ def run_io_dumping_mode(aiu_model_handler,deepview_mode, model_path, model_type)
         model_type=model_type,
         model_path=model_path,
         device='cpu',
-        prompt="What is the capital of India?",
+        prompt="What is 2 + 3? Output only the answer.",
     )
     cpu_model_handler.load_and_compile_model()
     cpu_model_handler.prep_input()
@@ -159,7 +161,7 @@ def run_model(
                 model_type=model_type,
                 model_path=model_path,
                 device='aiu',
-                prompt="What is the capital of India?",
+                prompt="What is 2 + 3? Output only the answer.",
             )
             aiu_model_handler.load_and_compile_model()
             aiu_model_handler.prep_input()

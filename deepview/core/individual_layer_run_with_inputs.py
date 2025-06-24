@@ -38,8 +38,8 @@ import torch
 import os
 
 os.environ["COMPILATION_MODE"] = "offline_decoder"
-# torch.compiler.reset()
-# torch._dynamo.reset()
+torch.compiler.reset()
+torch._dynamo.reset()
 
 model = get_model(
     "hf_pretrained",
