@@ -16,7 +16,7 @@ The code is structured in a way following the Deepview source code directory wit
     * `test_granite2b_fms.py`: e2e tests for ibm-granite/granite-3.3-2b-instruct ported to Foundation Model Stack that runs the model and then debug model layers to see if there is any errored layers running on the AIU systems.
     * `test_mistral7b_fms.py`: e2e tests for mistralai/Mistral-7B-Instruct-v0.3 ported to Foundation Model Stack that runs the model and then debug model layers and unsupported compute operations on the AIU systems.
 
-## How to run the tests
+## Installation
 
 For the tests you need to have the following dependencies installed in our python env:
 
@@ -24,6 +24,22 @@ For the tests you need to have the following dependencies installed in our pytho
 * `pytest-cov`
 
 Those can be installed with `pip3 install` or `pip3 install .[dev]` as is defined in the `pyproject.toml`.
+
+## Run e2e tests
+
+> To run the e2e tests as the state of current Deepview implementation to not have problem with subprocess leaking output from one model test case to another we need to run them sequentially. To do so please run each of the tests once the previous one ends:
+
+```bash
+pytest tests/models/<path_to_your_test_file>
+```
+
+Example:
+
+```bash
+pytest tests/models/test_mistral7b_fms.py
+```
+
+## How to run the tests
 
 To run the tests you can simply run:
 
