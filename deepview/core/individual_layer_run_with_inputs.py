@@ -57,7 +57,7 @@ device = torch.device("cpu")
 model.eval()
 torch.set_grad_enabled(False)
 layer = {sub_layer}
-compiled_layer = torch.compile(layer,backend="sendnn", dynamic=False)
+compiled_layer = torch.compile(layer, backend="sendnn", dynamic=False)
 input = torch.load("input_kwargs.pth")
 print(f"Warmup of layer {sub_layer} with inputs ",input)
 with torch_sendnn.warmup_mode():

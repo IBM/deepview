@@ -41,7 +41,7 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
 
     if device_to_run == 'aiu':
         print("Running each layer individually........")
-        filename = f"AIU_run_{timestamp}.txt"
+        filename = f"AIU_run_{timestamp}.pkl"
         for str_layer, inputval in model_handler.layer_inputs.items():
             if str_layer:
                 sub_layer = convert_attr_path(str_layer)
@@ -113,7 +113,7 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
             pickle.dump(input_outputs, f) 
 
     elif device_to_run == 'cpu':
-        filename = f"CPU_run_{timestamp}.txt"
+        filename = f"CPU_run_{timestamp}.pkl"
         for str_layer, inputval in model_handler.layer_inputs.items():
             print("here")
             if str_layer:
