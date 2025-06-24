@@ -16,7 +16,6 @@
 
 # Standard
 import argparse
-import os
 
 # Third Party
 import pytest
@@ -42,7 +41,7 @@ def debugger_path(tmp_path_factory):
     args = argparse.Namespace(
         model_type="hf",
         model_path="ibm-ai-platform/Bamba-9B-v1",
-        tool_output_file=tmp_path_factory.getbasetemp() / "test_debugger.txt",
+        tool_output_file=tmp_path_factory.getbasetemp() / "test_bamba9b_debugger.txt",
         deepview_mode=["unsupported_op"],
         show_details_flag=True,
         generate_repro_code_flag=True,
@@ -58,7 +57,7 @@ def debugger_path(tmp_path_factory):
         args.generate_repro_code_flag,
         args.logfile,
     )
-    debugger_path = tmp_path_factory.getbasetemp() / "test_debugger.txt"
+    debugger_path = tmp_path_factory.getbasetemp() / "test_bamba9b_debugger.txt"
     return debugger_path
 
 
@@ -93,7 +92,7 @@ def test_get_unsupported_ops(model_output_file):
     """
     assert "DEEPVIEW Unsupported operations list:\n" in model_output_file.read_text(
         encoding="utf-8"
-    ), "Expected 'DEEPVIEW Unsupported operations list:\n' in debugger output."
+    ), "Expected 'DEEPVIEW Unsupported operations list:\n'"
 
     unique_unsupported_ops = [
         "triu",
@@ -111,4 +110,4 @@ def test_get_unsupported_ops(model_output_file):
     assert (
         f"\033[1m{unique_unsupported_ops_str}\033[0m\n"
         in model_output_file.read_text(encoding="utf-8")
-    ), "Expected match unsupported ops known in debugger output."
+    ), "Expected match unsupported ops known in model output."

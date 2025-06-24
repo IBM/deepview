@@ -15,9 +15,7 @@
 # *******************************************************************************/
 
 # Standard
-from pathlib import Path
 import argparse
-import os
 
 # Third Party
 import pytest
@@ -42,10 +40,8 @@ def debugger_path(tmp_path_factory):
     """
     args = argparse.Namespace(
         model_type="fms",
-        model_path=str(
-            Path.home() / "models" / "ibm-granite" / "granite-3.3-2b-instruct"
-        ),
-        tool_output_file=tmp_path_factory.getbasetemp() / "test_debugger.txt",
+        model_path="ibm-granite/granite-3.3-2b-instruct",
+        tool_output_file=tmp_path_factory.getbasetemp() / "test_granite2b_debugger.txt",
         deepview_mode=["layer_debugging"],
         show_details_flag=True,
         generate_repro_code_flag=True,
@@ -61,7 +57,7 @@ def debugger_path(tmp_path_factory):
         args.generate_repro_code_flag,
         args.logfile,
     )
-    debugger_path = tmp_path_factory.getbasetemp() / "test_debugger.txt"
+    debugger_path = tmp_path_factory.getbasetemp() / "test_granite2b_debugger.txt"
     return debugger_path
 
 
