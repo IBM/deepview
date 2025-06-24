@@ -37,6 +37,9 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
     input_outputs = [] 
     layers_done = []
     failed_layer = "No failed layer"
+
+    torch.compiler.reset()
+    torch._dynamo.reset()
     model = model_handler.model
 
     if device_to_run == 'aiu':
