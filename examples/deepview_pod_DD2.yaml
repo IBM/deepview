@@ -89,7 +89,9 @@ spec:
     - name: HOME
       value: /home/senuser
     - name: HF_HUB_OFFLINE
-      value: "0"
+      value: "1"
+    - name: HF_HOME
+      value: /home/senuser/models/huggingface_cache
     - name:  HF_HUB_CACHE
       value: /home/senuser/models/huggingface_cache/hub
     # Make the AIU stack quiet
@@ -102,7 +104,7 @@ spec:
     - name: POD_IMAGE
       value: *pod_image
     - name: FMS_CHECKOUT
-      value: 517315ca3b840e46117614ef19ac0e8da76a5c0c
+      value: v1.1.0
     volumeMounts:
     # Expanded Shared Memory
     - name: dev-shm
