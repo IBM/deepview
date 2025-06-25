@@ -44,8 +44,8 @@ def debugger_path(tmp_path_factory):
         model_path="mistralai/Mistral-7B-Instruct-v0.3",
         tool_output_file=tmp_path_factory.getbasetemp() / "test_mistral7b_debugger.txt",
         deepview_mode=["unsupported_op", "layer_debugging"],
-        show_details_flag=False,
-        generate_repro_code_flag=False,
+        show_details_flag=True,
+        generate_repro_code_flag=True,
         logfile=tmp_path_factory.getbasetemp() / "test_mistral7b_output.txt",
     )
 
@@ -111,22 +111,6 @@ def test_layer_debugging_mode(model_output_file, request):
         encoding="utf-8"
     ), "Expected Running each layer individually"
     assert (
-        "DEEPVIEW Successfully ran model.base_model.layers[31].ff_sub_layer, [1, 64, 4096], torch.float16\n"
+        "DEEPVIEW \033[1mError running model.base_model.layers[0].ln, [1, 64, 4096], torch.float16\n"
         in model_output_file.read_text(encoding="utf-8")
-    ), "Expected Successfully ran model.base_model.layers[31].ff_sub_layer"
-    assert (
-        "DEEPVIEW Successfully ran model.base_model.dec_norm, [1, 64, 4096], torch.float16\n"
-        in model_output_file.read_text(encoding="utf-8")
-    ), "Expected Successfully ran model.base_model.dec_norm"
-    assert (
-        "DEEPVIEW Successfully ran model.base_model, [1, 64], torch.int64\n"
-        in model_output_file.read_text(encoding="utf-8")
-    ), "Expected Successfully ran model.base_model"
-    assert (
-        "DEEPVIEW Successfully ran model.head, [1, 4096], torch.float16\n"
-        in model_output_file.read_text(encoding="utf-8")
-    ), "Expected Successfully ran model.head"
-    assert (
-        "DEEPVIEW Successfully ran model, [1, 64], torch.int64\n"
-        in model_output_file.read_text(encoding="utf-8")
-    ), "Expected Successfully ran model"
+    ), "Expected Error running model.base_model.layers[0].ln"

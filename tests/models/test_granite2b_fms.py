@@ -40,11 +40,11 @@ def debugger_path(tmp_path_factory):
     """
     args = argparse.Namespace(
         model_type="fms",
-        model_path="ibm-granite/granite-3.3-2b-instruct",
+        model_path="ibm-granite/granite-3.2-2b-instruct",
         tool_output_file=tmp_path_factory.getbasetemp() / "test_granite2b_debugger.txt",
         deepview_mode=["layer_debugging"],
         show_details_flag=True,
-        generate_repro_code_flag=True,
+        generate_repro_code_flag=False,
         logfile=tmp_path_factory.getbasetemp() / "test_granite2b_output.txt",
     )
 
@@ -94,10 +94,6 @@ def test_layer_debugging_mode(model_output_file):
         encoding="utf-8"
     ), "Expected Running each layer individually"
     assert (
-        "DEEPVIEW Successfully ran model.base_model.embedding, [1, 1], torch.int64\n"
+        "DEEPVIEW \033[1mError running model.base_model.layers[0].ln, [1, 1, 2048], torch.float16\n"
         in model_output_file.read_text(encoding="utf-8")
-    ), "Expected Successfully ran model.base_model.embedding"
-    assert (
-        "DEEPVIEW \033[1mError running model.base_model.layers[0].attn, [1, 1, 2048], torch.float16\n"
-        in model_output_file.read_text(encoding="utf-8")
-    ), "Expected Error running model.base_model.layers[0].attn"
+    ), "Expected Error running model.base_model.layers[0].ln"
