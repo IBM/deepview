@@ -28,6 +28,12 @@ dependencies = [
 "sentence_transformers"
 ]
 
+[project.optional-dependencies]
+dev = [
+"pytest",
+"pytest-cov"
+]
+
 [project.scripts]
 deepview = "deepview.deepview:main"
 
