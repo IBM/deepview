@@ -97,7 +97,7 @@ def test_get_unsupported_ops(model_output_file):
     ), "Expected 'DEEPVIEW \033[1mNo unsupported operations detected.\033[0m\n'"
 
 
-def test_layer_debugging_mode(model_output_file, request):
+def test_layer_debugging_mode(model_output_file):
     """
     Test to ensure the layer debugging mode is correctly set in the debugger output.
     Only runs when --layer_debugging argument is passed to pytest.
