@@ -18,6 +18,7 @@
 """
 DeepView CLI tool for debugging and analyzing deep learning models.
 """
+import torch_sendnn
 
 # Standard
 import argparse
@@ -79,7 +80,18 @@ def main():
 
     # Run the model
     print("Running the model")
-    try:
+    #try:
+    if "unsupported_op" in args.mode:
+        with torch_sendnn.preserve_lazyhandle():
+            run_model(
+                args.model_type,
+                args.model,
+                args.output_file,
+                args.mode,
+                args.show_details,
+                args.generate_repro_code,
+            )
+    else:
         run_model(
             args.model_type,
             args.model,
@@ -88,10 +100,11 @@ def main():
             args.show_details,
             args.generate_repro_code,
         )
+
         print("DeepView run completed")
-    except Exception as e:
-        print(f"Error running DeepView: {e}")
-        sys.exit(1)
+    #except Exception as e:
+    #    print(f"Error running DeepView: {e}")
+    #    sys.exit(1)
 
 
 if __name__ == "__main__":

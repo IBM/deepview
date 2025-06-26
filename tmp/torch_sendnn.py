@@ -16,19 +16,17 @@ from torch._dynamo.backends.registry import lookup_backend
 from torch._dynamo.exc import InvalidBackend
 
 # update_lazyhandle is used by the fms inference server
-from torch_sendnn.backends import (
+from .backends import (
     sendnn_backend,
+    sendnn_debug_backend,
     sendnn_decoder_backend,
     update_lazyhandle,  # noqa: F401
-    preserve_lazyhandle,
-    release_lazyhandle,
-    set_warmup_mode,
-    get_warmup_mode
 )
 
 _BACKENDS = {
     'sendnn':  sendnn_backend,
     'sendnn_decoder': sendnn_decoder_backend,
+    'sendnn_debug': sendnn_debug_backend,
 }
 
 for name in _BACKENDS:

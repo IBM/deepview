@@ -5,7 +5,7 @@ import shutil
 
 # Third Party
 from sendnn import opcodes
-from torch_sendnn.backends import lazy_handles
+from torch_sendnn.backends import preserved_lazy_handles
 from torch_sendnn.utils import convert
 import torch
 
@@ -174,7 +174,7 @@ def process_unsupported_ops(show_details_flag, generate_repro_code_flag):
         generate_repro_code_flag (bool): Whether to generate minimal repro scripts for each op.
     """
     all_unsupported_ops = []
-    for iter_idx, lh in enumerate(lazy_handles):
+    for iter_idx, lh in enumerate(preserved_lazy_handles):
         unsupported_ops = get_unsupported_ops(lh)
         all_unsupported_ops.extend(unsupported_ops)
         process_unsupported_ops_lazy_handle(
