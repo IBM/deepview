@@ -6,8 +6,10 @@ import subprocess
 import itertools
 import inspect
 import pickle
+import shutil
 import torch
 import re
+import os
 
 # Local
 from deepview.core.individual_layer_run_with_inputs import run_layers_with_inputs
@@ -40,12 +42,14 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
     # torch.compiler.reset()
     # torch._dynamo.reset()
     model = model_handler.model
+    os.makedirs("temp", exist_ok=True)
 
     if device_to_run == 'aiu':
         input_outputs = []
         layers_done = []
         print("Running each layer individually........")
         filename = f"AIU_run_{timestamp}.pkl"
+
         for str_layer, inputval in model_handler.layer_inputs.items():
             if str_layer:
                 sub_layer = convert_attr_path(str_layer)
@@ -64,6 +68,7 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
                 print(f"Expected Arguments: {expected_args}")
                 print("Inputs collected:", inputval)
                 inputvals = list(inputval)
+
                 for i, val in enumerate(inputvals):
                     if isinstance(val, torch.Tensor):
                         print(f"  [{i}]: Tensor of shape {val.shape}")
@@ -76,40 +81,10 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
                     zipped_inputs = list(zip(expected_args, inputval))
                 
                 kwargs = dict(zipped_inputs)
-                input_filename = str_layer.replace(".", "_") + "_input_kwargs.pth"
-                torch.save(kwargs, input_filename)
-
-                # print(
-                #     "DEEPVIEW========================================================================\n"
-                #     f"DEEPVIEW Running {sub_layer} with input {kwargs}"
-                # )
-                # # torch.compiler.reset()
-                # # torch._dynamo.reset_code_caches()
-                # target_layer.compile(backend="sendnn", dynamic=False)
-                # # try:
-                # with torch_sendnn.warmup_mode():
-                #     result = target_layer(**kwargs)
-                # print(result)
-                # print(
-                #     f"DEEPVIEW Successfully ran {sub_layer}\n"
-                #     "DEEPVIEW========================================================================\n"
-                # )
-                # input_output_dict = {}
-                # input_output_dict['layer'] = sub_layer
-                # input_output_dict['input'] = kwargs
-                # input_output_dict['output'] = result
-                # input_outputs.append(input_output_dict)
-                # # except Exception as e:
-                # #     print(f"Caught an unexpected exception: {e}")
-                # #     print(
-                # #         "DEEPVIEW========================================================================\n"
-                # #         f"DEEPVIEW \033[1mError running {sub_layer}\n\033[0m"
-                # #         "DEEPVIEW========================================================================\n"
-                # #     )
-                # #     failed_layer = sub_layer
-                # #     break
-
-                layer_run = run_layers_with_inputs(model_path, sub_layer)
+                tmp_filename = str_layer.replace(".", "_")
+                torch.save(kwargs, "temp/"+tmp_filename+"_input_kwargs.pth")
+                
+                layer_run = run_layers_with_inputs(model_path, sub_layer, tmp_filename)
                 command1 = ["python3", "-c", layer_run]
                 process = subprocess.run(
                     command1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
@@ -126,7 +101,7 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
                     failed_layer = sub_layer
                     break
                 else:
-                    result = torch.load("output_kwargs.pth")
+                    result = torch.load("temp/"+tmp_filename+"_output_kwargs.pth")
                     print(
                         f"DEEPVIEW Successfully ran {sub_layer}\n"
                         "DEEPVIEW========================================================================\n"
@@ -142,6 +117,8 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
 
         with open(filename, 'wb') as f:
             pickle.dump(input_outputs, f) 
+        
+        shutil.rmtree("temp")
 
     elif device_to_run == 'cpu':
         input_outputs = []

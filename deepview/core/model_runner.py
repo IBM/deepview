@@ -46,7 +46,7 @@ def set_environment():
         if os.path.exists(file):
             print(f"Deleting the old {file}..............")
             os.remove(file)
-    os.environ["DTLOG_LEVEL"] = "debug"
+    os.environ["DTLOG_LEVEL"] = "error"
     os.environ["TORCH_SENDNN_LOG"] = "CRITICAL"
     os.environ["DT_DEEPRT_VERBOSE"] = "-1"
     os.environ["PYTHONUNBUFFERED"] = "1"

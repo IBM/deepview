@@ -15,7 +15,7 @@
 # *******************************************************************************/
 import torch
 
-def run_layers_with_inputs(modelpath, sub_layer):
+def run_layers_with_inputs(modelpath, sub_layer, filename):
     """Generates a minimal Python script to reproduce a layer-level failure in layer debugging mode.
 
     The generated code loads the model, compiles the specified sub-layer using the `sendnn` backend,
@@ -57,11 +57,17 @@ model = get_model(
 device = torch.device("cpu")
 model.eval()
 torch.set_grad_enabled(False)
+
 layer = {sub_layer}
 layer.compile(backend="sendnn", dynamic=False)
-input = torch.load("input_kwargs.pth")
+
+input_filename = "temp/{filename}_input_kwargs.pth"
+output_filename = "temp/{filename}_output_kwargs.pth"
+input = torch.load(input_filename)
+
 print(f"Warmup of layer {sub_layer} with inputs ",input)
+
 with torch_sendnn.warmup_mode():
     result = layer(**input)
-torch.save(result, "output_kwargs.pth")
+torch.save(result, output_filename)
 """
