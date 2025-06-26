@@ -46,7 +46,7 @@ def set_environment():
         if os.path.exists(file):
             print(f"Deleting the old {file}..............")
             os.remove(file)
-    os.environ["DTLOG_LEVEL"] = "error"
+    os.environ["DTLOG_LEVEL"] = "debug"
     os.environ["TORCH_SENDNN_LOG"] = "CRITICAL"
     os.environ["DT_DEEPRT_VERBOSE"] = "-1"
     os.environ["PYTHONUNBUFFERED"] = "1"
@@ -86,6 +86,7 @@ def run_io_dumping_mode(aiu_model_handler,deepview_mode, model_path, model_type)
     aiu_model_handler.infer()
     aiu_model_handler.get_layer_io()
     aiu_model_handler.remove_forward_hooks()
+    aiu_model_handler.clear_layer_io()
     aiu_layer_io = generate_individual_layer_output(
         aiu_model_handler,
         model_path,
@@ -94,27 +95,27 @@ def run_io_dumping_mode(aiu_model_handler,deepview_mode, model_path, model_type)
         timestamp
     )
 
-    ## CPU run
-    print("========= AIU IO captured. Running on CPU ==========")
-    cpu_model_handler = ModelHandler(
-        model_type=model_type,
-        model_path=model_path,
-        device='cpu',
-        prompt="What is the capital of Karnataka?",
-    )
-    cpu_model_handler.load_and_compile_model()
-    cpu_model_handler.prep_input()
-    cpu_model_handler.insert_forward_hooks(deepview_mode)
-    cpu_model_handler.infer()
-    cpu_model_handler.get_layer_io()
-    cpu_model_handler.remove_forward_hooks()
-    cpu_layer_io = generate_individual_layer_output(
-        cpu_model_handler,
-        model_path,
-        model_type,
-        'cpu',
-        timestamp
-    )
+    # ## CPU run
+    # print("========= AIU IO captured. Running on CPU ==========")
+    # cpu_model_handler = ModelHandler(
+    #     model_type=model_type,
+    #     model_path=model_path,
+    #     device='cpu',
+    #     prompt="What is the capital of Egypt?",
+    # )
+    # cpu_model_handler.load_and_compile_model()
+    # cpu_model_handler.prep_input()
+    # cpu_model_handler.insert_forward_hooks(deepview_mode)
+    # cpu_model_handler.infer()
+    # cpu_model_handler.get_layer_io()
+    # cpu_model_handler.remove_forward_hooks()
+    # cpu_layer_io = generate_individual_layer_output(
+    #     cpu_model_handler,
+    #     model_path,
+    #     model_type,
+    #     'cpu',
+    #     timestamp
+    # )
 
     ## TODO: Flavia to add code here. aiu_layer_io and cpu_layer_io are the lists of dictionaries used to store layer name, inputs and outputs
     # from AIU and CPU runs, respectively.
@@ -158,23 +159,23 @@ def run_model(
                 model_type=model_type,
                 model_path=model_path,
                 device='aiu',
-                prompt="What is the capital of Karnataka?",
+                prompt="What is the capital of Egypt?",
             )
             aiu_model_handler.load_and_compile_model()
             aiu_model_handler.prep_input()
 
             print("Reached first infer call post compile.....")
-            try:
-                if deepview_mode == "unsupported_op":
-                    run_unsupported_op_mode(aiu_model_handler, show_details_flag, generate_repro_code_flag)
-                    
-                if deepview_mode == "layer_debugging":
-                    run_layer_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_type, generate_repro_code_flag)
+            # try:
+            if deepview_mode == "unsupported_op":
+                run_unsupported_op_mode(aiu_model_handler, show_details_flag, generate_repro_code_flag)
+                
+            if deepview_mode == "layer_debugging":
+                run_layer_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_type, generate_repro_code_flag)
 
-                if deepview_mode == "io_dump":
-                    run_io_dumping_mode(aiu_model_handler,deepview_mode, model_path, model_type)
-            except Exception as e:
-                print(f"Exception occurred: {e}")
+            if deepview_mode == "io_dump":
+                run_io_dumping_mode(aiu_model_handler,deepview_mode, model_path, model_type)
+            # except Exception as e:
+            #     print(f"Exception occurred: {e}")
 
             # Process the logfile to create the tool_output_file
             tee.flush()

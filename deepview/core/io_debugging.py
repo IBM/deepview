@@ -1,6 +1,7 @@
 # Standard
 from pathlib import Path
 from pycony import *
+import torch_sendnn
 import subprocess
 import itertools
 import inspect
@@ -50,8 +51,10 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
                 sub_layer = convert_attr_path(str_layer)
             else:
                 sub_layer = 'model'
+
             if sub_layer in layers_done:
                 continue
+
             if sub_layer != "model" and sub_layer != "model.base_model":
                 print("Layer is ", sub_layer)
                 
@@ -59,7 +62,6 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
                 forward_signature = inspect.signature(target_layer.forward)
                 expected_args = list(forward_signature.parameters.keys())
                 print(f"Expected Arguments: {expected_args}")
-                
                 print("Inputs collected:", inputval)
                 inputvals = list(inputval)
                 for i, val in enumerate(inputvals):
@@ -74,12 +76,38 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
                     zipped_inputs = list(zip(expected_args, inputval))
                 
                 kwargs = dict(zipped_inputs)
-                torch.save(kwargs, "input_kwargs.pth")
+                input_filename = str_layer.replace(".", "_") + "_input_kwargs.pth"
+                torch.save(kwargs, input_filename)
 
-                print(
-                    "DEEPVIEW========================================================================\n"
-                    f"DEEPVIEW Running {sub_layer} with input {kwargs}"
-                )
+                # print(
+                #     "DEEPVIEW========================================================================\n"
+                #     f"DEEPVIEW Running {sub_layer} with input {kwargs}"
+                # )
+                # # torch.compiler.reset()
+                # # torch._dynamo.reset_code_caches()
+                # target_layer.compile(backend="sendnn", dynamic=False)
+                # # try:
+                # with torch_sendnn.warmup_mode():
+                #     result = target_layer(**kwargs)
+                # print(result)
+                # print(
+                #     f"DEEPVIEW Successfully ran {sub_layer}\n"
+                #     "DEEPVIEW========================================================================\n"
+                # )
+                # input_output_dict = {}
+                # input_output_dict['layer'] = sub_layer
+                # input_output_dict['input'] = kwargs
+                # input_output_dict['output'] = result
+                # input_outputs.append(input_output_dict)
+                # # except Exception as e:
+                # #     print(f"Caught an unexpected exception: {e}")
+                # #     print(
+                # #         "DEEPVIEW========================================================================\n"
+                # #         f"DEEPVIEW \033[1mError running {sub_layer}\n\033[0m"
+                # #         "DEEPVIEW========================================================================\n"
+                # #     )
+                # #     failed_layer = sub_layer
+                # #     break
 
                 layer_run = run_layers_with_inputs(model_path, sub_layer)
                 command1 = ["python3", "-c", layer_run]
@@ -110,7 +138,7 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
                     input_output_dict['output'] = result
                     input_outputs.append(input_output_dict)
 
-                layers_done.append(sub_layer)
+            layers_done.append(sub_layer)
 
         with open(filename, 'wb') as f:
             pickle.dump(input_outputs, f) 

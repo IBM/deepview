@@ -243,6 +243,50 @@ class ModelHandler:
                 [self.prompt], padding=True, truncation=True, return_tensors="pt"
             )
 
+    def _generate_forward_output(self, is_warmup):
+        """Calling generate function based on model_type."""
+        if self.model_type == "fms":
+            self.extra_generation_kwargs["only_last_token"] = True
+            if is_warmup:
+                eos_token_id = None
+                max_len = self.model.config.max_expected_seq_len
+            else:
+                eos_token_id = self.tokenizer.eos_token_id
+                if hasattr(self.model.config, "ntk_scaling") and self.model.config.ntk_scaling:
+                    max_len = max(len(self.prompt), self.model.config.max_expected_seq_len)
+                else:
+                    max_len = self.model.config.max_expected_seq_len
+            result = self.model(
+                self.input_id,
+                # max_new_tokens=self.max_new_tokens,
+                # use_cache=True,
+                # do_sample=False,
+                # max_seq_len=max_len,
+                # eos_token_id=eos_token_id,
+                # contiguous_cache=True,
+                # extra_kwargs=self.extra_generation_kwargs,
+            )
+        # elif self.model_type == "hf":
+        #     if self.model_class in ["causal_lm"]:
+        #         input_ids = self.input_id["input_ids"]
+        #         attention_mask = self.input_id.get("attention_mask", None)
+        #         generate_ids = self.model.generate(
+        #             input_ids,
+        #             attention_mask=attention_mask,
+        #             max_new_tokens=self.max_new_tokens,
+        #         )
+        #         result = self.tokenizer.batch_decode(
+        #             generate_ids,
+        #             skip_special_tokens=True,
+        #             clean_up_tokenization_spaces=False,
+        #         )[0]
+        #     else:
+        #         result = self.model(**self.input_id)
+        print(result)
+        return result
+
+
+
     def _generate_output(self, is_warmup):
         """Calling generate function based on model_type."""
         if self.model_type == "fms":
@@ -290,17 +334,17 @@ class ModelHandler:
         """Perform warmup on the prepared input based on the model type."""
         old_warmup_mode = get_warmup_mode()
         set_warmup_mode(True)
-        self._generate_output(True)
+        self._generate_forward_output(True)
         set_warmup_mode(old_warmup_mode)
 
     def warmup(self):
         """Perform warmup on the prepared input based on the model type."""
         with torch_sendnn.warmup_mode():
-            self._generate_output(True)
+            self._generate_forward_output(True)
 
     def infer(self):
         """Perform inference on the prepared input based on the model type."""
-        return self._generate_output(False)
+        return self._generate_forward_output(False)
 
     def insert_forward_hooks(self, deepview_mode):
         """Insert forward hooks into the model layers to capture input shapes and types during forward pass."""
@@ -347,10 +391,11 @@ class ModelHandler:
         """Get all inputs captured using forward hook for input_output_debugging mode."""
         print("Extracting layer IO ...")
         for name, module in self.model.named_modules():
-            if hasattr(module, '_debug_input'):
-                self.layer_inputs[name] = module._debug_input
-            if hasattr(module, '_debug_output'):
-                self.layer_outputs[name] = module._debug_output
+            if name.count(".") <= 3:
+                if hasattr(module, '_debug_input'):
+                    self.layer_inputs[name] = module._debug_input
+                if hasattr(module, '_debug_output'):
+                    self.layer_outputs[name] = module._debug_output
 
     def clear_layer_io(self):
         """Get all inputs captured using forward hook for input_output_debugging mode."""

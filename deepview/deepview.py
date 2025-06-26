@@ -78,19 +78,19 @@ def main():
 
     # Run the model
     print("Running the model")
-    try:
-        run_model(
-            args.model_type,
-            args.model,
-            args.output_file,
-            args.mode,
-            args.show_details,
-            args.generate_repro_code,
-        )
-        print("DeepView run completed")
-    except Exception as e:
-        print(f"Error running DeepView: {e}")
-        sys.exit(1)
+    # try:
+    run_model(
+        args.model_type,
+        args.model,
+        args.output_file,
+        args.mode,
+        args.show_details,
+        args.generate_repro_code,
+    )
+    print("DeepView run completed")
+    # except Exception as e:
+    #     print(f"Error running DeepView: {e}")
+    #     sys.exit(1)
 
 
 if __name__ == "__main__":

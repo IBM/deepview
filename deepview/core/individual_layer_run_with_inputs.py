@@ -40,6 +40,7 @@ import os
 os.environ["COMPILATION_MODE"] = "offline_decoder"
 torch.compiler.reset()
 torch._dynamo.reset()
+torch._dynamo.reset_code_caches()
 
 model = get_model(
     "hf_pretrained",
@@ -57,10 +58,10 @@ device = torch.device("cpu")
 model.eval()
 torch.set_grad_enabled(False)
 layer = {sub_layer}
-compiled_layer = torch.compile(layer, backend="sendnn", dynamic=False)
+layer.compile(backend="sendnn", dynamic=False)
 input = torch.load("input_kwargs.pth")
 print(f"Warmup of layer {sub_layer} with inputs ",input)
 with torch_sendnn.warmup_mode():
-    result = compiled_layer(**input)
+    result = layer(**input)
 torch.save(result, "output_kwargs.pth")
 """
