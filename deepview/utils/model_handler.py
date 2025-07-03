@@ -367,10 +367,9 @@ class ModelHandler:
         def hook_fn(module, input, output):
             if len(input) == 0:
                 return 
-            if deepview_mode == 'aiu_input_capture':
+            if deepview_mode == 'io_dump':
                 module._debug_input = input
-            if deepview_mode == 'io_dump' and self.device_to_run == 'cpu':
-                module._debug_input = input
+            if self.device_to_run == 'cpu':
                 module._debug_output = output
             if deepview_mode == 'layer_debugging':
                 module_instance = module_instance_names.get(module, "unknown")

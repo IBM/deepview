@@ -37,6 +37,8 @@ import torch_sendnn
 import inspect
 import torch
 import os
+import pickle
+
 
 os.environ["COMPILATION_MODE"] = "offline_decoder"
 torch.compiler.reset()
@@ -59,15 +61,20 @@ model.eval()
 torch.set_grad_enabled(False)
 
 layer = {sub_layer}
-# print(type(layer))
 target_layer = layer
 forward_signature = inspect.signature(target_layer.forward)
 expected_args = list(forward_signature.parameters.keys())
 print(f"Expected Arguments: ",expected_args)
 
 
-input_filename = "temp/{filename}_input.pth"
-inputval = torch.load(input_filename)
+input_filename = "temp/{filename}_input.pkl"
+
+with open(input_filename, 'rb') as f:
+    inputval = pickle.load(f)
+
+
+# inputval = torch.load(input_filename)
+
 
 print("Inputs collected:", inputval)
 inputvals = list(inputval)
@@ -91,8 +98,13 @@ with torch_sendnn.warmup_mode():
     result = layer(**kwargs)
 
     
-input_kwargs_filename = "temp/{filename}_input_kwargs.pth"
-output_filename = "temp/{filename}_output_kwargs.pth"
-torch.save(kwargs, input_kwargs_filename)
-torch.save(result, output_filename)
+input_kwargs_filename = "temp/{filename}_input_kwargs.pkl"
+output_filename = "temp/{filename}_output_kwargs.pkl"
+
+with open(input_kwargs_filename, 'wb') as f:
+    pickle.dump(kwargs, f)
+with open(output_filename, 'wb') as f:
+    pickle.dump(result, f)
+# torch.save(kwargs, input_kwargs_filename)
+# torch.save(result, output_filename)
 """

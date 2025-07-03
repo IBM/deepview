@@ -63,7 +63,10 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
                 print("Layer is ", sub_layer)
                 
                 tmp_filename = str_layer.replace(".", "_")
-                torch.save(inputval, "temp/"+tmp_filename+"_input.pth")
+
+                with open("temp/"+tmp_filename+"_input.pkl", 'wb') as f:
+                    pickle.dump(inputval, f) 
+                # torch.save(inputval, "temp/"+tmp_filename+"_input.pth")
                 
                 layer_run = run_layers_with_inputs(model_path, sub_layer, tmp_filename)
                 command1 = ["python3", "-c", layer_run]
@@ -82,8 +85,10 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
                     failed_layer = sub_layer
                     break
                 else:
-                    input_kwargs = torch.load("temp/"+tmp_filename+"_input_kwargs.pth")
-                    result = torch.load("temp/"+tmp_filename+"_output_kwargs.pth")
+                    with open("temp/"+tmp_filename+"_input_kwargs.pkl", 'rb') as f:
+                        input_kwargs = pickle.load(f)
+                    with open("temp/"+tmp_filename+"_output_kwargs.pkl", 'rb') as f:
+                        result = pickle.load(f)
                     print(
                         f"DEEPVIEW Successfully ran {sub_layer}\n"
                         "DEEPVIEW========================================================================\n"
