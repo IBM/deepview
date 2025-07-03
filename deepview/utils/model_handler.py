@@ -367,9 +367,10 @@ class ModelHandler:
         def hook_fn(module, input, output):
             if len(input) == 0:
                 return 
-            if deepview_mode == 'io_dump':
+            if deepview_mode == 'aiu_input_capture':
                 module._debug_input = input
-            if self.device_to_run == 'cpu':
+            if deepview_mode == 'io_dump' and self.device_to_run == 'cpu':
+                module._debug_input = input
                 module._debug_output = output
             if deepview_mode == 'layer_debugging':
                 module_instance = module_instance_names.get(module, "unknown")
@@ -391,6 +392,7 @@ class ModelHandler:
         """Get all inputs captured using forward hook for input_output_debugging mode."""
         print("Extracting layer IO ...")
         for name, module in self.model.named_modules():
+            print(name)
             if name.count(".") <= 3:
                 if hasattr(module, '_debug_input'):
                     self.layer_inputs[name] = module._debug_input

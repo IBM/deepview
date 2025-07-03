@@ -62,27 +62,8 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
             if sub_layer != "model" and sub_layer != "model.base_model":
                 print("Layer is ", sub_layer)
                 
-                target_layer = eval(sub_layer)
-                forward_signature = inspect.signature(target_layer.forward)
-                expected_args = list(forward_signature.parameters.keys())
-                print(f"Expected Arguments: {expected_args}")
-                print("Inputs collected:", inputval)
-                inputvals = list(inputval)
-
-                for i, val in enumerate(inputvals):
-                    if isinstance(val, torch.Tensor):
-                        print(f"  [{i}]: Tensor of shape {val.shape}")
-                    else:
-                        print(f"  [{i}]: {val}")
-
-                if len(inputval) < len(expected_args):
-                    zipped_inputs = list(itertools.zip_longest(expected_args, inputval, fillvalue=None))
-                else:
-                    zipped_inputs = list(zip(expected_args, inputval))
-                
-                kwargs = dict(zipped_inputs)
                 tmp_filename = str_layer.replace(".", "_")
-                torch.save(kwargs, "temp/"+tmp_filename+"_input_kwargs.pth")
+                torch.save(inputval, "temp/"+tmp_filename+"_input.pth")
                 
                 layer_run = run_layers_with_inputs(model_path, sub_layer, tmp_filename)
                 command1 = ["python3", "-c", layer_run]
@@ -101,6 +82,7 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
                     failed_layer = sub_layer
                     break
                 else:
+                    input_kwargs = torch.load("temp/"+tmp_filename+"_input_kwargs.pth")
                     result = torch.load("temp/"+tmp_filename+"_output_kwargs.pth")
                     print(
                         f"DEEPVIEW Successfully ran {sub_layer}\n"
@@ -109,7 +91,7 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
                     
                     input_output_dict = {}
                     input_output_dict['layer'] = sub_layer
-                    input_output_dict['input'] = kwargs
+                    input_output_dict['input'] = input_kwargs
                     input_output_dict['output'] = result
                     input_outputs.append(input_output_dict)
 

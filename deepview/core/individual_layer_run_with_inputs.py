@@ -34,6 +34,7 @@ def run_layers_with_inputs(modelpath, sub_layer, filename):
 from fms.models import get_model
 from torch import tensor
 import torch_sendnn
+import inspect
 import torch
 import os
 
@@ -58,15 +59,40 @@ model.eval()
 torch.set_grad_enabled(False)
 
 layer = {sub_layer}
+# print(type(layer))
+target_layer = layer
+forward_signature = inspect.signature(target_layer.forward)
+expected_args = list(forward_signature.parameters.keys())
+print(f"Expected Arguments: ",expected_args)
+
+
+input_filename = "temp/{filename}_input.pth"
+inputval = torch.load(input_filename)
+
+print("Inputs collected:", inputval)
+inputvals = list(inputval)
+for i, val in enumerate(inputvals):
+    if isinstance(val, torch.Tensor):
+        print("[",i,"] : Tensor of shape", val.shape)
+    else:
+        print("[",i,"]: ",val)
+
+if len(inputval) < len(expected_args):
+    zipped_inputs = list(itertools.zip_longest(expected_args, inputval, fillvalue=None))
+else:
+    zipped_inputs = list(zip(expected_args, inputval))
+
+kwargs = dict(zipped_inputs)
+
 layer.compile(backend="sendnn", dynamic=False)
-
-input_filename = "temp/{filename}_input_kwargs.pth"
-output_filename = "temp/{filename}_output_kwargs.pth"
-input = torch.load(input_filename)
-
-print(f"Warmup of layer {sub_layer} with inputs ",input)
+print(f"Warmup of layer {sub_layer} with inputs ",kwargs)
 
 with torch_sendnn.warmup_mode():
-    result = layer(**input)
+    result = layer(**kwargs)
+
+    
+input_kwargs_filename = "temp/{filename}_input_kwargs.pth"
+output_filename = "temp/{filename}_output_kwargs.pth"
+torch.save(kwargs, input_kwargs_filename)
 torch.save(result, output_filename)
 """
