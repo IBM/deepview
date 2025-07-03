@@ -89,14 +89,20 @@ def run_io_dumping_mode(aiu_model_handler, deepview_mode, model_path, model_type
     aiu_model_handler.remove_forward_hooks()
     aiu_model_handler.clear_layer_io()
 
+    with open(model_path.split("/")[-1]+".pkl", 'wb') as f:
+        pickle.dump(aiu_model_handler.layer_inputs, f) 
+        
+    del aiu_model_handler
+
     new_aiu_model_handler = ModelHandler(
                 model_type=model_type,
                 model_path=model_path,
                 device='aiu',
                 prompt="What is the capital of Egypt?",
             )
-    new_aiu_model_handler.layer_inputs = aiu_model_handler.layer_inputs
-    del aiu_model_handler
+    with open(model_path.split("/")[-1]+".pkl", 'rb') as f:
+        new_aiu_model_handler.layer_inputs = pickle.load(f) 
+
     aiu_layer_io = generate_individual_layer_output(
         new_aiu_model_handler,
         model_path,

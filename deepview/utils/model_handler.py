@@ -403,6 +403,6 @@ class ModelHandler:
         print("Clearing layer IO ...")
         for name, module in self.model.named_modules():
             if hasattr(module, '_debug_input'):
-                module._debug_input = None
+                delattr(module, '_debug_input')
             if hasattr(module, '_debug_output'):
-                module._debug_output = None
+                delattr(module, '_debug_output')
