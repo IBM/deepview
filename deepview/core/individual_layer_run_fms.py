@@ -39,8 +39,7 @@ os.environ["COMPILATION_MODE"] = "offline_decoder"
 
 model = get_model(
     "hf_pretrained",
-    None,
-    model_path='{modelpath}',
+    variant='{modelpath}',
     device_type="cpu",
     data_type=torch.float16,
     source=None,
