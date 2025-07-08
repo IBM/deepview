@@ -40,7 +40,7 @@ import os
 import pickle
 import gc
 
-os.environ["AIU_WORLD_RANK_0"] = {device}
+os.environ["AIU_WORLD_RANK_0"] = "{device}"
 os.environ["COMPILATION_MODE"] = "offline_decoder"
 torch.compiler.reset()
 torch._dynamo.reset()
