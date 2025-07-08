@@ -74,6 +74,21 @@ def run_layer_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_
         generate_repro_code_flag,
     )
 
+
+def io_compare(timestamp):
+    cpu_filename = f"CPU_run_{timestamp}.pkl"
+    aiu_filename = f"AIU_run_{timestamp}.pkl"
+    with open(cpu_filename, 'rb') as f:
+        cpu_data_dict = pickle.load(f)
+    with open(aiu_filename, 'rb') as f:
+        aiu_data_dict = pickle.load(f)
+    for iodict in aiu_data_dict:
+        iodict['layer']
+        iodict['input']
+        iodict['output']
+
+
+
 def run_io_capture_mode(aiu_model_handler, deepview_mode, model_path, model_type):
     # AIU run
     print("========= Capturing AIU Inputs. ==========")
@@ -138,6 +153,8 @@ def run_io_dumping_mode(aiu_model_handler, deepview_mode, model_path, model_type
             'cpu',
             timestamp
         )
+
+    
 
     ## TODO: Flavia to add code here. aiu_layer_io and cpu_layer_io are the lists of dictionaries used to store layer name, inputs and outputs
     # from AIU and CPU runs, respectively.

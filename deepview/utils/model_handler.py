@@ -334,17 +334,17 @@ class ModelHandler:
         """Perform warmup on the prepared input based on the model type."""
         old_warmup_mode = get_warmup_mode()
         set_warmup_mode(True)
-        self._generate_forward_output(True)
+        self._generate_output(True)
         set_warmup_mode(old_warmup_mode)
 
     def warmup(self):
         """Perform warmup on the prepared input based on the model type."""
         with torch_sendnn.warmup_mode():
-            self._generate_forward_output(True)
+            self._generate_output(True)
 
     def infer(self):
         """Perform inference on the prepared input based on the model type."""
-        return self._generate_forward_output(False)
+        return self._generate_output(False)
 
     def insert_forward_hooks(self, deepview_mode):
         """Insert forward hooks into the model layers to capture input shapes and types during forward pass."""
@@ -392,7 +392,6 @@ class ModelHandler:
         """Get all inputs captured using forward hook for input_output_debugging mode."""
         print("Extracting layer IO ...")
         for name, module in self.model.named_modules():
-            print(name)
             if name.count(".") <= 3:
                 if hasattr(module, '_debug_input'):
                     self.layer_inputs[name] = module._debug_input

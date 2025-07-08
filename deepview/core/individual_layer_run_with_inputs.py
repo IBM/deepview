@@ -59,12 +59,10 @@ model.eval()
 torch.set_grad_enabled(False)
 
 layer = {sub_layer}
-# print(type(layer))
 target_layer = layer
 forward_signature = inspect.signature(target_layer.forward)
 expected_args = list(forward_signature.parameters.keys())
 print(f"Expected Arguments: ",expected_args)
-
 
 input_filename = "temp/{filename}_input.pth"
 inputval = torch.load(input_filename)
@@ -89,7 +87,8 @@ print(f"Warmup of layer {sub_layer} with inputs ",kwargs)
 
 with torch_sendnn.warmup_mode():
     result = layer(**kwargs)
-
+    
+result = layer(**kwargs)
     
 input_kwargs_filename = "temp/{filename}_input_kwargs.pth"
 output_filename = "temp/{filename}_output_kwargs.pth"

@@ -45,8 +45,9 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
     os.makedirs("temp", exist_ok=True)
 
     if device_to_run == 'aiu':
-        input_outputs = []
+        # input_outputs = []
         layers_done = []
+        full_output_dict = {}
         print("Running each layer individually........")
         filename = f"AIU_run_{timestamp}.pkl"
 
@@ -89,21 +90,22 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
                         "DEEPVIEW========================================================================\n"
                     )
                     
-                    input_output_dict = {}
-                    input_output_dict['layer'] = sub_layer
-                    input_output_dict['input'] = input_kwargs
-                    input_output_dict['output'] = result
-                    input_outputs.append(input_output_dict)
+                    
+                    # input_output_dict['layer'] = sub_layer
+                    # input_output_dict['input'] = input_kwargs
+                    full_output_dict[sub_layer] = result
+                    # input_outputs.append(input_output_dict)
 
             layers_done.append(sub_layer)
 
         with open(filename, 'wb') as f:
-            pickle.dump(input_outputs, f) 
+            pickle.dump(full_output_dict, f) 
         
         shutil.rmtree("temp")
 
     elif device_to_run == 'cpu':
-        input_outputs = []
+        # input_outputs = []
+        full_output_dict = {}
         filename = f"CPU_run_{timestamp}.pkl"
         for str_layer, inputval in model_handler.layer_inputs.items():
             if str_layer:
@@ -111,19 +113,20 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
             else:
                 sub_layer = 'model'
 
-            inputs = model_handler.layer_inputs[str_layer]
+            # inputs = model_handler.layer_inputs[str_layer]
             outputs = model_handler.layer_outputs[str_layer]
 
-            input_output_dict = {}
-            input_output_dict['layer'] = sub_layer
-            input_output_dict['input'] = inputs
-            input_output_dict['output'] = outputs
-            input_outputs.append(input_output_dict)
+            # input_output_dict = {}
+            full_output_dict[sub_layer] = outputs
+            # input_output_dict['layer'] = sub_layer
+            # input_output_dict['input'] = inputs
+            # input_output_dict['output'] = outputs
+            # input_outputs.append(input_output_dict)
 
         with open(filename, 'wb') as f:
-            pickle.dump(input_outputs, f) 
+            pickle.dump(full_output_dict, f) 
 
-    return input_outputs
+    return full_output_dict
 
 
 
