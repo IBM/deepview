@@ -26,7 +26,7 @@ def convert_attr_path(attr_path):
     return converted
 
 
-def generate_individual_layer_output(model_handler, model_path, model_type, device_to_run, timestamp):
+def generate_individual_layer_output(model_handler, model_path, model_type, device_to_run, timestamp, device):
     """Generates layer outputs by running each layer of the model individually on the inputs collected in forward pass.
 
     Iterates over the all layers and captures the outputs of the layers
@@ -44,7 +44,7 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
     model = model_handler.model
     os.makedirs("temp", exist_ok=True)
 
-    if device_to_run == 'aiu':
+    if device_to_run == 'aiu' and device is not None:
         input_outputs = []
         layers_done = []
         print("Running each layer individually........")
@@ -68,7 +68,7 @@ def generate_individual_layer_output(model_handler, model_path, model_type, devi
                     pickle.dump(inputval, f) 
                 # torch.save(inputval, "temp/"+tmp_filename+"_input.pth")
                 
-                layer_run = run_layers_with_inputs(model_path, sub_layer, tmp_filename)
+                layer_run = run_layers_with_inputs(model_path, sub_layer, tmp_filename, device)
                 command1 = ["python3", "-c", layer_run]
                 process = subprocess.run(
                     command1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True

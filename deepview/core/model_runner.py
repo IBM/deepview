@@ -20,6 +20,7 @@ import json
 import os
 import re
 import sys
+import gc
 import pickle
 from datetime import datetime
 
@@ -76,10 +77,24 @@ def run_layer_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_
 
 
 
-def run_io_dumping_mode(aiu_model_handler, deepview_mode, model_path, model_type):
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+def run_aiu_io_dumping_mode(deepview_mode, model_path, model_type, timestamp):
+    num_aius = os.getenv("AIU_WORLD_SIZE")
+    if int(num_aius) < 2:
+        print("io_dump mode can run only when number of available AIUs is 2 or more.")
+        sys.exit(1)
+    aiu2 = os.getenv("AIU_WORLD_RANK_1")
+    
+    os.environ["AIU_WORLD_SIZE"] = "1"
 
     print("========= Capturing AIU Inputs. ==========")
+    aiu_model_handler = ModelHandler(
+                    model_type=model_type,
+                    model_path=model_path,
+                    device='aiu',
+                    prompt="What is the capital of Egypt?",
+                )
+    aiu_model_handler.load_and_compile_model()
+    aiu_model_handler.prep_input()
     aiu_model_handler.insert_forward_hooks(deepview_mode)
     aiu_model_handler.warmup()
     print("Reached second infer call post compile.....")
@@ -91,26 +106,35 @@ def run_io_dumping_mode(aiu_model_handler, deepview_mode, model_path, model_type
 
     with open(model_path.split("/")[-1]+".pkl", 'wb') as f:
         pickle.dump(aiu_model_handler.layer_inputs, f) 
-        
+    
+    # time.sleep(1000)
     del aiu_model_handler
-
+    torch.compiler.reset()
+    torch._dynamo.reset()
+    torch._dynamo.reset_code_caches()
+    gc.collect()
+    
     new_aiu_model_handler = ModelHandler(
                 model_type=model_type,
                 model_path=model_path,
                 device='aiu',
                 prompt="What is the capital of Egypt?",
             )
+    
     with open(model_path.split("/")[-1]+".pkl", 'rb') as f:
         new_aiu_model_handler.layer_inputs = pickle.load(f) 
-
+    
     aiu_layer_io = generate_individual_layer_output(
         new_aiu_model_handler,
         model_path,
         model_type,
         'aiu',
-        timestamp
+        timestamp,
+        aiu2
     )
 
+
+def run_cpu_io_dumping_mode(deepview_mode, model_path, model_type, timestamp):
     ## CPU run
     print("========= AIU Inputs captured. Running on CPU ==========")
     cpu_model_handler = ModelHandler(
@@ -130,7 +154,8 @@ def run_io_dumping_mode(aiu_model_handler, deepview_mode, model_path, model_type
         model_path,
         model_type,
         'cpu',
-        timestamp
+        timestamp,
+        None
     )
 
     ## TODO: Flavia to add code here. aiu_layer_io and cpu_layer_io are the lists of dictionaries used to store layer name, inputs and outputs
@@ -171,27 +196,31 @@ def run_model(
 
             torch.set_default_dtype(torch.float16)
 
-            aiu_model_handler = ModelHandler(
-                model_type=model_type,
-                model_path=model_path,
-                device='aiu',
-                prompt="What is the capital of Egypt?",
-            )
-
-            aiu_model_handler.load_and_compile_model()
-            aiu_model_handler.prep_input()
-
-            print("Reached first infer call post compile.....")
-            # try:
-            if deepview_mode == "unsupported_op":
-                run_unsupported_op_mode(aiu_model_handler, show_details_flag, generate_repro_code_flag)
-                
-            if deepview_mode == "layer_debugging":
-                run_layer_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_type, generate_repro_code_flag)
-        
             if deepview_mode == "io_dump":
-                run_io_dumping_mode(aiu_model_handler, deepview_mode, model_path, model_type)
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                run_aiu_io_dumping_mode(deepview_mode, model_path, model_type, timestamp)
+                run_cpu_io_dumping_mode(deepview_mode, model_path, model_type, timestamp)
+            
+            else:
+                aiu_model_handler = ModelHandler(
+                    model_type=model_type,
+                    model_path=model_path,
+                    device='aiu',
+                    prompt="What is the capital of Egypt?",
+                )
 
+                aiu_model_handler.load_and_compile_model()
+                aiu_model_handler.prep_input()
+
+                print("Reached first infer call post compile.....")
+                # try:
+                if deepview_mode == "unsupported_op":
+                    run_unsupported_op_mode(aiu_model_handler, show_details_flag, generate_repro_code_flag)
+                    
+                if deepview_mode == "layer_debugging":
+                    run_layer_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_type, generate_repro_code_flag)
+            
+            
             # Process the logfile to create the tool_output_file
             tee.flush()
             save_deepview_logs(logfile, tool_output_file)

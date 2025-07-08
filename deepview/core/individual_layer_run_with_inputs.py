@@ -15,7 +15,7 @@
 # *******************************************************************************/
 import torch
 
-def run_layers_with_inputs(modelpath, sub_layer, filename):
+def run_layers_with_inputs(modelpath, sub_layer, filename, device):
     """Generates a minimal Python script to reproduce a layer-level failure in layer debugging mode.
 
     The generated code loads the model, compiles the specified sub-layer using the `sendnn` backend,
@@ -38,8 +38,9 @@ import inspect
 import torch
 import os
 import pickle
+import gc
 
-
+os.environ["AIU_WORLD_RANK_0"] = {device}
 os.environ["COMPILATION_MODE"] = "offline_decoder"
 torch.compiler.reset()
 torch._dynamo.reset()
@@ -72,11 +73,8 @@ input_filename = "temp/{filename}_input.pkl"
 with open(input_filename, 'rb') as f:
     inputval = pickle.load(f)
 
-
-# inputval = torch.load(input_filename)
-
-
 print("Inputs collected:", inputval)
+
 inputvals = list(inputval)
 for i, val in enumerate(inputvals):
     if isinstance(val, torch.Tensor):
@@ -96,7 +94,8 @@ print(f"Warmup of layer {sub_layer} with inputs ",kwargs)
 
 with torch_sendnn.warmup_mode():
     result = layer(**kwargs)
-
+print(f"Second run of the layer {sub_layer}, with same inputs")
+result = layer(**kwargs)
     
 input_kwargs_filename = "temp/{filename}_input_kwargs.pkl"
 output_filename = "temp/{filename}_output_kwargs.pkl"
@@ -105,6 +104,5 @@ with open(input_kwargs_filename, 'wb') as f:
     pickle.dump(kwargs, f)
 with open(output_filename, 'wb') as f:
     pickle.dump(result, f)
-# torch.save(kwargs, input_kwargs_filename)
-# torch.save(result, output_filename)
+
 """

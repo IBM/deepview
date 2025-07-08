@@ -391,10 +391,9 @@ class ModelHandler:
         """Get all inputs captured using forward hook for input_output_debugging mode."""
         print("Extracting layer IO ...")
         for name, module in self.model.named_modules():
-            print(name)
             if name.count(".") <= 3:
                 if hasattr(module, '_debug_input'):
-                    self.layer_inputs[name] = module._debug_input
+                    self.layer_inputs[name] = tuple(v.detach() for v in module._debug_input if isinstance(v, torch.Tensor))
                 if hasattr(module, '_debug_output'):
                     self.layer_outputs[name] = module._debug_output
 
