@@ -1,15 +1,11 @@
 # Standard
-from pathlib import Path
-import numpy as np
+import torch.nn.functional as F
 import torch.nn as nn
 from pycony import *
-import torch_sendnn
 import subprocess
-import itertools
-import inspect
-import pickle
 import shutil
 import torch
+import json
 import re
 import os
 
@@ -30,14 +26,21 @@ def convert_attr_path(attr_path):
     converted = pattern.sub(replace_numeric_attr, attr_path)
     return converted
 
-def calc_output_diff(cpu_output_tensor, aiu_output_tensor, metrics):
-    diff = {}
-    if "abs_diff" in metrics:
-        diff["abs_diff"] = torch.norm(torch.abs(cpu_output_tensor - aiu_output_tensor)).item()
-    if "cos_sim" in metrics:
+def replace_zeros(tensor, eps=1e-8):
+    norm = tensor.norm(dim=-1, keepdim=True)
+    mask = norm < eps
+    tensor[mask] = torch.randn_like(tensor[mask]) * eps
+    return tensor
+
+def calc_output_diff(cpu_output_tensor, aiu_output_tensor, metric):
+    if metric == "abs_diff":
+        return torch.norm(torch.abs(cpu_output_tensor - aiu_output_tensor)).item()
+    elif metric == "cos_sim":
         cos = nn.CosineSimilarity(dim=-1)
-        diff["cos_sim"] = (cos(cpu_output_tensor,aiu_output_tensor)).mean().item()
-    return diff
+        cpu_output_tensor[cpu_output_tensor == 0.0] = 1e-6
+        aiu_output_tensor[aiu_output_tensor == 0.0] = 1e-6
+        cos_val = cos(cpu_output_tensor,aiu_output_tensor)
+        return cos_val.mean().item()
 
 
 def get_layer_thresholds(model_path, model_type):
@@ -108,28 +111,29 @@ def generate_layerwise_output_diffs(aiu_model_handler, cpu_layer_outputs, thresh
             else:
                 result = torch.load("temp/"+tmp_filename+"_output_kwargs.pth")
 
-                ## Calculate diff with CPU output
-                diffs = calc_output_diff(cpu_layer_outputs[sub_layer], result, metrics)
-
-                ## Compare with threshold
                 key_in_thresholds_json = re.sub(r'\[(\d+)\]', r'\1', sub_layer)
-                flag = False
                 for metric in metrics:
-                    if diffs[metric] > thresholds[metric][key_in_thresholds_json]:
-                        flag = True
-                        break
-                if flag:
-                    print(
-                        f"DEEPVIEW Threshold test failed for {sub_layer}. Observed {metric} = {diffs[metric]}. Threshold = {thresholds[metric][key_in_thresholds_json]}.\n"
-                         "DEEPVIEW========================================================================\n"
-                    )
-                    return sub_layer, 1
-                else:
-                    print(
-                        f"DEEPVIEW Threshold test passed for {sub_layer}. Observed {metric} = {diffs[metric]}. Threshold = {thresholds[metric][key_in_thresholds_json]}.\n"
-                         "DEEPVIEW========================================================================\n"
-                    )
-                    layers_done.append(sub_layer)
+                    diff = calc_output_diff(cpu_layer_outputs[sub_layer], result, metric)
+                    print(f"DEEPVIEW Metric: {metric}. Observed Value = {diff}. Threshold = {thresholds[metric][key_in_thresholds_json]}")
+                    if metric == 'cos_sim':
+                        if diff < thresholds[metric][key_in_thresholds_json]:
+                            print(
+                                f"DEEPVIEW Threshold test failed for {sub_layer}.\n"
+                                "DEEPVIEW========================================================================\n"
+                            )
+                            return sub_layer, 1
+                    else:
+                        if diff > thresholds[metric][key_in_thresholds_json]:
+                            print(
+                                f"DEEPVIEW Threshold test failed for {sub_layer}.\n"
+                                "DEEPVIEW========================================================================\n"
+                            )
+                            return sub_layer, 1
+                print(
+                    f"DEEPVIEW Threshold test passed for {sub_layer}.\n"
+                    "DEEPVIEW========================================================================\n"
+                )
+                layers_done.append(sub_layer)
     shutil.rmtree("temp")
     return None, 2
 

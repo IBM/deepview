@@ -74,8 +74,6 @@ else:
 kwargs = dict(zipped_inputs)
 
 layer.compile(backend="sendnn", dynamic=False)
-print(f"Warmup of layer {sub_layer}")
-
 with torch_sendnn.warmup_mode():
     result = layer(**kwargs)
     

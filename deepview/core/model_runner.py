@@ -18,7 +18,6 @@
 from contextlib import redirect_stderr, redirect_stdout
 import json
 import os
-import re
 import sys
 import pickle
 
@@ -94,7 +93,7 @@ def run_io_capture_mode(aiu_model_handler, deepview_mode, layer_inputs_file):
 
 
 def run_layer_io_divergence_mode(aiu_model_handler, deepview_mode, inputs_filename, model_path, model_type):
-    if inputs_filename == "":
+    if inputs_filename == None:
         inputs_filename = model_path.split("/")[-1] + ".pkl"
     if not os.path.exists(inputs_filename):
         print(f"You need to run Deepview on {model_path} in aiu_input_capture mode, first.")
