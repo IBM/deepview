@@ -62,19 +62,10 @@ layer = {sub_layer}
 target_layer = layer
 forward_signature = inspect.signature(target_layer.forward)
 expected_args = list(forward_signature.parameters.keys())
-print(f"Expected Arguments: ",expected_args)
 
 input_filename = "temp/{filename}_input.pth"
 inputval = torch.load(input_filename)
-
-print("Inputs collected:", inputval)
 inputvals = list(inputval)
-for i, val in enumerate(inputvals):
-    if isinstance(val, torch.Tensor):
-        print("[",i,"] : Tensor of shape", val.shape)
-    else:
-        print("[",i,"]: ",val)
-
 if len(inputval) < len(expected_args):
     zipped_inputs = list(itertools.zip_longest(expected_args, inputval, fillvalue=None))
 else:
@@ -83,7 +74,7 @@ else:
 kwargs = dict(zipped_inputs)
 
 layer.compile(backend="sendnn", dynamic=False)
-print(f"Warmup of layer {sub_layer} with inputs ",kwargs)
+print(f"Warmup of layer {sub_layer}")
 
 with torch_sendnn.warmup_mode():
     result = layer(**kwargs)

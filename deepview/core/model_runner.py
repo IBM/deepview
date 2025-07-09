@@ -21,14 +21,13 @@ import os
 import re
 import sys
 import pickle
-from datetime import datetime
 
 # Third Party
 from torch_sendnn import torch_sendnn
 import torch
 
 # Local
-from deepview.core.io_debugging import generate_individual_layer_output
+from deepview.core.io_debugging import get_layerwise_outputs_cpu, generate_layerwise_output_diffs, get_layer_thresholds
 from deepview.core.layer_debugging import run_individual_layers
 from deepview.core.unsupported_ops import process_unsupported_ops
 from deepview.utils.logger import save_deepview_logs
@@ -74,61 +73,34 @@ def run_layer_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_
         generate_repro_code_flag,
     )
 
-
-def io_compare(cpu_layer_outputs, aiu_layer_outputs):
-    diff = {}
-    for key, val in aiu_layer_outputs.items():
-        diff[key] = torch.abs(cpu_layer_outputs[key] - val)
-    print(diff)
-
-
-def run_io_capture_mode(aiu_model_handler, deepview_mode, model_path, model_type):
-    # AIU run
+def run_io_capture_mode(aiu_model_handler, deepview_mode, layer_inputs_file):
     print("========= Capturing AIU Inputs. ==========")
     aiu_model_handler.insert_forward_hooks(deepview_mode)
     aiu_model_handler.warmup()
-
     print("Reached second infer call post compile.....")
     aiu_model_handler.clear_layer_io()
     aiu_model_handler.infer()
-
-    print("Saving layer inputs....")
+    print(f"Saving layer inputs.....")
     aiu_model_handler.get_layer_io()
-
-    print(aiu_model_handler.layer_inputs)
-
-    input_store_filename = model_path.split("/")[-1]+".pkl"
-    with open(input_store_filename, 'wb') as f:
-        pickle.dump(aiu_model_handler.layer_inputs, f) 
-    print("Saved inputs to ", input_store_filename)
-
+    layer_inputs = aiu_model_handler.layer_inputs
+    if layer_inputs_file is None:
+        layer_inputs_file = aiu_model_handler.model_path.split("/")[-1]+".pkl"
+    with open(layer_inputs_file, 'wb') as f:
+        pickle.dump(layer_inputs, f) 
+    print(f"Saved inputs to {layer_inputs_file}.")
     aiu_model_handler.remove_forward_hooks()
     aiu_model_handler.clear_layer_io()
+    return layer_inputs
 
-    
 
-
-def run_io_dumping_mode(aiu_model_handler, deepview_mode, model_path, model_type):
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    inputs_filename = model_path.split("/")[-1] + ".pkl"
+def run_layer_io_divergence_mode(aiu_model_handler, deepview_mode, inputs_filename, model_path, model_type):
+    if inputs_filename == "":
+        inputs_filename = model_path.split("/")[-1] + ".pkl"
     if not os.path.exists(inputs_filename):
-        print(f"You need to run the deepview on {model_path} in io_capture mode first.")
+        print(f"You need to run Deepview on {model_path} in aiu_input_capture mode, first.")
         sys.exit(0)
     else:
-        with open(inputs_filename, 'rb') as f:
-            aiu_model_handler.layer_inputs = pickle.load(f)
-
-        aiu_layer_outputs = generate_individual_layer_output(
-            aiu_model_handler,
-            model_path,
-            model_type,
-            'aiu',
-            timestamp
-        )
-
-        ## CPU run
-        print("========= AIU Inputs captured. Running on CPU ==========")
+        print("========= Running on CPU to capture layer IO ==========")
         cpu_model_handler = ModelHandler(
             model_type=model_type,
             model_path=model_path,
@@ -138,21 +110,33 @@ def run_io_dumping_mode(aiu_model_handler, deepview_mode, model_path, model_type
         cpu_model_handler.load_and_compile_model()
         cpu_model_handler.prep_input()
         cpu_model_handler.insert_forward_hooks(deepview_mode)
+        print("Reached first infer call post compile.....")
         cpu_model_handler.infer()
+        print(f"Getting layerwise outputs.....")
         cpu_model_handler.get_layer_io()
+        cpu_layer_outputs = get_layerwise_outputs_cpu(cpu_model_handler)
         cpu_model_handler.remove_forward_hooks()
-        cpu_layer_outputs = generate_individual_layer_output(
-            cpu_model_handler,
-            model_path,
-            model_type,
-            'cpu',
-            timestamp
+        cpu_model_handler.clear_layer_io()
+        
+        print(f"Getting layer output thresholds.....")
+        thesholds = get_layer_thresholds(model_path, model_type)
+
+        print("========= Running on AIU to capture layer divergence ==========")
+        with open(inputs_filename, 'rb') as f:
+            aiu_model_handler.layer_inputs = pickle.load(f)
+
+        diverging_layer, status = generate_layerwise_output_diffs(
+            aiu_model_handler,
+            cpu_layer_outputs,
+            thesholds
         )
-
-    ## TODO: Flavia to add code here. aiu_layer_io and cpu_layer_io are the lists of dictionaries used to store layer name, inputs and outputs
-    # from AIU and CPU runs, respectively.
-        io_compare(cpu_layer_outputs, aiu_layer_outputs)
-
+        if diverging_layer is None and status == 2:
+            print(
+                f"DEEPVIEW Threshold test passed for all layers of {model_path}\n"
+                "DEEPVIEW========================================================================\n"
+            )
+            return True
+        return False
 
 
 def run_model(
@@ -162,6 +146,7 @@ def run_model(
     deepview_mode,
     show_details_flag,
     generate_repro_code_flag,
+    layer_inputs_file,
     logfile="model_output.txt",
 ):
     """Main entry point to run a model and process its execution logs.
@@ -197,7 +182,7 @@ def run_model(
             )
 
             if deepview_mode == "layer_io_divergence":
-                run_io_dumping_mode(aiu_model_handler, deepview_mode, model_path, model_type)
+                status = run_layer_io_divergence_mode(aiu_model_handler, deepview_mode, layer_inputs_file, model_path, model_type)
             
             else:
                 aiu_model_handler.load_and_compile_model()
@@ -212,7 +197,7 @@ def run_model(
                     run_layer_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_type, generate_repro_code_flag)
             
                 if deepview_mode == "aiu_input_capture":
-                    run_io_capture_mode(aiu_model_handler, deepview_mode, model_path, model_type)
+                    layer_inputs = run_io_capture_mode(aiu_model_handler, deepview_mode, layer_inputs_file)
 
             # Process the logfile to create the tool_output_file
             tee.flush()

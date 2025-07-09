@@ -71,14 +71,24 @@ def main():
         help="Name of the file in which the debug tool output will be stored.",
     )
 
+    parser.add_argument(
+        "--layer_inputs_file",
+        default=None,
+        help="Name of the file in which AIU layer inputs are stored.",
+    )
+
     args = parser.parse_args()
+
+    if args.layer_inputs_file is not None:
+        if args.mode != "layer_io_divergence" or args.mode != "aiu_input_capture":
+            print("Error: --layer_inputs_file is valid only for 'aiu_input_capture' and 'layer_io_divergence' modes.")
+            sys.exit(1)
 
     # Setting the environment variables
     set_environment()
 
     # Run the model
     print("Running the model")
-    # try:
     run_model(
         args.model_type,
         args.model,
@@ -86,12 +96,9 @@ def main():
         args.mode,
         args.show_details,
         args.generate_repro_code,
+        args.layer_inputs_file
     )
     print("DeepView run completed")
-    # except Exception as e:
-    #     print(f"Error running DeepView: {e}")
-    #     sys.exit(1)
-
 
 if __name__ == "__main__":
     main()
