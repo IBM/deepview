@@ -75,18 +75,11 @@ def run_layer_debugging_mode(aiu_model_handler,deepview_mode, model_path, model_
     )
 
 
-def io_compare(timestamp):
-    cpu_filename = f"CPU_run_{timestamp}.pkl"
-    aiu_filename = f"AIU_run_{timestamp}.pkl"
-    with open(cpu_filename, 'rb') as f:
-        cpu_data_dict = pickle.load(f)
-    with open(aiu_filename, 'rb') as f:
-        aiu_data_dict = pickle.load(f)
-    for iodict in aiu_data_dict:
-        iodict['layer']
-        iodict['input']
-        iodict['output']
-
+def io_compare(cpu_layer_outputs, aiu_layer_outputs):
+    diff = {}
+    for key, val in aiu_layer_outputs.items():
+        diff[key] = torch.abs(cpu_layer_outputs[key] - val)
+    print(diff)
 
 
 def run_io_capture_mode(aiu_model_handler, deepview_mode, model_path, model_type):
@@ -104,8 +97,10 @@ def run_io_capture_mode(aiu_model_handler, deepview_mode, model_path, model_type
 
     print(aiu_model_handler.layer_inputs)
 
-    with open(model_path.split("/")[-1]+".pkl", 'wb') as f:
+    input_store_filename = model_path.split("/")[-1]+".pkl"
+    with open(input_store_filename, 'wb') as f:
         pickle.dump(aiu_model_handler.layer_inputs, f) 
+    print("Saved inputs to ", input_store_filename)
 
     aiu_model_handler.remove_forward_hooks()
     aiu_model_handler.clear_layer_io()
@@ -116,15 +111,15 @@ def run_io_capture_mode(aiu_model_handler, deepview_mode, model_path, model_type
 def run_io_dumping_mode(aiu_model_handler, deepview_mode, model_path, model_type):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    inputs_filename = model_path.split("/")[-1]+".pkl"
-    if os.path.exists(inputs_filename):
+    inputs_filename = model_path.split("/")[-1] + ".pkl"
+    if not os.path.exists(inputs_filename):
         print(f"You need to run the deepview on {model_path} in io_capture mode first.")
         sys.exit(0)
     else:
         with open(inputs_filename, 'rb') as f:
             aiu_model_handler.layer_inputs = pickle.load(f)
 
-        aiu_layer_io = generate_individual_layer_output(
+        aiu_layer_outputs = generate_individual_layer_output(
             aiu_model_handler,
             model_path,
             model_type,
@@ -146,7 +141,7 @@ def run_io_dumping_mode(aiu_model_handler, deepview_mode, model_path, model_type
         cpu_model_handler.infer()
         cpu_model_handler.get_layer_io()
         cpu_model_handler.remove_forward_hooks()
-        cpu_layer_io = generate_individual_layer_output(
+        cpu_layer_outputs = generate_individual_layer_output(
             cpu_model_handler,
             model_path,
             model_type,
@@ -154,10 +149,10 @@ def run_io_dumping_mode(aiu_model_handler, deepview_mode, model_path, model_type
             timestamp
         )
 
-    
-
     ## TODO: Flavia to add code here. aiu_layer_io and cpu_layer_io are the lists of dictionaries used to store layer name, inputs and outputs
     # from AIU and CPU runs, respectively.
+        io_compare(cpu_layer_outputs, aiu_layer_outputs)
+
 
 
 def run_model(
