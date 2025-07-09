@@ -196,7 +196,7 @@ def run_model(
                 prompt="What is the capital of Egypt?",
             )
 
-            if deepview_mode == "io_dump":
+            if deepview_mode == "layer_io_divergence":
                 run_io_dumping_mode(aiu_model_handler, deepview_mode, model_path, model_type)
             
             else:

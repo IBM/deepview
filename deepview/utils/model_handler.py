@@ -247,42 +247,24 @@ class ModelHandler:
         """Calling generate function based on model_type."""
         if self.model_type == "fms":
             self.extra_generation_kwargs["only_last_token"] = True
-            if is_warmup:
-                eos_token_id = None
-                max_len = self.model.config.max_expected_seq_len
-            else:
-                eos_token_id = self.tokenizer.eos_token_id
-                if hasattr(self.model.config, "ntk_scaling") and self.model.config.ntk_scaling:
-                    max_len = max(len(self.prompt), self.model.config.max_expected_seq_len)
-                else:
-                    max_len = self.model.config.max_expected_seq_len
             result = self.model(
                 self.input_id,
-                # max_new_tokens=self.max_new_tokens,
-                # use_cache=True,
-                # do_sample=False,
-                # max_seq_len=max_len,
-                # eos_token_id=eos_token_id,
-                # contiguous_cache=True,
-                # extra_kwargs=self.extra_generation_kwargs,
             )
-        # elif self.model_type == "hf":
-        #     if self.model_class in ["causal_lm"]:
-        #         input_ids = self.input_id["input_ids"]
-        #         attention_mask = self.input_id.get("attention_mask", None)
-        #         generate_ids = self.model.generate(
-        #             input_ids,
-        #             attention_mask=attention_mask,
-        #             max_new_tokens=self.max_new_tokens,
-        #         )
-        #         result = self.tokenizer.batch_decode(
-        #             generate_ids,
-        #             skip_special_tokens=True,
-        #             clean_up_tokenization_spaces=False,
-        #         )[0]
-        #     else:
-        #         result = self.model(**self.input_id)
-        print(result)
+        elif self.model_type == "hf":
+            if self.model_class in ["causal_lm"]:
+                input_ids = self.input_id["input_ids"]
+                attention_mask = self.input_id.get("attention_mask", None)
+                generate_ids = self.model.model(
+                    input_ids,
+                    attention_mask=attention_mask,
+                )
+                result = self.tokenizer.batch_decode(
+                    generate_ids,
+                    skip_special_tokens=True,
+                    clean_up_tokenization_spaces=False,
+                )[0]
+            else:
+                result = self.model(**self.input_id)
         return result
 
 
@@ -327,7 +309,6 @@ class ModelHandler:
                 )[0]
             else:
                 result = self.model(**self.input_id)
-        print(result)
         return result
 
     def safe_warmup(self):
@@ -369,7 +350,7 @@ class ModelHandler:
                 return 
             if deepview_mode == 'aiu_input_capture':
                 module._debug_input = input
-            if deepview_mode == 'io_dump' and self.device_to_run == 'cpu':
+            if deepview_mode == 'layer_io_divergence' and self.device_to_run == 'cpu':
                 module._debug_input = input
                 module._debug_output = output
             if deepview_mode == 'layer_debugging':

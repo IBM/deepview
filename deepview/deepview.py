@@ -48,9 +48,9 @@ def main():
 
     parser.add_argument(
         "--mode",
-        choices=["unsupported_op", "layer_debugging", "aiu_input_capture", "io_dump"],
+        choices=["unsupported_op", "layer_debugging", "aiu_input_capture", "layer_io_divergence"],
         default="unsupported_op",
-        help="Modes: [unsupported_op, layer_debugging, aiu_input_capture, io_dump] (Choose ONLY one). Default is the unsupported_op mode.",
+        help="Modes: [unsupported_op, layer_debugging, aiu_input_capture, layer_io_divergence] (Choose ONLY one). Default is the unsupported_op mode.",
     )
 
     parser.add_argument(
