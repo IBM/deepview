@@ -321,11 +321,11 @@ class ModelHandler:
     def warmup(self):
         """Perform warmup on the prepared input based on the model type."""
         with torch_sendnn.warmup_mode():
-            self._generate_forward_output(True)
+            self._generate_output(True)
 
     def infer(self):
         """Perform inference on the prepared input based on the model type."""
-        return self._generate_forward_output(False)
+        return self._generate_output(False)
 
     def insert_forward_hooks(self, deepview_mode):
         """Insert forward hooks into the model layers to capture input shapes and types during forward pass."""

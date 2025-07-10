@@ -10,6 +10,7 @@ import re
 import os
 
 # Local
+from aiu_fms_testing_utils.utils.metrics_utils import tensor_cos_sim, tensor_abs_diff, abs_diff_linalg_norm, list_mean
 from deepview.core.individual_layer_run_with_inputs import run_layers_with_inputs
 
 def convert_attr_path_indexed(attr_path):
@@ -35,40 +36,36 @@ def replace_zeros(tensor, eps=1e-8):
 def calc_output_diff(cpu_output_tensor, aiu_output_tensor, metric):
     if metric == "abs_diff":
         return torch.norm(torch.abs(cpu_output_tensor - aiu_output_tensor)).item()
-    elif metric == "cos_sim":
+        # return abs_diff_linalg_norm(tensor_abs_diff(cpu_output_tensor,aiu_output_tensor).numpy())
+    elif metric == "cos_sim_avg" or metric == "cos_sim_mean":
         cos = nn.CosineSimilarity(dim=-1)
         cpu_output_tensor[cpu_output_tensor == 0.0] = 1e-6
         aiu_output_tensor[aiu_output_tensor == 0.0] = 1e-6
         cos_val = cos(cpu_output_tensor,aiu_output_tensor)
         return cos_val.mean().item()
+        # cos_val = (tensor_cos_sim(cpu_output_tensor, aiu_output_tensor)).numpy()
+        # return list_mean(cos_val)
 
 
 def get_layer_thresholds(model_path, model_type):
     model_folder_name = model_path.replace("/", "--")
-    thresholds_folder = "/home/senuser/a5-deepview/deepview/layerwise-thresholds"
+    thresholds_folder = os.getenv('DEEPVIEW_THRESHOLDS_FOLDERPATH')
     thesholds_filename = f"{model_folder_name}-thresholds.json"
-    thresholds_filepath = os.path.join(thresholds_folder, model_folder_name, "model-forward", thesholds_filename)
+    thresholds_filepath = os.path.join(thresholds_folder, model_folder_name, "generate", thesholds_filename)
     with open(thresholds_filepath, 'r') as f:
         thresholds_data = json.load(f)
     del thresholds_data["model_id"]
-    merged_thresholds_data = {}
-    for key, value_list in thresholds_data.items():
-        merged_thresholds_data[key] = {}
-        for item_dict in value_list:
-            for k, v in item_dict.items():
-                merged_thresholds_data[key][k] = v
-    return merged_thresholds_data
+    return thresholds_data
 
 
 def get_layerwise_outputs_cpu(model_handler):
     full_output_dict = {}
-    for str_layer, _ in model_handler.layer_inputs.items():
-        outputs = model_handler.layer_outputs[str_layer]
+    for str_layer, output in model_handler.layer_outputs.items():
         if str_layer:
             sub_layer = convert_attr_path(str_layer)
         else:
             sub_layer = 'model'
-        full_output_dict[sub_layer] = outputs
+        full_output_dict[sub_layer] = output
     return full_output_dict
 
 
@@ -112,23 +109,22 @@ def generate_layerwise_output_diffs(aiu_model_handler, cpu_layer_outputs, thresh
                 result = torch.load("temp/"+tmp_filename+"_output_kwargs.pth")
 
                 key_in_thresholds_json = re.sub(r'\[(\d+)\]', r'\1', sub_layer)
+                count = 0
                 for metric in metrics:
                     diff = calc_output_diff(cpu_layer_outputs[sub_layer], result, metric)
-                    print(f"DEEPVIEW Metric: {metric}. Observed Value = {diff}. Threshold = {thresholds[metric][key_in_thresholds_json]}")
-                    if metric == 'cos_sim':
-                        if diff < thresholds[metric][key_in_thresholds_json]:
-                            print(
-                                f"DEEPVIEW Threshold test failed for {sub_layer}.\n"
-                                "DEEPVIEW========================================================================\n"
-                            )
-                            return sub_layer, 1
+                    print(f"DEEPVIEW Metric: {metric}. Observed Value = {diff}. Threshold = {thresholds[metric][key_in_thresholds_json]}.")
+                    if metric == 'cos_sim_avg' or metric == 'cos_sim_mean':
+                        if int(diff*1000) < int(thresholds[metric][key_in_thresholds_json]*1000):
+                            count = count + 1
                     else:
                         if diff > thresholds[metric][key_in_thresholds_json]:
-                            print(
-                                f"DEEPVIEW Threshold test failed for {sub_layer}.\n"
-                                "DEEPVIEW========================================================================\n"
-                            )
-                            return sub_layer, 1
+                            count = count + 1
+                if count > 0:
+                    print(
+                        f"DEEPVIEW Threshold test failed for {sub_layer}.\n"
+                        "DEEPVIEW========================================================================\n"
+                    )
+                    return sub_layer, 1
                 print(
                     f"DEEPVIEW Threshold test passed for {sub_layer}.\n"
                     "DEEPVIEW========================================================================\n"

@@ -96,7 +96,7 @@ def run_layer_io_divergence_mode(aiu_model_handler, deepview_mode, inputs_filena
     if inputs_filename == None:
         inputs_filename = model_path.split("/")[-1] + ".pkl"
     if not os.path.exists(inputs_filename):
-        print(f"You need to run Deepview on {model_path} in aiu_input_capture mode, first.")
+        print(f"You need to run Deepview on {model_path} in 'aiu_input_capture' mode, first.")
         sys.exit(0)
     else:
         print("========= Running on CPU to capture layer IO ==========")
@@ -181,7 +181,7 @@ def run_model(
             )
 
             if deepview_mode == "layer_io_divergence":
-                status = run_layer_io_divergence_mode(aiu_model_handler, deepview_mode, layer_inputs_file, model_path, model_type)
+                passed = run_layer_io_divergence_mode(aiu_model_handler, deepview_mode, layer_inputs_file, model_path, model_type)
             
             else:
                 aiu_model_handler.load_and_compile_model()
