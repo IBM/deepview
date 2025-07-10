@@ -3,6 +3,7 @@ import torch.nn.functional as F
 import torch.nn as nn
 from pycony import *
 import subprocess
+import pickle
 import shutil
 import torch
 import json
@@ -46,6 +47,14 @@ def calc_output_diff(cpu_output_tensor, aiu_output_tensor, metric):
         # cos_val = (tensor_cos_sim(cpu_output_tensor, aiu_output_tensor)).numpy()
         # return list_mean(cos_val)
 
+def is_acceptable(obs, thresh):
+    atol = float(os.getenv("DEEPVIEW_ABS_TOLERANCE"), 1e-6)
+    rtol = float(os.getenv("DEEPVIEW_REL_TOLERANCE"), 0.05)
+    if abs(obs - thresh) <= (rtol * thresh + atol):
+        return True
+    return False
+
+
 
 def get_layer_thresholds(model_path, model_type):
     model_folder_name = model_path.replace("/", "--")
@@ -85,7 +94,8 @@ def generate_layerwise_output_diffs(aiu_model_handler, cpu_layer_outputs, thresh
             continue
         if sub_layer != "model" and sub_layer != "model.base_model":
             tmp_filename = str_layer.replace(".", "_")
-            torch.save(inputval, "temp/"+tmp_filename+"_input.pth")
+            with open("temp/"+tmp_filename+"_input.pkl", 'wb') as f:
+                pickle.dump(inputval, f) 
             layer_run = run_layers_with_inputs(aiu_model_handler.model_path, sub_layer, tmp_filename)
             command1 = ["python3", "-c", layer_run]
             process = subprocess.run(
@@ -106,19 +116,16 @@ def generate_layerwise_output_diffs(aiu_model_handler, cpu_layer_outputs, thresh
                 )
                 return sub_layer, 0
             else:
-                result = torch.load("temp/"+tmp_filename+"_output_kwargs.pth")
-
+                with open("temp/"+tmp_filename+"_output_kwargs.pkl", 'rb') as f:
+                    result = pickle.load(f) 
                 key_in_thresholds_json = re.sub(r'\[(\d+)\]', r'\1', sub_layer)
                 count = 0
                 for metric in metrics:
-                    diff = calc_output_diff(cpu_layer_outputs[sub_layer], result, metric)
-                    print(f"DEEPVIEW Metric: {metric}. Observed Value = {diff}. Threshold = {thresholds[metric][key_in_thresholds_json]}.")
-                    if metric == 'cos_sim_avg' or metric == 'cos_sim_mean':
-                        if int(diff*1000) < int(thresholds[metric][key_in_thresholds_json]*1000):
-                            count = count + 1
-                    else:
-                        if diff > thresholds[metric][key_in_thresholds_json]:
-                            count = count + 1
+                    observed_diff = calc_output_diff(cpu_layer_outputs[sub_layer], result, metric)
+                    threshold_diff = thresholds[metric][key_in_thresholds_json]
+                    print(f"DEEPVIEW Metric: {metric}. Observed Value = {observed_diff}. Threshold = {threshold_diff}.")
+                    if not is_acceptable(observed_diff,threshold_diff):
+                        count = count + 1
                 if count > 0:
                     print(
                         f"DEEPVIEW Threshold test failed for {sub_layer}.\n"

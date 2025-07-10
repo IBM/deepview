@@ -35,6 +35,7 @@ from fms.models import get_model
 from torch import tensor
 import torch_sendnn
 import inspect
+import pickle
 import torch
 import os
 
@@ -63,8 +64,9 @@ target_layer = layer
 forward_signature = inspect.signature(target_layer.forward)
 expected_args = list(forward_signature.parameters.keys())
 
-input_filename = "temp/{filename}_input.pth"
-inputval = torch.load(input_filename)
+input_filename = "temp/{filename}_input.pkl"
+with open(input_filename, 'rb') as f:
+    inputval = pickle.load(f) 
 inputvals = list(inputval)
 if len(inputval) < len(expected_args):
     zipped_inputs = list(itertools.zip_longest(expected_args, inputval, fillvalue=None))
@@ -79,8 +81,11 @@ with torch_sendnn.warmup_mode():
     
 result = layer(**kwargs)
     
-input_kwargs_filename = "temp/{filename}_input_kwargs.pth"
-output_filename = "temp/{filename}_output_kwargs.pth"
-torch.save(kwargs, input_kwargs_filename)
-torch.save(result, output_filename)
+input_kwargs_filename = "temp/{filename}_input_kwargs.pkl"
+output_filename = "temp/{filename}_output_kwargs.pkl"
+
+with open(input_kwargs_filename, 'wb') as f:
+    pickle.dump(kwargs, f) 
+with open(output_filename, 'wb') as f:
+    pickle.dump(result, f) 
 """
