@@ -105,6 +105,8 @@ spec:
       value: *pod_image
     - name: FMS_CHECKOUT
       value: v1.1.0
+    - name: DEEPVIEW_THRESHOLDS_FOLDERPATH
+      value: /home/senuser/models/deepview/layerwise-thresholds
     volumeMounts:
     # Expanded Shared Memory
     - name: dev-shm
