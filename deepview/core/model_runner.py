@@ -95,8 +95,16 @@ def run_io_capture_mode(aiu_model_handler, deepview_mode, layer_inputs_file):
 def run_layer_io_divergence_mode(aiu_model_handler, deepview_mode, inputs_filename, model_path, model_type):
     if inputs_filename == None:
         inputs_filename = model_path.split("/")[-1] + ".pkl"
+    model_folder_name = model_path.replace("/", "--")
+    thresholds_folder = os.getenv('DEEPVIEW_THRESHOLDS_FOLDERPATH')
+    thesholds_filename = f"{model_folder_name}-thresholds.json"
+    thresholds_filepath = os.path.join(thresholds_folder, model_folder_name, "generate", thesholds_filename)
+
     if not os.path.exists(inputs_filename):
         print(f"You need to run Deepview on {model_path} in 'aiu_input_capture' mode, first.")
+        sys.exit(0)
+    elif not os.path.exists(thresholds_filepath):
+        print(f"Thresholds for {model_path} are not present in {thresholds_folder}.")
         sys.exit(0)
     else:
         print("========= Running on CPU to capture layer IO ==========")
@@ -118,7 +126,7 @@ def run_layer_io_divergence_mode(aiu_model_handler, deepview_mode, inputs_filena
         cpu_model_handler.clear_layer_io()
         
         print(f"Getting layer output thresholds.....")
-        thesholds = get_layer_thresholds(model_path, model_type)
+        thesholds = get_layer_thresholds(thresholds_filepath)
 
         print("========= Running on AIU to capture layer divergence ==========")
         with open(inputs_filename, 'rb') as f:

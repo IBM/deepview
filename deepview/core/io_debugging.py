@@ -48,13 +48,7 @@ def is_acceptable(obs, thresh):
         return True
     return False
 
-
-
-def get_layer_thresholds(model_path, model_type):
-    model_folder_name = model_path.replace("/", "--")
-    thresholds_folder = os.getenv('DEEPVIEW_THRESHOLDS_FOLDERPATH')
-    thesholds_filename = f"{model_folder_name}-thresholds.json"
-    thresholds_filepath = os.path.join(thresholds_folder, model_folder_name, "generate", thesholds_filename)
+def get_layer_thresholds(thresholds_filepath):
     with open(thresholds_filepath, 'r') as f:
         thresholds_data = json.load(f)
     del thresholds_data["model_id"]
