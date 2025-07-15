@@ -42,7 +42,7 @@ def calc_output_diff(cpu_output_tensor, aiu_output_tensor, metric):
         return list_mean(cos_sim)
 
 def is_acceptable(obs, thresh):
-    atol = float(os.getenv("DEEPVIEW_ABS_TOLERANCE", 1e-4))
+    atol = float(os.getenv("DEEPVIEW_ABS_TOLERANCE", 1e-6))
     rtol = float(os.getenv("DEEPVIEW_REL_TOLERANCE", 0.05))
     if abs(obs - thresh) <= (rtol * thresh + atol):
         return True
