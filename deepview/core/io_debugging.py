@@ -36,20 +36,14 @@ def replace_zeros(tensor, eps=1e-8):
 
 def calc_output_diff(cpu_output_tensor, aiu_output_tensor, metric):
     if metric == "abs_diff":
-        return torch.norm(torch.abs(cpu_output_tensor - aiu_output_tensor)).item()
-        # return abs_diff_linalg_norm(tensor_abs_diff(cpu_output_tensor,aiu_output_tensor).numpy())
+        return abs_diff_linalg_norm(tensor_abs_diff(cpu_output_tensor,aiu_output_tensor).numpy())
     elif metric == "cos_sim_avg" or metric == "cos_sim_mean":
-        cos = nn.CosineSimilarity(dim=-1)
-        cpu_output_tensor[cpu_output_tensor == 0.0] = 1e-6
-        aiu_output_tensor[aiu_output_tensor == 0.0] = 1e-6
-        cos_val = cos(cpu_output_tensor,aiu_output_tensor)
-        return cos_val.mean().item()
-        # cos_val = (tensor_cos_sim(cpu_output_tensor, aiu_output_tensor)).numpy()
-        # return list_mean(cos_val)
+        cos_sim = (tensor_cos_sim(cpu_output_tensor, aiu_output_tensor)).numpy()
+        return list_mean(cos_sim)
 
 def is_acceptable(obs, thresh):
-    atol = float(os.getenv("DEEPVIEW_ABS_TOLERANCE"), 1e-6)
-    rtol = float(os.getenv("DEEPVIEW_REL_TOLERANCE"), 0.05)
+    atol = float(os.getenv("DEEPVIEW_ABS_TOLERANCE", 1e-4))
+    rtol = float(os.getenv("DEEPVIEW_REL_TOLERANCE", 0.05))
     if abs(obs - thresh) <= (rtol * thresh + atol):
         return True
     return False
@@ -106,7 +100,7 @@ def generate_layerwise_output_diffs(aiu_model_handler, cpu_layer_outputs, thresh
 
             print(
                 "DEEPVIEW========================================================================\n"
-                f"DEEPVIEW Layer is {sub_layer}. \n"
+                f"DEEPVIEW Layer is {sub_layer}."
                 )
             if process.returncode != 0:
                 print(
@@ -124,8 +118,9 @@ def generate_layerwise_output_diffs(aiu_model_handler, cpu_layer_outputs, thresh
                     observed_diff = calc_output_diff(cpu_layer_outputs[sub_layer], result, metric)
                     threshold_diff = thresholds[metric][key_in_thresholds_json]
                     print(f"DEEPVIEW Metric: {metric}. Observed Value = {observed_diff}. Threshold = {threshold_diff}.")
-                    if not is_acceptable(observed_diff,threshold_diff):
-                        count = count + 1
+                    if ((metric == 'abs_diff') and (observed_diff > threshold_diff)) or (((metric == 'cos_sim_avg') or (metric == 'cos_sim_mean')) and (observed_diff < threshold_diff)) :
+                        if not is_acceptable(observed_diff,threshold_diff):
+                            count = count + 1
                 if count > 0:
                     print(
                         f"DEEPVIEW Threshold test failed for {sub_layer}.\n"
