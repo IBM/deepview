@@ -26,7 +26,14 @@ dependencies = [
 "numpy",
 "transformers",
 "sentence_transformers",
-"pillow"
+"pillow",
+"protobuf"
+]
+
+[project.optional-dependencies]
+dev = [
+"pytest",
+"pytest-cov"
 ]
 
 [project.scripts]
