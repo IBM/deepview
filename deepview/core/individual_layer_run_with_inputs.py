@@ -33,6 +33,7 @@ def run_layers_with_inputs(modelpath, sub_layer, filename):
     return f"""
 from fms.models import get_model
 from torch import tensor
+import itertools
 import torch_sendnn
 import inspect
 import pickle
