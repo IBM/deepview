@@ -126,7 +126,6 @@ class ModelHandler:
         self.min_pad_length = 64
         self.max_new_tokens = 2
 
-
     def _infer_model_class(self, model_path):
         """Infer the model class based on the model configuration or repo contents.
 
@@ -210,16 +209,16 @@ class ModelHandler:
 
         print("Compiling model")
         start = time.time()
-        if self.device_to_run == 'aiu':
+        if self.device_to_run == "aiu":
             self.model.compile(backend="sendnn", dynamic=False)
-        elif self.device_to_run == 'cpu':
+        elif self.device_to_run == "cpu":
             self.model.compile(backend="inductor")
         else:
             print("Device not supported by Deepview yet.")
         print(f"Compiling complete, took {time.time() - start:.3f}s")
 
         return self.model
-    
+
     def prep_input(self):
         """Prepare input tensors and tokenizers based on the model type and prompt."""
         if self.model_type == "fms":
@@ -267,8 +266,6 @@ class ModelHandler:
                 result = self.model(**self.input_id)
         return result
 
-
-
     def _generate_output(self, is_warmup):
         """Calling generate function based on model_type."""
         if self.model_type == "fms":
@@ -278,8 +275,13 @@ class ModelHandler:
                 max_len = self.model.config.max_expected_seq_len
             else:
                 eos_token_id = self.tokenizer.eos_token_id
-                if hasattr(self.model.config, "ntk_scaling") and self.model.config.ntk_scaling:
-                    max_len = max(len(self.prompt), self.model.config.max_expected_seq_len)
+                if (
+                    hasattr(self.model.config, "ntk_scaling")
+                    and self.model.config.ntk_scaling
+                ):
+                    max_len = max(
+                        len(self.prompt), self.model.config.max_expected_seq_len
+                    )
                 else:
                     max_len = self.model.config.max_expected_seq_len
             result = generate(
@@ -330,7 +332,7 @@ class ModelHandler:
     def insert_forward_hooks(self, deepview_mode):
         """Insert forward hooks into the model layers to capture input shapes and types during forward pass."""
         print("Inserting forward hooks.............")
-        if deepview_mode == 'layer_debugging':
+        if deepview_mode == "layer_debugging":
             module_instance_names = {}
 
             def get_instance_names(module, current_depth=0, name="model"):
@@ -339,26 +341,29 @@ class ModelHandler:
                 array_layers = all(key.isdigit() for key in module._modules.keys())
                 for subname, child in module._modules.items():
                     if array_layers:
-                        get_instance_names(child, current_depth + 1, f"{parent}[{subname}]")
+                        get_instance_names(
+                            child, current_depth + 1, f"{parent}[{subname}]"
+                        )
                     else:
-                        get_instance_names(child, current_depth + 1, f"{parent}.{subname}")
+                        get_instance_names(
+                            child, current_depth + 1, f"{parent}.{subname}"
+                        )
 
             get_instance_names(self.model)
 
         def hook_fn(module, input, output):
             if len(input) == 0:
-                return 
-            if deepview_mode == 'aiu_input_capture':
+                return
+            if deepview_mode == "aiu_input_capture":
                 module._debug_input = input
-            if deepview_mode == 'layer_io_divergence' and self.device_to_run == 'cpu':
+            if deepview_mode == "layer_io_divergence" and self.device_to_run == "cpu":
                 module._debug_input = input
                 module._debug_output = output
-            if deepview_mode == 'layer_debugging':
+            if deepview_mode == "layer_debugging":
                 module_instance = module_instance_names.get(module, "unknown")
                 input_shape_str = f"[{', '.join(map(str, input[0].shape))}]"
                 input_type = str(input[0].dtype)
                 self.layer_list[module_instance] = {input_shape_str, input_type}
-            
 
         for name, layer in self.model.named_modules():
             self.hooks.append(layer.register_forward_hook(hook_fn))
@@ -374,16 +379,20 @@ class ModelHandler:
         print("Extracting layer IO ...")
         for name, module in self.model.named_modules():
             if name.count(".") <= 3:
-                if hasattr(module, '_debug_input'):
-                    self.layer_inputs[name] = tuple(v.detach() for v in module._debug_input if isinstance(v, torch.Tensor))
-                if hasattr(module, '_debug_output'):
+                if hasattr(module, "_debug_input"):
+                    self.layer_inputs[name] = tuple(
+                        v.detach()
+                        for v in module._debug_input
+                        if isinstance(v, torch.Tensor)
+                    )
+                if hasattr(module, "_debug_output"):
                     self.layer_outputs[name] = module._debug_output
 
     def clear_layer_io(self):
         """Get all inputs captured using forward hook for input_output_debugging mode."""
         print("Clearing layer IO ...")
         for name, module in self.model.named_modules():
-            if hasattr(module, '_debug_input'):
+            if hasattr(module, "_debug_input"):
                 module._debug_input = None
-            if hasattr(module, '_debug_output'):
+            if hasattr(module, "_debug_output"):
                 module._debug_output = None
