@@ -13,7 +13,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 # *******************************************************************************/
+# Third Party
 import torch
+
 
 def run_layers_with_inputs(modelpath, sub_layer, filename):
     """Generates a minimal Python script to reproduce a layer-level failure in layer debugging mode.
@@ -24,8 +26,7 @@ def run_layers_with_inputs(modelpath, sub_layer, filename):
     Args:
         modelpath (str): Path to the model checkpoint.
         sub_layer (str): The sub-layer (module) name to compile and test.
-        input_shape (str): Input tensor shape.
-        datatype (str): Torch datatype for the input tensor (e.g., 'torch.float16').
+        filename (str): Name of pkl file without extension in which inputs to the sublayer are stored.
 
     Returns:
         str: A complete Python script as a string that can be saved and executed to reproduce the failure.

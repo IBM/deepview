@@ -375,7 +375,7 @@ class ModelHandler:
         self.hooks = []
 
     def get_layer_io(self):
-        """Get all inputs captured using forward hook for input_output_debugging mode."""
+        """Get all inputs captured using forward hook."""
         print("Extracting layer IO ...")
         for name, module in self.model.named_modules():
             if name.count(".") <= 3:
@@ -389,7 +389,7 @@ class ModelHandler:
                     self.layer_outputs[name] = module._debug_output
 
     def clear_layer_io(self):
-        """Get all inputs captured using forward hook for input_output_debugging mode."""
+        """Clear all inputs/outputs captured using forward hook."""
         print("Clearing layer IO ...")
         for name, module in self.model.named_modules():
             if hasattr(module, "_debug_input"):
