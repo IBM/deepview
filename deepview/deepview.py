@@ -48,10 +48,14 @@ def main():
 
     parser.add_argument(
         "--mode",
-        nargs="+",
-        choices=["unsupported_op", "layer_debugging"],
-        default=["unsupported_op"],
-        help="Modes: [unsupported_op, layer_debugging] (Choose one or more). Default is the unsupported_op mode.",
+        choices=[
+            "unsupported_op",
+            "layer_debugging",
+            "aiu_input_capture",
+            "layer_io_divergence",
+        ],
+        default="unsupported_op",
+        help="Modes: [unsupported_op, layer_debugging, aiu_input_capture, layer_io_divergence] (Choose ONLY one). Default is the unsupported_op mode.",
     )
 
     parser.add_argument(
@@ -72,26 +76,36 @@ def main():
         help="Name of the file in which the debug tool output will be stored.",
     )
 
+    parser.add_argument(
+        "--layer_inputs_file",
+        default=None,
+        help="Name of the file in which AIU layer inputs are stored.",
+    )
+
     args = parser.parse_args()
+
+    if args.layer_inputs_file is not None:
+        if args.mode not in ["layer_io_divergence", "aiu_input_capture"]:
+            print(
+                "Error: --layer_inputs_file is valid only for 'aiu_input_capture' and 'layer_io_divergence' modes."
+            )
+            sys.exit(1)
 
     # Setting the environment variables
     set_environment()
 
     # Run the model
     print("Running the model")
-    try:
-        run_model(
-            args.model_type,
-            args.model,
-            args.output_file,
-            args.mode,
-            args.show_details,
-            args.generate_repro_code,
-        )
-        print("DeepView run completed")
-    except Exception as e:
-        print(f"Error running DeepView: {e}")
-        sys.exit(1)
+    run_model(
+        args.model_type,
+        args.model,
+        args.output_file,
+        args.mode,
+        args.show_details,
+        args.generate_repro_code,
+        args.layer_inputs_file,
+    )
+    print("DeepView run completed")
 
 
 if __name__ == "__main__":

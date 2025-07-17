@@ -114,6 +114,9 @@ spec:
     # Model mount
     - name: shared-models
       mountPath: /home/senuser/models
+    # Deepview assets mount
+    - name: a5-deepview
+      mountPath: /home/senuser/a5-deepview
   imagePullSecrets:
     - name: <your-pull-secret>
   volumes:
@@ -124,3 +127,6 @@ spec:
   - name: shared-models
     persistentVolumeClaim:
       claimName: shared-models
+  - name: a5-deepview
+    persistentVolumeClaim:
+      claimName: a5-deepview

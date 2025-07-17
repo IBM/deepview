@@ -22,11 +22,13 @@ classifiers=[
 dynamic = ["version"]
 dependencies = [
 "ibm-fms @ git+https://github.com/foundation-model-stack/foundation-model-stack@main",
+"aiu-fms-testing-utils @ git+https://github.com/foundation-model-stack/aiu-fms-testing-utils@main",
 "sentencepiece",
 "numpy",
 "transformers",
 "sentence_transformers",
-"protobuf"
+"protobuf",
+"pycony"
 ]
 
 [project.optional-dependencies]

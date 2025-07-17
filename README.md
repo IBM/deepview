@@ -118,8 +118,8 @@ Now, run deepview as follows :
 
 ```shell
 usage: deepview [-h] --model_type {fms,hf} --model MODEL
-                   [--mode {unsupported_op,layer_debugging} [{unsupported_op,layer_debugging} ...]]
-                   [--show_details] [--generate_repro_code] --output_file OUTPUT_FILE
+                   [--mode {unsupported_op,layer_debugging,aiu_input_capture,layer_io_divergence} [{unsupported_op,layer_debugging,aiu_input_capture,layer_io_divergence} ...]]
+                   [--show_details] [--generate_repro_code] --output_file OUTPUT_FILE --layer_inputs_file LAYER_INPUTS_FILE
 
 Script to run DeepView tool on any model.
 
@@ -128,18 +128,20 @@ options:
   --model_type {fms,hf}
                         The type of model you want to debug - fms or hf.
   --model MODEL         Model name in HF format or model path
-  --mode {unsupported_op,layer_debugging} [{unsupported_op,layer_debugging} ...]
-                        Modes: [unsupported_op, layer_debugging] (Choose one or more). Default is the
+  --mode {unsupported_op,layer_debugging,aiu_input_capture,layer_io_divergence} 
+                        Modes: [unsupported_op, layer_debugging, aiu_input_capture, layer_io_divergence] (Choose ONLY one). Default is the
                         unsupported_op mode.
   --show_details        Print stack trace and other details, valid only with unsupported_op.
   --generate_repro_code
                         Generate minimal reproducible code for unsupported operation.
   --output_file OUTPUT_FILE
                         Name of the file in which the debug tool output will be stored.
+  --layer_inputs_file LAYER_INPUTS_FILE
+                        Name of the file in which AIU layer inputs are stored.
 ```
 
 ## Examples
-A few examples demonstrating the use of unsupported_op and layer_debugging modes are shown below. A detailed list of models tested with DeepView can be found under [examples](./examples).
+A few examples demonstrating the use of unsupported_op, layer_debugging, and layer_io_divergence modes are shown below. A detailed list of models tested with DeepView can be found under [examples](./examples).
 
 ### unsupported_op mode
 ```
@@ -178,4 +180,123 @@ deepview --model_type fms --model ibm-granite/granite-3.2-2b-instruct --mode lay
 DEEPVIEW========================================================================
 DEEPVIEW Error running model.base_model.layers[0].attn, [1, 1, 2048], torch.float16
 DEEPVIEW========================================================================
+```
+
+
+### layer_io_divergence mode
+```
+deepview --model_type fms --model ibm-granite/granite-3.2-8b-instruct --mode layer_io_divergence
+```
+
+> [!NOTE]
+> The `layer_io_divergence` mode assumes the following:
+> 1. You have the layer inputs stored as a dict with keys = layer names and values = inputs in pickle format. By default, the tool assumes that the pickle file is present in the same folder and has the name <model_name>.pkl. 
+>    If the file is elsewhere or has a different name, please specify it using the `--layer_inputs_file` flag. 
+>    If the file does not exist, run deepview in the aiu_io_capture mode using the following command. 
+>    ```
+>     deepview --model_type fms --model ibm-granite/granite-3.2-8b-instruct --mode aiu_input_capture
+>     ```
+> 2. The thresholds from GPU run is already present in the path pointed by `DEEPVIEW_THRESHOLDS_FOLDERPATH` env variable (specified in the Deepview pod yaml).
+
+
+#### Sample Output
+
+```
+DEEPVIEW========================================================================
+DEEPVIEW Layer is model.base_model.embedding.
+DEEPVIEW Metric: abs_diff. Observed Value = 0.0. Threshold = 2.582696413198807e-07.
+DEEPVIEW Metric: cos_sim_avg. Observed Value = 1.0009765625. Threshold = 1.0000495910644531.
+DEEPVIEW Metric: cos_sim_mean. Observed Value = 1.0009765625. Threshold = 1.0000495910644531.
+DEEPVIEW Threshold test passed for model.base_model.embedding.
+DEEPVIEW========================================================================
+
+DEEPVIEW========================================================================
+DEEPVIEW Layer is model.base_model.layers[0].ln.
+DEEPVIEW Metric: abs_diff. Observed Value = 0.39794921875. Threshold = 0.7421883531266595.
+DEEPVIEW Metric: cos_sim_avg. Observed Value = 0.99951171875. Threshold = 1.000023373582745.
+DEEPVIEW Metric: cos_sim_mean. Observed Value = 0.99951171875. Threshold = 1.000023373582745.
+DEEPVIEW Threshold test passed for model.base_model.layers[0].ln.
+DEEPVIEW========================================================================
+
+DEEPVIEW========================================================================
+DEEPVIEW Layer is model.base_model.layers[0].ff_ln.
+DEEPVIEW Metric: abs_diff. Observed Value = 0.25146484375. Threshold = 0.5086808401930663.
+DEEPVIEW Metric: cos_sim_avg. Observed Value = 1.0. Threshold = 1.0000249248155406.
+DEEPVIEW Metric: cos_sim_mean. Observed Value = 1.0. Threshold = 1.0000249248155406.
+DEEPVIEW Threshold test passed for model.base_model.layers[0].ff_ln.
+DEEPVIEW========================================================================
+
+DEEPVIEW========================================================================
+DEEPVIEW Layer is model.base_model.layers[0].ff_sub_layer.
+DEEPVIEW Metric: abs_diff. Observed Value = 0.19580078125. Threshold = 0.32078647954976347.
+DEEPVIEW Metric: cos_sim_avg. Observed Value = 1.0. Threshold = 0.9999915364626292.
+DEEPVIEW Metric: cos_sim_mean. Observed Value = 1.0. Threshold = 0.9999915364626292.
+DEEPVIEW Threshold test passed for model.base_model.layers[0].ff_sub_layer.
+DEEPVIEW========================================================================
+
+DEEPVIEW========================================================================
+DEEPVIEW Layer is model.base_model.layers[1].ln.
+DEEPVIEW Metric: abs_diff. Observed Value = 0.392822265625. Threshold = 1.377269982083503.
+DEEPVIEW Metric: cos_sim_avg. Observed Value = 1.0. Threshold = 1.0000008151337907.
+DEEPVIEW Metric: cos_sim_mean. Observed Value = 1.0. Threshold = 1.0000008151337907.
+DEEPVIEW Threshold test passed for model.base_model.layers[1].ln.
+DEEPVIEW========================================================================
+
+DEEPVIEW========================================================================
+DEEPVIEW Layer is model.base_model.layers[1].ff_ln.
+DEEPVIEW Metric: abs_diff. Observed Value = 0.359130859375. Threshold = 0.773005896516742.
+DEEPVIEW Metric: cos_sim_avg. Observed Value = 1.0. Threshold = 0.9999926803268004.
+DEEPVIEW Metric: cos_sim_mean. Observed Value = 1.0. Threshold = 0.9999926803268004.
+DEEPVIEW Threshold test passed for model.base_model.layers[1].ff_ln.
+DEEPVIEW========================================================================
+
+DEEPVIEW========================================================================
+DEEPVIEW Layer is model.base_model.layers[1].ff_sub_layer.
+DEEPVIEW Metric: abs_diff. Observed Value = 0.2418212890625. Threshold = 0.3038148235646063.
+DEEPVIEW Metric: cos_sim_avg. Observed Value = 0.99951171875. Threshold = 1.0000109166315156.
+DEEPVIEW Metric: cos_sim_mean. Observed Value = 0.99951171875. Threshold = 1.0000109166315156.
+DEEPVIEW Threshold test passed for model.base_model.layers[1].ff_sub_layer.
+DEEPVIEW========================================================================
+
+DEEPVIEW========================================================================
+DEEPVIEW Layer is model.base_model.layers[2].ln.
+DEEPVIEW Metric: abs_diff. Observed Value = 0.59375. Threshold = 0.889103195155278.
+DEEPVIEW Metric: cos_sim_avg. Observed Value = 0.99951171875. Threshold = 1.00001675180263.
+DEEPVIEW Metric: cos_sim_mean. Observed Value = 0.99951171875. Threshold = 1.00001675180263.
+DEEPVIEW Threshold test passed for model.base_model.layers[2].ln.
+DEEPVIEW========================================================================
+
+DEEPVIEW========================================================================
+DEEPVIEW Layer is model.base_model.layers[2].ff_ln.
+DEEPVIEW Metric: abs_diff. Observed Value = 0.434814453125. Threshold = 0.5860415770837124.
+DEEPVIEW Metric: cos_sim_avg. Observed Value = 1.0. Threshold = 0.999989212775717.
+DEEPVIEW Metric: cos_sim_mean. Observed Value = 1.0. Threshold = 0.999989212775717.
+DEEPVIEW Threshold test passed for model.base_model.layers[2].ff_ln.
+DEEPVIEW========================================================================
+
+DEEPVIEW========================================================================
+DEEPVIEW Layer is model.base_model.layers[2].ff_sub_layer.
+DEEPVIEW Metric: abs_diff. Observed Value = 0.27685546875. Threshold = 0.49616399385390714.
+DEEPVIEW Metric: cos_sim_avg. Observed Value = 0.9990234375. Threshold = 0.9999972087772269.
+DEEPVIEW Metric: cos_sim_mean. Observed Value = 0.9990234375. Threshold = 0.9999972087772269.
+DEEPVIEW Threshold test passed for model.base_model.layers[2].ff_sub_layer.
+DEEPVIEW========================================================================
+
+DEEPVIEW========================================================================
+DEEPVIEW Layer is model.base_model.layers[3].ln.
+DEEPVIEW Metric: abs_diff. Observed Value = 1.3837890625. Threshold = 1.9169280779069073.
+DEEPVIEW Metric: cos_sim_avg. Observed Value = 0.99951171875. Threshold = 1.0000057428382163.
+DEEPVIEW Metric: cos_sim_mean. Observed Value = 0.99951171875. Threshold = 1.0000057428382163.
+DEEPVIEW Threshold test passed for model.base_model.layers[3].ln.
+DEEPVIEW========================================================================
+
+DEEPVIEW========================================================================
+DEEPVIEW Layer is model.base_model.layers[3].ff_ln.
+DEEPVIEW Metric: abs_diff. Observed Value = 0.6962890625. Threshold = 0.5865474108397013.
+DEEPVIEW Metric: cos_sim_avg. Observed Value = 1.0. Threshold = 0.9999819579003733.
+DEEPVIEW Metric: cos_sim_mean. Observed Value = 1.0. Threshold = 0.9999819579003733.
+DEEPVIEW Threshold test failed for model.base_model.layers[3].ff_ln.
+DEEPVIEW========================================================================
+
+DeepView run completed
 ```
