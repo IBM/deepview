@@ -79,11 +79,7 @@ with torch_sendnn.warmup_mode():
     result = layer(**kwargs)    
 result = layer(**kwargs)
     
-# input_kwargs_filename = "dv_layer_io_debugging_tmp/{filename}_input_kwargs.pkl"
 output_filename = "dv_layer_io_debugging_tmp/{str_layer}_output_kwargs.pkl"
-
-# with open(input_kwargs_filename, 'wb') as f:
-#     pickle.dump(kwargs, f) 
 with open(output_filename, 'wb') as f:
     pickle.dump(result, f) 
 """
