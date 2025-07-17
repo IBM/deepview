@@ -20,6 +20,7 @@ import json
 import os
 import pickle
 import sys
+import glob
 
 # Third Party
 from torch_sendnn import torch_sendnn
@@ -108,17 +109,26 @@ def run_layer_io_divergence_mode(
         inputs_filename = model_path.split("/")[-1] + ".pkl"
 
     thresholds_folder = os.getenv("DEEPVIEW_THRESHOLDS_FOLDERPATH")
-    if model_path.count("/") > 1:
-        model_folder_name = model_path.split("/")[-2] + "--" + model_path.split("/")[-1]
-    else:
-        model_folder_name = model_path.replace("/", "--")
+
+    # this is the model prefix used to locate the folder where the model's thresholds files are. 
+    # for common models, use the huggingface standard
+    # Eg.: meta-llama/Llama-3.2-3B-Instruct 
+    model_prefix_or_id = os.getenv("MODEL_PREFIX_ID")
+
+    # this can be either generate or model-forward; default is generate
+    generation_mode = os.getenv("GENERATION_MODE", "generate")
+    
+    model_folder_name = model_prefix_or_id.replace("/", "--")
     thresholds_folder_fullpath = os.path.join(
-        thresholds_folder, model_folder_name, "generate"
+        thresholds_folder, model_folder_name , generation_mode
     )
     theshold_filepath = None
-    for filename in os.listdir(thresholds_folder_fullpath):
-        if filename.endswith(".json"):
-            theshold_filepath = os.path.join(thresholds_folder_fullpath, filename)
+
+    path = os.path.join(thresholds_folder_fullpath, f"*{model_folder_name}*.json")
+    json_files = glob.glob(path)
+
+    # only one file per generation mode, so this list has a single file path
+    theshold_filepath = json_files[0] if json_files else None
 
     if not os.path.exists(inputs_filename):
         print(
