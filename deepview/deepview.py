@@ -48,7 +48,12 @@ def main():
 
     parser.add_argument(
         "--mode",
-        choices=["unsupported_op", "layer_debugging", "aiu_input_capture", "layer_io_divergence"],
+        choices=[
+            "unsupported_op",
+            "layer_debugging",
+            "aiu_input_capture",
+            "layer_io_divergence",
+        ],
         default="unsupported_op",
         help="Modes: [unsupported_op, layer_debugging, aiu_input_capture, layer_io_divergence] (Choose ONLY one). Default is the unsupported_op mode.",
     )
@@ -80,8 +85,10 @@ def main():
     args = parser.parse_args()
 
     if args.layer_inputs_file is not None:
-        if args.mode != "layer_io_divergence" or args.mode != "aiu_input_capture":
-            print("Error: --layer_inputs_file is valid only for 'aiu_input_capture' and 'layer_io_divergence' modes.")
+        if args.mode not in ["layer_io_divergence", "aiu_input_capture"]:
+            print(
+                "Error: --layer_inputs_file is valid only for 'aiu_input_capture' and 'layer_io_divergence' modes."
+            )
             sys.exit(1)
 
     # Setting the environment variables
@@ -96,9 +103,10 @@ def main():
         args.mode,
         args.show_details,
         args.generate_repro_code,
-        args.layer_inputs_file
+        args.layer_inputs_file,
     )
     print("DeepView run completed")
+
 
 if __name__ == "__main__":
     main()

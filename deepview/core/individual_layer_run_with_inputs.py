@@ -17,8 +17,9 @@
 import torch
 
 
-def run_layers_with_inputs(modelpath, sub_layer, filename):
-    """Generates a minimal Python script to reproduce a layer-level failure in layer debugging mode.
+def run_layers_with_inputs(modelpath, sub_layer, str_layer, filename):
+    """Generates a minimal Python script to generate per layer outputs on precaptured inputs in the
+      layer io divergence mode.
 
     The generated code loads the model, compiles the specified sub-layer using the `sendnn` backend,
     and runs inference twice to simulate lazy compilation and execution.
@@ -42,9 +43,6 @@ import torch
 import os
 
 os.environ["COMPILATION_MODE"] = "offline_decoder"
-torch.compiler.reset()
-torch._dynamo.reset()
-torch._dynamo.reset_code_caches()
 
 model = get_model(
     "hf_pretrained",
@@ -66,28 +64,26 @@ target_layer = layer
 forward_signature = inspect.signature(target_layer.forward)
 expected_args = list(forward_signature.parameters.keys())
 
-input_filename = "temp/{filename}_input.pkl"
-with open(input_filename, 'rb') as f:
-    inputval = pickle.load(f) 
+with open("{filename}", "rb") as f:
+    layer_inputs_dict = pickle.load(f)
+inputval = layer_inputs_dict["{str_layer}"]
 inputvals = list(inputval)
 if len(inputval) < len(expected_args):
     zipped_inputs = list(itertools.zip_longest(expected_args, inputval, fillvalue=None))
 else:
     zipped_inputs = list(zip(expected_args, inputval))
-
 kwargs = dict(zipped_inputs)
 
 layer.compile(backend="sendnn", dynamic=False)
 with torch_sendnn.warmup_mode():
-    result = layer(**kwargs)
-    
+    result = layer(**kwargs)    
 result = layer(**kwargs)
     
-input_kwargs_filename = "temp/{filename}_input_kwargs.pkl"
-output_filename = "temp/{filename}_output_kwargs.pkl"
+# input_kwargs_filename = "dv_layer_io_debugging_tmp/{filename}_input_kwargs.pkl"
+output_filename = "dv_layer_io_debugging_tmp/{str_layer}_output_kwargs.pkl"
 
-with open(input_kwargs_filename, 'wb') as f:
-    pickle.dump(kwargs, f) 
+# with open(input_kwargs_filename, 'wb') as f:
+#     pickle.dump(kwargs, f) 
 with open(output_filename, 'wb') as f:
     pickle.dump(result, f) 
 """

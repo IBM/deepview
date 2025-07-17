@@ -13,18 +13,18 @@ from aiu_fms_testing_utils.utils.metrics_utils import (
     tensor_abs_diff,
     tensor_cos_sim,
 )
-import torch
 
 # Local
 from deepview.core.individual_layer_run_with_inputs import run_layers_with_inputs
 
-
-def convert_attr_path_indexed(attr_path):
-    pattern = re.compile(r"(\b\w+?)(\d+)\b")
-    return pattern.sub(r"\1[\2]", attr_path)
+# Defining some constants
+SUCCESS = 2
+THRESHOLD_TEST_FAILED = 1
+LAYER_RUN_FAILED = 0
 
 
 def convert_attr_path(attr_path):
+    """Converts the name of the modules to match the format in thresholds file."""
     attr_path = "model." + attr_path
 
     def replace_numeric_attr(match):
@@ -37,14 +37,26 @@ def convert_attr_path(attr_path):
     return converted
 
 
-def replace_zeros(tensor, eps=1e-8):
-    norm = tensor.norm(dim=-1, keepdim=True)
-    mask = norm < eps
-    tensor[mask] = torch.randn_like(tensor[mask]) * eps
-    return tensor
+def get_thresholds_json_file(model_path):
+    """Gets the file path of the thresholds json of the particular model being tested."""
+    theshold_filepath = None
+    thresholds_folder = os.getenv("DEEPVIEW_THRESHOLDS_FOLDERPATH")
+    if model_path.count("/") > 1:
+        model_folder_name = model_path.split("/")[-2] + "--" + model_path.split("/")[-1]
+    else:
+        model_folder_name = model_path.replace("/", "--")
+    thresholds_folder_fullpath = os.path.join(
+        thresholds_folder, model_folder_name, "generate"
+    )
+    theshold_filepath = None
+    for filename in os.listdir(thresholds_folder_fullpath):
+        if filename.endswith(".json"):
+            theshold_filepath = os.path.join(thresholds_folder_fullpath, filename)
+    return theshold_filepath
 
 
 def calc_output_diff(cpu_output_tensor, aiu_output_tensor, metric):
+    """Calculates the diff of outputs between the CPU and AIU runs."""
     if metric == "abs_diff":
         return abs_diff_linalg_norm(
             tensor_abs_diff(cpu_output_tensor, aiu_output_tensor).numpy()
@@ -55,12 +67,14 @@ def calc_output_diff(cpu_output_tensor, aiu_output_tensor, metric):
 
 
 def is_acceptable(obs, thresh):
+    """Checks if the observed diff is within the specified range with respect to threshold diffs."""
     atol = float(os.getenv("DEEPVIEW_ABS_TOLERANCE", 1e-6))
     rtol = float(os.getenv("DEEPVIEW_REL_TOLERANCE", 0.05))
     return abs(obs - thresh) <= (rtol * thresh + atol)
 
 
 def get_layer_thresholds(thresholds_filepath):
+    """Gets the layerwise thresdholds from the thresholds json file."""
     with open(thresholds_filepath, "r") as f:
         thresholds_data = json.load(f)
     del thresholds_data["model_id"]
@@ -68,6 +82,7 @@ def get_layer_thresholds(thresholds_filepath):
 
 
 def get_layerwise_outputs_cpu(model_handler):
+    """Gets the output of CPU run in dict format with properly formatted keys."""
     full_output_dict = {}
     for str_layer, output in model_handler.layer_outputs.items():
         if str_layer:
@@ -78,14 +93,21 @@ def get_layerwise_outputs_cpu(model_handler):
     return full_output_dict
 
 
-def generate_layerwise_output_diffs(aiu_model_handler, cpu_layer_outputs, thresholds):
+def generate_layerwise_output_diffs(
+    aiu_model_handler, inputs_filename, cpu_layer_outputs, thresholds
+):
+    """Runs the model on AIU layer-by-layer, meaures the output divergence at each layer, and compares with the thresholds.
+
+    Returns status code 2 if all tests pass, 1 and the offernding layer if the threshold test fails for any particular layer,
+    and 0 and the offernding layer if the layer run fails.
+    """
     model = aiu_model_handler.model
 
     metrics = list(thresholds.keys())
     layers_done = []
     print("Running each layer individually........")
-    os.makedirs("temp", exist_ok=True)
-    for str_layer, inputval in aiu_model_handler.layer_inputs.items():
+    os.makedirs("dv_layer_io_debugging_tmp", exist_ok=True)
+    for str_layer in aiu_model_handler.layer_inputs.keys():
         if str_layer:
             sub_layer = convert_attr_path(str_layer)
         else:
@@ -93,11 +115,8 @@ def generate_layerwise_output_diffs(aiu_model_handler, cpu_layer_outputs, thresh
         if sub_layer in layers_done:
             continue
         if sub_layer != "model" and sub_layer != "model.base_model":
-            tmp_filename = str_layer.replace(".", "_")
-            with open("temp/" + tmp_filename + "_input.pkl", "wb") as f:
-                pickle.dump(inputval, f)
             layer_run = run_layers_with_inputs(
-                aiu_model_handler.model_path, sub_layer, tmp_filename
+                aiu_model_handler.model_path, sub_layer, str_layer, inputs_filename
             )
             command1 = ["python3", "-c", layer_run]
             process = subprocess.run(
@@ -105,7 +124,6 @@ def generate_layerwise_output_diffs(aiu_model_handler, cpu_layer_outputs, thresh
             )
             for line in process.stdout:
                 print(line, end="")
-
             print(
                 "DEEPVIEW========================================================================\n"
                 f"DEEPVIEW Layer is {sub_layer}."
@@ -116,9 +134,12 @@ def generate_layerwise_output_diffs(aiu_model_handler, cpu_layer_outputs, thresh
                     f"DEEPVIEW \033[1mError running {sub_layer}\n\033[0m"
                     "DEEPVIEW========================================================================\n"
                 )
-                return sub_layer, 0
+                return sub_layer, LAYER_RUN_FAILED
             else:
-                with open("temp/" + tmp_filename + "_output_kwargs.pkl", "rb") as f:
+                with open(
+                    "dv_layer_io_debugging_tmp/" + str_layer + "_output_kwargs.pkl",
+                    "rb",
+                ) as f:
                     result = pickle.load(f)
                 key_in_thresholds_json = re.sub(r"\[(\d+)\]", r"\1", sub_layer)
                 count = 0
@@ -143,11 +164,11 @@ def generate_layerwise_output_diffs(aiu_model_handler, cpu_layer_outputs, thresh
                         f"DEEPVIEW Threshold test failed for {sub_layer}.\n"
                         "DEEPVIEW========================================================================\n"
                     )
-                    return sub_layer, 1
+                    return sub_layer, THRESHOLD_TEST_FAILED
                 print(
                     f"DEEPVIEW Threshold test passed for {sub_layer}.\n"
                     "DEEPVIEW========================================================================\n"
                 )
                 layers_done.append(sub_layer)
-    shutil.rmtree("temp")
-    return None, 2
+    shutil.rmtree("dv_layer_io_debugging_tmp")
+    return None, SUCCESS

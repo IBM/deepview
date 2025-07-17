@@ -242,30 +242,6 @@ class ModelHandler:
                 [self.prompt], padding=True, truncation=True, return_tensors="pt"
             )
 
-    def _generate_forward_output(self, is_warmup):
-        """Calling generate function based on model_type."""
-        if self.model_type == "fms":
-            self.extra_generation_kwargs["only_last_token"] = True
-            result = self.model(
-                self.input_id,
-            )
-        elif self.model_type == "hf":
-            if self.model_class in ["causal_lm"]:
-                input_ids = self.input_id["input_ids"]
-                attention_mask = self.input_id.get("attention_mask", None)
-                generate_ids = self.model.model(
-                    input_ids,
-                    attention_mask=attention_mask,
-                )
-                result = self.tokenizer.batch_decode(
-                    generate_ids,
-                    skip_special_tokens=True,
-                    clean_up_tokenization_spaces=False,
-                )[0]
-            else:
-                result = self.model(**self.input_id)
-        return result
-
     def _generate_output(self, is_warmup):
         """Calling generate function based on model_type."""
         if self.model_type == "fms":
@@ -314,7 +290,7 @@ class ModelHandler:
         return result
 
     def safe_warmup(self):
-        """Perform warmup on the prepared input based on the model type."""
+        """Perform warmup on the prepared input based on the model type, but skip update_lazyhandle()."""
         old_warmup_mode = get_warmup_mode()
         set_warmup_mode(True)
         self._generate_output(True)
@@ -366,7 +342,8 @@ class ModelHandler:
                 self.layer_list[module_instance] = {input_shape_str, input_type}
 
         for name, layer in self.model.named_modules():
-            self.hooks.append(layer.register_forward_hook(hook_fn))
+            if name.count(".") <= 3:
+                self.hooks.append(layer.register_forward_hook(hook_fn))
 
     def remove_forward_hooks(self):
         """Remove all previously registered forward hooks from the model."""
@@ -378,15 +355,14 @@ class ModelHandler:
         """Get all inputs captured using forward hook."""
         print("Extracting layer IO ...")
         for name, module in self.model.named_modules():
-            if name.count(".") <= 3:
-                if hasattr(module, "_debug_input"):
-                    self.layer_inputs[name] = tuple(
-                        v.detach()
-                        for v in module._debug_input
-                        if isinstance(v, torch.Tensor)
-                    )
-                if hasattr(module, "_debug_output"):
-                    self.layer_outputs[name] = module._debug_output
+            if hasattr(module, "_debug_input"):
+                self.layer_inputs[name] = tuple(
+                    v.detach()
+                    for v in module._debug_input
+                    if isinstance(v, torch.Tensor)
+                )
+            if hasattr(module, "_debug_output"):
+                self.layer_outputs[name] = module._debug_output
 
     def clear_layer_io(self):
         """Clear all inputs/outputs captured using forward hook."""

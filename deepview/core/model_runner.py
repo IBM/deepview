@@ -26,12 +26,14 @@ from torch_sendnn import torch_sendnn
 import torch
 
 # Local
-from deepview.core.io_debugging import (
+from deepview.core.layer_debugging import run_individual_layers
+from deepview.core.layer_io_debugging import (
+    SUCCESS,
     generate_layerwise_output_diffs,
     get_layer_thresholds,
     get_layerwise_outputs_cpu,
+    get_thresholds_json_file,
 )
-from deepview.core.layer_debugging import run_individual_layers
 from deepview.core.unsupported_ops import process_unsupported_ops
 from deepview.utils.logger import save_deepview_logs
 from deepview.utils.model_handler import ModelHandler
@@ -58,6 +60,7 @@ def set_environment():
 def run_unsupported_op_mode(
     aiu_model_handler, show_details_flag, generate_repro_code_flag
 ):
+    """Runs the unsupported ops mode using the flags specified by the user."""
     aiu_model_handler.safe_warmup()
     process_unsupported_ops(show_details_flag, generate_repro_code_flag)
 
@@ -65,6 +68,7 @@ def run_unsupported_op_mode(
 def run_layer_debugging_mode(
     aiu_model_handler, deepview_mode, model_path, model_type, generate_repro_code_flag
 ):
+    """Runs the layer debugging mode using the flags specified by the user."""
     aiu_model_handler.insert_forward_hooks(deepview_mode)
     aiu_model_handler.safe_warmup()
     aiu_model_handler.remove_forward_hooks()
@@ -81,13 +85,19 @@ def run_layer_debugging_mode(
     )
 
 
-def run_io_capture_mode(aiu_model_handler, deepview_mode, layer_inputs_file):
+def run_aiu_input_capture_mode(aiu_model_handler, deepview_mode, layer_inputs_file):
+    """Runs the aiu_input_capture mode. Uses layer_inputs_file to store the inputs if specified by the user.
+
+    Returns the layer_inputs dictionary with keys = layernames and values = inputs.
+    """
     print("========= Capturing AIU Inputs. ==========")
     aiu_model_handler.insert_forward_hooks(deepview_mode)
     aiu_model_handler.warmup()
+
     print("Reached second infer call post compile.....")
     aiu_model_handler.clear_layer_io()
     aiu_model_handler.infer()
+
     print(f"Saving layer inputs.....")
     aiu_model_handler.get_layer_io()
     layer_inputs = aiu_model_handler.layer_inputs
@@ -96,29 +106,25 @@ def run_io_capture_mode(aiu_model_handler, deepview_mode, layer_inputs_file):
     with open(layer_inputs_file, "wb") as f:
         pickle.dump(layer_inputs, f)
     print(f"Saved inputs to {layer_inputs_file}.")
+
     aiu_model_handler.remove_forward_hooks()
     aiu_model_handler.clear_layer_io()
+
     return layer_inputs
 
 
-def run_layer_io_divergence_mode(
-    aiu_model_handler, deepview_mode, inputs_filename, model_path, model_type
-):
+def run_layer_io_divergence_mode(aiu_model_handler, deepview_mode, inputs_filename):
+    """Runs the layer_io_divergence_mode mode. Uses inputs_filename to get the precaptured inputs if specified by the user.
+
+    Returns True if all layers pass the thresholds test, otherwise False.
+    """
+    model_path = aiu_model_handler.model_path
+    model_type = aiu_model_handler.model_type
+
     if inputs_filename == None:
         inputs_filename = model_path.split("/")[-1] + ".pkl"
 
-    thresholds_folder = os.getenv("DEEPVIEW_THRESHOLDS_FOLDERPATH")
-    if model_path.count("/") > 1:
-        model_folder_name = model_path.split("/")[-2] + "--" + model_path.split("/")[-1]
-    else:
-        model_folder_name = model_path.replace("/", "--")
-    thresholds_folder_fullpath = os.path.join(
-        thresholds_folder, model_folder_name, "generate"
-    )
-    theshold_filepath = None
-    for filename in os.listdir(thresholds_folder_fullpath):
-        if filename.endswith(".json"):
-            theshold_filepath = os.path.join(thresholds_folder_fullpath, filename)
+    theshold_filepath = get_thresholds_json_file(model_path)
 
     if not os.path.exists(inputs_filename):
         print(
@@ -126,7 +132,7 @@ def run_layer_io_divergence_mode(
         )
         sys.exit(0)
     elif not theshold_filepath:
-        print(f"Thresholds for {model_path} are not present in {thresholds_folder}.")
+        print(f"Unable to find thresholds for {model_path}.")
         sys.exit(0)
     else:
         print("========= Running on CPU to capture layer IO ==========")
@@ -155,9 +161,9 @@ def run_layer_io_divergence_mode(
             aiu_model_handler.layer_inputs = pickle.load(f)
 
         diverging_layer, status = generate_layerwise_output_diffs(
-            aiu_model_handler, cpu_layer_outputs, thesholds
+            aiu_model_handler, inputs_filename, cpu_layer_outputs, thesholds
         )
-        if diverging_layer is None and status == 2:
+        if diverging_layer is None and status == SUCCESS:
             print(
                 f"DEEPVIEW Threshold test passed for all layers of {model_path}\n"
                 "DEEPVIEW========================================================================\n"
@@ -182,6 +188,9 @@ def run_model(
 
     For `layer_debugging` mode, it inserts hooks and runs individual layers.
     For `unsupported_op` mode, it detects unsupported ops in the model.
+    For `aiu_input_capture` mode, it inserts hooks and captures inputs of each layer.
+    For `layer_io_divergence` mode, it runs the model on cpu and captures the layerwise.
+    output divergence by running each layer one-by-one on AIU using precaptured inputs.
 
     Args:
         model_type (str): Type of the model - hf or fms.
@@ -190,6 +199,7 @@ def run_model(
         deepview_mode (str): Mode to run DeepView in; can include 'layer_debugging' or 'unsupported_op'.
         show_details_flag (str): Whether to print the stack trace for unsupported ops.
         generate_repro_code_flag (bool): Whether to generate reproducible test scripts for failure points.
+        layer_inputs_file (str, optional): File which has the precaptured layer inputs, if not in default location.
         logfile (str, optional): File to store full execution logs. Defaults to 'model_output.txt'.
     """
     # Prints generated by compile_and_infer are shown in terminal as well as saved in logfile.
@@ -210,11 +220,7 @@ def run_model(
 
             if deepview_mode == "layer_io_divergence":
                 passed = run_layer_io_divergence_mode(
-                    aiu_model_handler,
-                    deepview_mode,
-                    layer_inputs_file,
-                    model_path,
-                    model_type,
+                    aiu_model_handler, deepview_mode, layer_inputs_file
                 )
 
             else:
@@ -238,7 +244,7 @@ def run_model(
                     )
 
                 if deepview_mode == "aiu_input_capture":
-                    layer_inputs = run_io_capture_mode(
+                    layer_inputs = run_aiu_input_capture_mode(
                         aiu_model_handler, deepview_mode, layer_inputs_file
                     )
 
