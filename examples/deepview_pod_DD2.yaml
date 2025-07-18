@@ -20,19 +20,10 @@ spec:
       # lines without gap are considered on the same line and indented are new lines
       - >
         source ~/.bashrc
-
-        unset HF_HOME
         
         cd $HOME
 
         pip3 install -q -U transformers
-
-        git clone
-        https://github.com/foundation-model-stack/foundation-model-stack.git
-
-        cd foundation-model-stack
-
-        git checkout $FMS_CHECKOUT
         
         cp ${AIU_AUTOGEN_SENLIB_CONFIG_FILE} /tmp/etc/ibm/spyre/senlib_config.json
 
@@ -88,12 +79,12 @@ spec:
     # HOME might not be set, so set it
     - name: HOME
       value: /home/senuser
-    - name: HF_HUB_OFFLINE
-      value: "1"
     - name: HF_HOME
       value: /home/senuser/models/huggingface_cache
     - name:  HF_HUB_CACHE
       value: /home/senuser/models/huggingface_cache/hub
+    - name: HF_DATASETS_CACHE
+      value: $HF_HOME/datasets
     # Make the AIU stack quiet
     - name: DTLOG_LEVEL
       value: "error"
@@ -103,8 +94,6 @@ spec:
       value: "-1"
     - name: POD_IMAGE
       value: *pod_image
-    - name: FMS_CHECKOUT
-      value: v1.1.0
     - name: DEEPVIEW_THRESHOLDS_FOLDERPATH
       value: /home/senuser/models/deepview/layerwise-thresholds
     volumeMounts:
@@ -114,8 +103,6 @@ spec:
     # Model mount
     - name: shared-models
       mountPath: /home/senuser/models
-  imagePullSecrets:
-    - name: <your-pull-secret>
   volumes:
   - name: dev-shm
     emptyDir:
