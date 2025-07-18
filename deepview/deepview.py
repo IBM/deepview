@@ -51,11 +51,10 @@ def main():
         choices=[
             "unsupported_op",
             "layer_debugging",
-            "aiu_input_capture",
             "layer_io_divergence",
         ],
         default="unsupported_op",
-        help="Modes: [unsupported_op, layer_debugging, aiu_input_capture, layer_io_divergence] (Choose ONLY one). Default is the unsupported_op mode.",
+        help="Modes: [unsupported_op, layer_debugging, layer_io_divergence] (Choose ONLY one). Default is the unsupported_op mode.",
     )
 
     parser.add_argument(
@@ -76,20 +75,11 @@ def main():
         help="Name of the file in which the debug tool output will be stored.",
     )
 
-    parser.add_argument(
-        "--layer_inputs_file",
-        default=None,
-        help="Name of the file in which AIU layer inputs are stored.",
-    )
-
     args = parser.parse_args()
 
-    if args.layer_inputs_file is not None:
-        if args.mode not in ["layer_io_divergence", "aiu_input_capture"]:
-            print(
-                "Error: --layer_inputs_file is valid only for 'aiu_input_capture' and 'layer_io_divergence' modes."
-            )
-            sys.exit(1)
+    if args.mode not in ["unsupported_op"] and args.model_type == "hf":
+        print(f"{args.mode} is currently supported only for FMS models.")
+        sys.exit(1)
 
     if args.mode not in ["unsupported_op"] and args.model_type == "hf":
         print(f"{args.mode} is currently supported only for FMS models.")
@@ -99,7 +89,7 @@ def main():
     set_environment()
 
     # Run the model
-    print("Running the model")
+    print("Running Deepview")
     run_model(
         args.model_type,
         args.model,
@@ -107,7 +97,6 @@ def main():
         args.mode,
         args.show_details,
         args.generate_repro_code,
-        args.layer_inputs_file,
     )
     print("DeepView run completed")
 

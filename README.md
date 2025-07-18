@@ -189,14 +189,7 @@ deepview --model_type fms --model ibm-granite/granite-3.2-8b-instruct --mode lay
 ```
 
 > [!NOTE]
-> The `layer_io_divergence` mode assumes the following:
-> 1. You have the layer inputs stored as a dict with keys = layer names and values = inputs in pickle format. By default, the tool assumes that the pickle file is present in the same folder and has the name <model_name>.pkl. 
->    If the file is elsewhere or has a different name, please specify it using the `--layer_inputs_file` flag. 
->    If the file does not exist, run deepview in the aiu_io_capture mode using the following command. 
->    ```
->     deepview --model_type fms --model ibm-granite/granite-3.2-8b-instruct --mode aiu_input_capture
->     ```
-> 2. The thresholds from GPU run is already present in the path pointed by `DEEPVIEW_THRESHOLDS_FOLDERPATH` env variable (specified in the Deepview pod yaml).
+> The `layer_io_divergence` mode assumes that the thresholds from GPU run is already present in the path pointed by `DEEPVIEW_THRESHOLDS_FOLDERPATH` env variable (specified in the Deepview pod yaml).
 
 
 #### Sample Output
