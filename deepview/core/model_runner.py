@@ -57,7 +57,7 @@ def set_environment():
 
 
 def run_unsupported_op_mode(
-    model_type, model_path, show_details_flag, generate_repro_code_flag
+    model_path, model_type, show_details_flag, generate_repro_code_flag
 ):
     """Runs the unsupported ops mode using the flags specified by the user."""
     aiu_model_handler = ModelHandler(
