@@ -98,7 +98,7 @@ class ModelHandler:
             Removes all registered forward hooks from the model.
     """
 
-    def __init__(self, model_type, model_path, device, prompt, model_class=None):
+    def __init__(self, model_type, model_path, prompt, model_class=None):
         """Initialize ModelHandler with model configuration.
 
         Args:
@@ -112,19 +112,16 @@ class ModelHandler:
         self.model_class = model_class
         self.prompt = prompt
         self.device = torch.device("cpu")
-        self.device_to_run = device
-        self.backend = None
         self.model = None
         self.tokenizer = None
         self.input_id = None
         self.hooks = []
         self.layer_list = {}
-        self.layer_inputs = {}
-        self.layer_outputs = {}
         self.extra_generation_kwargs = None
         self.batch_size = 1
         self.min_pad_length = 64
         self.max_new_tokens = 2
+        self.inputs = None
 
     def _infer_model_class(self, model_path):
         """Infer the model class based on the model configuration or repo contents.
@@ -209,19 +206,29 @@ class ModelHandler:
 
         print("Compiling model")
         start = time.time()
-        if self.device_to_run == "aiu":
-            self.model.compile(backend="sendnn", dynamic=False)
-        elif self.device_to_run == "cpu":
-            self.model.compile(backend="inductor")
-        else:
-            print("Device not supported by Deepview yet.")
+        #self.model.compile(backend="sendnn", dynamic=False)
+        self.model.compile(backend="sendnn")
         print(f"Compiling complete, took {time.time() - start:.3f}s")
 
         return self.model
+    
+    
+    def _get_inputs(self, processor):
+        from PIL import Image
+
+        import requests
+        url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/pipeline-cat-chonk.jpeg"
+        image = Image.open(requests.get(url, stream=True).raw)
+        inputs = "<|system|>\nA chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions.\n<|user|>\n<image>\nWhat animal is shown in this image?\n<|assistant|>\n"
+        inputs = processor(text=inputs, images=image, return_tensors="pt").to(self.device)
+        return inputs
+
 
     def prep_input(self):
         """Prepare input tensors and tokenizers based on the model type and prompt."""
         if self.model_type == "fms":
+            # original DeepView Logic
+            '''
             self.tokenizer = tokenizers.get_tokenizer(self.model_path)
             tokens = self.tokenizer.tokenize(self.prompt)
             ids_l = self.tokenizer.convert_tokens_to_ids(tokens)
@@ -232,6 +239,18 @@ class ModelHandler:
             self.input_id, self.extra_generation_kwargs = pad_input_ids(
                 [prompt1], min_pad_length=self.min_pad_length
             )
+            '''
+            # granite vision input prep logic logic 
+            from transformers import LlavaNextProcessor
+            processor = LlavaNextProcessor.from_pretrained(self.model_path)
+            self.inputs = self._get_inputs(processor)
+
+            self.input_ids = self.inputs["input_ids"]
+            self.inputs.pop("input_ids")
+            self.input_ids, padding_kwargs = pad_input_ids(self.input_ids, min_pad_length=0)
+            self.inputs["mask"] = padding_kwargs["mask"].to(self.device)
+            self.inputs["position_ids"] = padding_kwargs["position_ids"].to(self.device)
+            self.input_ids = self.input_ids.to(self.device)
         elif self.model_type == "hf":
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.model_path, use_fast=True
@@ -242,35 +261,39 @@ class ModelHandler:
                 [self.prompt], padding=True, truncation=True, return_tensors="pt"
             )
 
-    def _generate_output(self, is_warmup):
-        """Calling generate function based on model_type."""
+    def warmup(self):
+        import pdb
+        pdb.set_trace()
+        """Perform warmup on the prepared input based on the model type."""
+        old_warmup_mode = get_warmup_mode()
+        set_warmup_mode(True)
         if self.model_type == "fms":
+            '''
             self.extra_generation_kwargs["only_last_token"] = True
-            if is_warmup:
-                eos_token_id = None
-                max_len = self.model.config.max_expected_seq_len
-            else:
-                eos_token_id = self.tokenizer.eos_token_id
-                if (
-                    hasattr(self.model.config, "ntk_scaling")
-                    and self.model.config.ntk_scaling
-                ):
-                    max_len = max(
-                        len(self.prompt), self.model.config.max_expected_seq_len
-                    )
-                else:
-                    max_len = self.model.config.max_expected_seq_len
             result = generate(
                 self.model,
-                self.input_id,
+                self.input_ids,
                 max_new_tokens=self.max_new_tokens,
                 use_cache=True,
                 do_sample=False,
-                max_seq_len=max_len,
-                eos_token_id=eos_token_id,
+                max_seq_len=self.model.config.text_config.max_expected_seq_len,
+                #eos_token_id=self.tokenizer.eos_token_id,
                 contiguous_cache=True,
-                extra_kwargs=self.extra_generation_kwargs,
+                extra_kwargs=self.inputs,
+                prepare_model_inputs_hook=self.model.prepare_inputs_for_generation,
             )
+            '''
+            with torch.no_grad():
+                output = generate(
+                    self.model,
+                    self.input_ids,
+                    max_new_tokens=20,
+                    use_cache=True,
+                    do_sample=False,
+                    max_seq_len=self.model.config.text_config.max_expected_seq_len,
+                    extra_kwargs=self.inputs,
+                    prepare_model_inputs_hook=self.model.prepare_inputs_for_generation,
+                )
         elif self.model_type == "hf":
             if self.model_class in ["causal_lm"]:
                 input_ids = self.input_id["input_ids"]
@@ -287,87 +310,38 @@ class ModelHandler:
                 )[0]
             else:
                 result = self.model(**self.input_id)
-        return result
-
-    def safe_warmup(self):
-        """Perform warmup on the prepared input based on the model type, but skip update_lazyhandle()."""
-        old_warmup_mode = get_warmup_mode()
-        set_warmup_mode(True)
-        self._generate_output(True)
         set_warmup_mode(old_warmup_mode)
 
-    def warmup(self):
-        """Perform warmup on the prepared input based on the model type."""
-        with torch_sendnn.warmup_mode():
-            self._generate_output(True)
-
-    def infer(self):
-        """Perform inference on the prepared input based on the model type."""
-        return self._generate_output(False)
-
-    def insert_forward_hooks(self, deepview_mode):
+    def insert_forward_hooks(self):
         """Insert forward hooks into the model layers to capture input shapes and types during forward pass."""
         print("Inserting forward hooks.............")
-        if deepview_mode == "layer_debugging":
-            module_instance_names = {}
+        module_instance_names = {}
 
-            def get_instance_names(module, current_depth=0, name="model"):
-                module_instance_names[module] = name
-                parent = name
-                array_layers = all(key.isdigit() for key in module._modules.keys())
-                for subname, child in module._modules.items():
-                    if array_layers:
-                        get_instance_names(
-                            child, current_depth + 1, f"{parent}[{subname}]"
-                        )
-                    else:
-                        get_instance_names(
-                            child, current_depth + 1, f"{parent}.{subname}"
-                        )
+        def get_instance_names(module, current_depth=0, name="model"):
+            module_instance_names[module] = name
+            parent = name
+            array_layers = all(key.isdigit() for key in module._modules.keys())
+            for subname, child in module._modules.items():
+                if array_layers:
+                    get_instance_names(child, current_depth + 1, f"{parent}[{subname}]")
+                else:
+                    get_instance_names(child, current_depth + 1, f"{parent}.{subname}")
 
-            get_instance_names(self.model)
+        get_instance_names(self.model)
 
         def hook_fn(module, input, output):
+            module_instance = module_instance_names.get(module, "unknown")
             if len(input) == 0:
                 return
-            if deepview_mode == "layer_io_divergence":
-                module._debug_input = input
-                if self.device_to_run == "cpu":
-                    module._debug_output = output
-            if deepview_mode == "layer_debugging":
-                module_instance = module_instance_names.get(module, "unknown")
-                input_shape_str = f"[{', '.join(map(str, input[0].shape))}]"
-                input_type = str(input[0].dtype)
-                self.layer_list[module_instance] = {input_shape_str, input_type}
+            input_shape_str = f"[{', '.join(map(str, input[0].shape))}]"
+            input_type = str(input[0].dtype)
+            self.layer_list[module_instance] = {input_shape_str, input_type}
 
         for name, layer in self.model.named_modules():
-            if name.count(".") <= 3:
-                self.hooks.append(layer.register_forward_hook(hook_fn))
+            self.hooks.append(layer.register_forward_hook(hook_fn))
 
     def remove_forward_hooks(self):
         """Remove all previously registered forward hooks from the model."""
         for hook in self.hooks:
             hook.remove()
         self.hooks = []
-
-    def get_layer_io(self):
-        """Get all inputs captured using forward hook."""
-        print("Extracting layer IO ...")
-        for name, module in self.model.named_modules():
-            if hasattr(module, "_debug_input"):
-                self.layer_inputs[name] = tuple(
-                    v.detach()
-                    for v in module._debug_input
-                    if isinstance(v, torch.Tensor)
-                )
-            if hasattr(module, "_debug_output"):
-                self.layer_outputs[name] = module._debug_output
-
-    def clear_layer_io(self):
-        """Clear all inputs/outputs captured using forward hook."""
-        print("Clearing layer IO ...")
-        for name, module in self.model.named_modules():
-            if hasattr(module, "_debug_input"):
-                module._debug_input = None
-            if hasattr(module, "_debug_output"):
-                module._debug_output = None
