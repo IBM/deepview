@@ -15,6 +15,7 @@
 # *******************************************************************************/
 
 # Standard
+from pathlib import Path
 import argparse
 
 # Third Party
@@ -22,7 +23,6 @@ import pytest
 
 # Local
 from deepview.core.model_runner import run_model, set_environment
-from pathlib import Path
 
 
 @pytest.fixture(scope="module", autouse=True)

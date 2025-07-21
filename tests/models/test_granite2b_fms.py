@@ -23,6 +23,7 @@ import pytest
 # Local
 from deepview.core.model_runner import run_model, set_environment
 
+
 @pytest.fixture(scope="module", autouse=True)
 def debugger_path(tmp_path_factory):
     """
@@ -58,6 +59,7 @@ def debugger_path(tmp_path_factory):
     )
     debugger_path = tmp_path_factory.getbasetemp() / "test_granite2b_debugger.txt"
     return debugger_path
+
 
 def test_debugger_output_exits(debugger_path):
     """
