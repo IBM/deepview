@@ -23,7 +23,10 @@ import pytest
 # Local
 from deepview.core.model_runner import run_model, set_environment
 
-@pytest.fixture(scope="module", autouse=True, params=["unsupported_op", "layer_debugging"])
+
+@pytest.fixture(
+    scope="module", autouse=True, params=["unsupported_op", "layer_debugging"]
+)
 def debugger_setup(tmp_path_factory, request):
     """
     A fixture to run the model and generate the debugger output file.
@@ -37,10 +40,11 @@ def debugger_setup(tmp_path_factory, request):
     Returns:
         tuple: (debugger_path, mode) - The path to the debugger output file and the mode used.
     """
+    # Standard
     from pathlib import Path
 
     mode = request.param
-    
+
     args = argparse.Namespace(
         model_type="fms",
         model="mistralai/Mistral-7B-Instruct-v0.3",
@@ -63,6 +67,7 @@ def debugger_setup(tmp_path_factory, request):
     debugger_path = tmp_path_factory.getbasetemp() / "test_mistral7b_debugger.txt"
     return debugger_path, mode
 
+
 def test_debugger_output_exits(debugger_setup):
     """
     Test to ensure the debugger output file exists after running the model.
@@ -76,6 +81,7 @@ def test_debugger_output_exits(debugger_setup):
         debugger_path.exists()
     ), f"Debugger output file {debugger_path} does not exist."
 
+
 def test_get_unsupported_ops(model_output_file, debugger_setup):
     """
     Test to ensure the unsupported operations are correctly extracted from the debugger output.
@@ -88,12 +94,13 @@ def test_get_unsupported_ops(model_output_file, debugger_setup):
     debugger_path, mode = debugger_setup
     if mode != "unsupported_op":
         pytest.skip(f"Skipping test_get_unsupported_ops for mode: {mode}")
-    
+
     print(f"Running test_get_unsupported_ops with mode: {mode}")
     assert (
         "DEEPVIEW \033[1mNo unsupported operations detected.\033[0m\n"
         in model_output_file.read_text(encoding="utf-8")
     ), "Expected 'DEEPVIEW \033[1mNo unsupported operations detected.\033[0m\n'"
+
 
 def test_layer_debugging_mode(model_output_file, debugger_setup):
     """
@@ -107,8 +114,8 @@ def test_layer_debugging_mode(model_output_file, debugger_setup):
     debugger_path, mode = debugger_setup
     if mode != "layer_debugging":
         pytest.skip(f"Skipping test_layer_debugging_mode for mode: {mode}")
-    
-    print(f"Running test_layer_debugging_mode with mode: {mode}")    
+
+    print(f"Running test_layer_debugging_mode with mode: {mode}")
     assert "Running each layer individually" in model_output_file.read_text(
         encoding="utf-8"
     ), "Expected Running each layer individually"
