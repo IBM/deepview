@@ -21,7 +21,8 @@ import argparse
 import pytest
 
 # Local
-from deepview.core.model_runner import run_model
+from deepview.core.model_runner import run_model, set_environment
+from pathlib import Path
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -40,22 +41,22 @@ def debugger_path(tmp_path_factory):
     """
     args = argparse.Namespace(
         model_type="hf",
-        model_path="ibm-ai-platform/Bamba-9B-v1",
-        tool_output_file=tmp_path_factory.getbasetemp() / "test_bamba9b_debugger.txt",
-        deepview_mode=["unsupported_op"],
-        show_details_flag=True,
-        generate_repro_code_flag=True,
-        logfile=tmp_path_factory.getbasetemp() / "test_bamba9b_output.txt",
+        model="ibm-ai-platform/Bamba-9B-v1",
+        output_file=tmp_path_factory.getbasetemp() / "test_bamba9b_debugger.txt",
+        mode="unsupported_op",
+        show_details=True,
+        generate_repro_code=True,
     )
+
+    set_environment()
 
     run_model(
         args.model_type,
-        args.model_path,
-        args.tool_output_file,
-        args.deepview_mode,
-        args.show_details_flag,
-        args.generate_repro_code_flag,
-        args.logfile,
+        args.model,
+        args.output_file,
+        args.mode,
+        args.show_details,
+        args.generate_repro_code,
     )
     debugger_path = tmp_path_factory.getbasetemp() / "test_bamba9b_debugger.txt"
     return debugger_path
