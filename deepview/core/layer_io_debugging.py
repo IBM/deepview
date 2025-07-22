@@ -6,6 +6,8 @@ import re
 import shutil
 import subprocess
 
+from model_runner import extract_hf_model_id
+
 # Third Party
 from aiu_fms_testing_utils.utils.metrics_utils import (
     abs_diff_linalg_norm,
@@ -39,21 +41,38 @@ def convert_attr_path(attr_path):
 
 
 def get_thresholds_json_file(model_path):
-    """Gets the file path of the thresholds json of the particular model being tested."""
-    theshold_filepath = None
-    thresholds_folder = os.getenv("DEEPVIEW_THRESHOLDS_FOLDERPATH")
+    """
+    Attempts to locate the threshold JSON file for a model by:
+    1. Extracting the HF model ID and checking in DEEPVIEW_THRESHOLDS_FOLDERPATH
+    2. Falling back to dynamic subfolder structure with 'generate' suffix
+    """
+    thresholds_folder = os.getenv("DEEPVIEW_THRESHOLDS_FOLDERPATH", ".")
+    if not thresholds_folder:
+        raise EnvironmentError("DEEPVIEW_THRESHOLDS_FOLDERPATH is not set")
+    
+    model_id = extract_hf_model_id(model_path)
+
+    # First attempt: direct match using model_id inside 'generate' subfolder
+    direct_folder = os.path.join(thresholds_folder, f"{model_id}", "generate")
+    if os.path.isdir(direct_folder):
+        for fname in os.listdir(direct_folder):
+            if fname.endswith(".json"):
+                return os.path.join(direct_folder, fname)
+
+    # Fallback: construct path using model folder name
     if model_path.count("/") > 1:
         model_folder_name = model_path.split("/")[-2] + "--" + model_path.split("/")[-1]
     else:
         model_folder_name = model_path.replace("/", "--")
-    thresholds_folder_fullpath = os.path.join(
-        thresholds_folder, model_folder_name, "generate"
-    )
-    theshold_filepath = None
-    for filename in os.listdir(thresholds_folder_fullpath):
-        if filename.endswith(".json"):
-            theshold_filepath = os.path.join(thresholds_folder_fullpath, filename)
-    return theshold_filepath
+
+    fallback_folder = os.path.join(thresholds_folder, model_folder_name, "generate")
+    if os.path.isdir(fallback_folder):
+        for fname in os.listdir(fallback_folder):
+            if fname.endswith(".json"):
+                return os.path.join(fallback_folder, fname)
+
+    raise FileNotFoundError("No threshold JSON file found.")
+
 
 
 def calc_output_diff(cpu_output_tensor, aiu_output_tensor, metric):
