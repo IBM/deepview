@@ -38,8 +38,8 @@ from deepview.core.layer_io_debugging import (
 from deepview.core.unsupported_ops import process_unsupported_ops
 from deepview.utils.logger import save_deepview_logs
 from deepview.utils.model_handler import ModelHandler
+from deepview.utils.model_handler import validate_model_id
 from deepview.utils.tee import Tee
-
 
 def set_environment():
     """Sets environment variables for consistent logging and output behavior during model execution.
@@ -54,37 +54,6 @@ def set_environment():
     os.environ["DT_DEEPRT_VERBOSE"] = "-1"
     os.environ["PYTHONUNBUFFERED"] = "1"
     os.environ["COMPILATION_MODE"] = "offline_decoder"
-
-def extract_hf_model_id(model_path: str) -> str:
-    """
-    Extracts the Hugging Face model ID from either a plain HF model ID string or an FMS model directory path.
-    """
-    if os.path.isdir(model_path):  # likely an FMS path
-        config_path = os.path.join(model_path, "config.json")
-        if os.path.exists(config_path):
-            with open(config_path, "r") as f:
-                config = json.load(f)
-            # Prefer 'original_model_id', fallback to 'model_id' or raise error
-            if "original_model_id" in config:
-                return config["original_model_id"]
-            elif "model_id" in config:
-                return config["model_id"]
-            else:
-                raise ValueError(f"No Hugging Face model ID found in config.json at {config_path}")
-        else:
-            raise FileNotFoundError(f"No config.json found in model directory: {model_path}")
-    else:
-        # Assume it's a Hugging Face ID
-        return model_path.strip("/")
-
-def validate_model_id(model_path: str) -> bool:
-    """
-    Basic validation: either a string model ID or a valid FMS directory with config.json.
-    """
-    if os.path.isdir(model_path):
-        return os.path.exists(os.path.join(model_path, "config.json"))
-    return isinstance(model_path, str) and ("/" in model_path or "-" in model_path)
-
 
 def run_unsupported_op_mode(
     model_path, model_type, show_details_flag, generate_repro_code_flag

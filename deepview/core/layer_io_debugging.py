@@ -6,7 +6,7 @@ import re
 import shutil
 import subprocess
 
-from model_runner import extract_hf_model_id
+from deepview.utils.model_handler import extract_hf_model_id 
 
 # Third Party
 from aiu_fms_testing_utils.utils.metrics_utils import (
