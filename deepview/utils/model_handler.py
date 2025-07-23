@@ -56,6 +56,7 @@ MODEL_CLASSES = {
     "sentence": SentenceTransformer,
 }
 
+
 def extract_hf_model_id(model_path: str) -> str:
     """
     Extracts the Hugging Face model ID from either a plain HF model ID string or an FMS model directory path.
@@ -78,7 +79,10 @@ def extract_hf_model_id(model_path: str) -> str:
         # Assume it's a Hugging Face ID
         return model_path.strip("/")
     else:
-        raise ValueError(f"No valid ID was found at: {model_path} - please provide model id or path that contains organization_name/model_name")
+        raise ValueError(
+            f"No valid ID was found at: {model_path} - please provide model id or path that contains organization_name/model_name"
+        )
+
 
 def validate_model_id(model_path: str) -> bool:
     """
@@ -129,18 +133,18 @@ class ModelHandler:
 
         remove_forward_hooks():
             Removes all registered forward hooks from the model.
-        
+
         get_layer_io():
             Extracts inputs and outputs captured by forward hooks into dictionaries.
-        
+
         clear_layer_io():
             Clears the captured inputs and outputs from the model's modules.
-            
+
         safe_warmup():
             Performs a warmup pass on the model without updating lazy handles.
-            
-        warmup():        
-            Performs a warmup pass on the model to initialize it for inference.                    
+
+        warmup():
+            Performs a warmup pass on the model to initialize it for inference.
     """
 
     def __init__(self, model_type, model_path, device, prompt, model_class=None):
@@ -416,5 +420,3 @@ class ModelHandler:
                 module._debug_input = None
             if hasattr(module, "_debug_output"):
                 module._debug_output = None
-    
-    

@@ -6,7 +6,7 @@ import re
 import shutil
 import subprocess
 
-from deepview.utils.model_handler import extract_hf_model_id 
+from deepview.utils.model_handler import extract_hf_model_id
 
 # Third Party
 from aiu_fms_testing_utils.utils.metrics_utils import (
@@ -49,7 +49,7 @@ def get_thresholds_json_file(model_path):
     thresholds_folder = os.getenv("DEEPVIEW_THRESHOLDS_FOLDERPATH", ".")
     if not thresholds_folder:
         raise EnvironmentError("DEEPVIEW_THRESHOLDS_FOLDERPATH is not set")
-    
+
     model_id = extract_hf_model_id(model_path)
 
     # First attempt: direct match using model_id inside 'generate' subfolder
@@ -72,7 +72,6 @@ def get_thresholds_json_file(model_path):
                 return os.path.join(fallback_folder, fname)
 
     raise FileNotFoundError("No threshold JSON file found.")
-
 
 
 def calc_output_diff(cpu_output_tensor, aiu_output_tensor, metric):
