@@ -17,6 +17,7 @@
 # Standard
 import os
 import time
+import json
 
 # Third Party
 from fms.models import get_model
@@ -70,13 +71,14 @@ def extract_hf_model_id(model_path: str) -> str:
             elif "model_id" in config:
                 return config["model_id"]
             else:
-                raise ValueError(f"No Hugging Face model ID found in config.json at {config_path}")
+                print(f"No Hugging Face model ID found in config.json at {config_path}")
         else:
-            raise FileNotFoundError(f"No config.json found in model directory: {model_path}")
-    else:
+            print(f"No config.json found in model directory: {model_path}")
+    elif "/" in model_path and len(model_path.strip("/")) > 2:
         # Assume it's a Hugging Face ID
         return model_path.strip("/")
-        
+    else:
+        raise ValueError(f"No valid ID was found at: {model_path} - please provide model id or path that contains organization_name/model_name")
 
 def validate_model_id(model_path: str) -> bool:
     """
