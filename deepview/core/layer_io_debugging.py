@@ -6,8 +6,6 @@ import re
 import shutil
 import subprocess
 
-from deepview.utils.model_handler import extract_hf_model_id
-
 # Third Party
 from aiu_fms_testing_utils.utils.metrics_utils import (
     abs_diff_linalg_norm,
@@ -19,6 +17,7 @@ from aiu_fms_testing_utils.utils.metrics_utils import (
 # Local
 from deepview.core.aiu_input_capture import run_model_for_inputs
 from deepview.core.individual_layer_run_with_inputs import run_layers_with_inputs
+from deepview.utils.model_handler import extract_hf_model_id
 
 # Defining some constants
 SUCCESS = 2
