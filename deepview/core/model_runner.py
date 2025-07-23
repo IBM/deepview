@@ -37,8 +37,7 @@ from deepview.core.layer_io_debugging import (
 )
 from deepview.core.unsupported_ops import process_unsupported_ops
 from deepview.utils.logger import save_deepview_logs
-from deepview.utils.model_handler import ModelHandler
-from deepview.utils.model_handler import validate_model_id
+from deepview.utils.model_handler import ModelHandler, validate_model_id
 from deepview.utils.tee import Tee
 
 

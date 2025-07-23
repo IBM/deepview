@@ -15,9 +15,9 @@
 # *******************************************************************************/
 
 # Standard
+import json
 import os
 import time
-import json
 
 # Third Party
 from fms.models import get_model
@@ -40,7 +40,9 @@ from transformers import (
     AutoTokenizer,
 )
 import torch
-import torch_sendnn
+
+from torch_sendnn.backends import get_warmup_mode, set_warmup_mode # isort:skip
+import torch_sendnn # isort:skip
 
 MODEL_CLASSES = {
     "auto": AutoModel,
