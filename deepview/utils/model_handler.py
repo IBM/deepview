@@ -15,6 +15,7 @@
 # *******************************************************************************/
 
 # Standard
+import json
 import os
 import time
 
@@ -54,6 +55,42 @@ MODEL_CLASSES = {
     "visual_question_answering": AutoModelForVisualQuestionAnswering,
     "sentence": SentenceTransformer,
 }
+
+
+def extract_hf_model_id(model_path: str) -> str:
+    """
+    Extracts the Hugging Face model ID from either a plain HF model ID string or an FMS model directory path.
+    """
+    if os.path.isdir(model_path):  # likely an FMS path
+        config_path = os.path.join(model_path, "config.json")
+        if os.path.exists(config_path):
+            with open(config_path, "r") as f:
+                config = json.load(f)
+            # Prefer 'original_model_id', fallback to 'model_id' or raise error
+            if "original_model_id" in config:
+                return config["original_model_id"]
+            elif "model_id" in config:
+                return config["model_id"]
+            else:
+                print(f"No Hugging Face model ID found in config.json at {config_path}")
+        else:
+            print(f"No config.json found in model directory: {model_path}")
+    elif "/" in model_path and len(model_path.strip("/")) > 2:
+        # Assume it's a Hugging Face ID
+        return model_path.strip("/")
+    else:
+        raise ValueError(
+            f"No valid ID was found at: {model_path} - please provide model id or path that contains organization_name/model_name"
+        )
+
+
+def validate_model_id(model_path: str) -> bool:
+    """
+    Basic validation: either a string model ID or a valid FMS directory with config.json.
+    """
+    if os.path.isdir(model_path):
+        return os.path.exists(os.path.join(model_path, "config.json"))
+    return isinstance(model_path, str) and ("/" in model_path or "-" in model_path)
 
 
 class ModelHandler:
@@ -96,6 +133,18 @@ class ModelHandler:
 
         remove_forward_hooks():
             Removes all registered forward hooks from the model.
+
+        get_layer_io():
+            Extracts inputs and outputs captured by forward hooks into dictionaries.
+
+        clear_layer_io():
+            Clears the captured inputs and outputs from the model's modules.
+
+        safe_warmup():
+            Performs a warmup pass on the model without updating lazy handles.
+
+        warmup():
+            Performs a warmup pass on the model to initialize it for inference.
     """
 
     def __init__(self, model_type, model_path, device, prompt, model_class=None):
