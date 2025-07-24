@@ -48,27 +48,27 @@ def run_individual_layers(model_path, model_type, layer_list, generate_repro_cod
 
         layer_run = run_layers(model_path, sub_layer, input_shape, datatype)
         command1 = ["python3", "-c", layer_run]
-        process = subprocess.run(
-            command1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
-        )
 
-        for line in process.stdout:
-            print(line, end="")
-        if process.returncode != 0:
-            print(
-                "DEEPVIEW========================================================================\n"
-                f"DEEPVIEW \033[1mError running {sub_layer}, {input_shape}, {datatype}\n\033[0m"
-                "DEEPVIEW========================================================================\n"
+        try:
+            process = subprocess.run(
+                command1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=True
             )
-            failed_layer = sub_layer
-            break
-        else:
+            for line in process.stdout.splitlines():
+                print(line)
             print(
                 f"DEEPVIEW Successfully ran {sub_layer}, {input_shape}, {datatype}\n"
                 "DEEPVIEW========================================================================\n"
             )
-
-        layers_done.append(sub_layer)
+            layers_done.append(sub_layer)
+        except subprocess.CalledProcessError as e:
+            print(
+                "DEEPVIEW========================================================================\n"
+                f"DEEPVIEW \033[1mError running {sub_layer}, {input_shape}, {datatype}\n\033[0m"
+                f"Subprocess output:\n{e.output}\n"
+                "DEEPVIEW========================================================================\n"
+            )
+            failed_layer = sub_layer
+            break
 
     if failed_layer != "No failed layer":
         if generate_repro_code_flag:

@@ -102,25 +102,47 @@ def generate_layerwise_inputs_aiu(
         model_type, model_path, deepview_mode, layer_inputs_file
     )
     command1 = ["python3", "-c", model_run]
-    process = subprocess.run(
-        command1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+    
+    import subprocess
+
+def generate_layerwise_inputs_aiu(
+    model_type, model_path, deepview_mode, layer_inputs_file
+):
+    layer_inputs = None
+    model_run = run_model_for_inputs(
+        model_type, model_path, deepview_mode, layer_inputs_file
     )
-    for line in process.stdout:
-        print(line, end="")
-    print(
-        "DEEPVIEW========================================================================\n"
-        f"DEEPVIEW Input capture for {model_path} ran succesfully.\n"
-        "DEEPVIEW========================================================================\n"
-    )
-    if process.returncode != 0:
+    command1 = ["python3", "-c", model_run]
+    try:
+        process = subprocess.run(
+            command1,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            check=True  # Raises CalledProcessError on failure
+        )
+        for line in process.stdout:
+            print(line, end="")
+        print(
+            "DEEPVIEW========================================================================\n"
+            f"DEEPVIEW Input capture for {model_path} ran succesfully.\n"
+            "DEEPVIEW========================================================================\n"
+        )
+        with open(layer_inputs_file, "rb") as f:
+            layer_inputs = pickle.load(f)
+    except subprocess.CalledProcessError as e:
         print(
             "DEEPVIEW========================================================================\n"
             f"DEEPVIEW \033[1mError running {model_path}\n\033[0m\n"
+            f"Subprocess output:\n{e.output}\n"
             "DEEPVIEW========================================================================\n"
         )
-    with open(layer_inputs_file, "rb") as f:
-        layer_inputs = pickle.load(f)
+        return None
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return None
     return layer_inputs
+    
 
 
 def generate_layerwise_output_diffs(
@@ -149,21 +171,25 @@ def generate_layerwise_output_diffs(
                 aiu_model_handler.model_path, sub_layer, str_layer, inputs_filename
             )
             command1 = ["python3", "-c", layer_run]
-            process = subprocess.run(
-                command1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
-            )
-            for line in process.stdout:
-                print(line, end="")
-            print(
-                "DEEPVIEW========================================================================\n"
-                f"DEEPVIEW Layer is {sub_layer}."
-            )
-            if process.returncode != 0:
+            try:
+                process = subprocess.run(
+                    command1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=True
+                )
+                print(process.stdout)
+                print(
+                    "DEEPVIEW========================================================================\n"
+                    f"DEEPVIEW Layer is {sub_layer}."
+                )
+            except subprocess.CalledProcessError as e:
                 print(
                     "DEEPVIEW========================================================================\n"
                     f"DEEPVIEW \033[1mError running {sub_layer}\n\033[0m"
+                    f"Subprocess output:\n{e.output}\n"
                     "DEEPVIEW========================================================================\n"
                 )
+                return sub_layer, LAYER_RUN_FAILED
+            except Exception as e:
+                print(f"Unexpected error: {e}")
                 return sub_layer, LAYER_RUN_FAILED
             else:
                 with open(
@@ -202,3 +228,4 @@ def generate_layerwise_output_diffs(
                 layers_done.append(sub_layer)
     shutil.rmtree("dv_layer_io_debugging_tmp")
     return None, SUCCESS
+     
