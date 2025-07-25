@@ -24,7 +24,6 @@ from fms.models import get_model
 from fms.utils import tokenizers
 from fms.utils.generation import generate, pad_input_ids
 from sentence_transformers import SentenceTransformer
-from torch_sendnn.backends import get_warmup_mode, set_warmup_mode
 from transformers import (
     AutoConfig,
     AutoModel,
@@ -252,6 +251,7 @@ class ModelHandler:
                 self.model = AutoModel.from_pretrained(self.model_path)
 
         print(f"Loading complete, took {time.time() - start:.3f}s")
+        self.model.base_model.layers  = self.model.base_model.layers[:1]
 
         self.model.eval()
         torch.set_grad_enabled(False)
@@ -340,10 +340,8 @@ class ModelHandler:
 
     def safe_warmup(self):
         """Perform warmup on the prepared input based on the model type, but skip update_lazyhandle()."""
-        old_warmup_mode = get_warmup_mode()
-        set_warmup_mode(True)
-        self._generate_output(True)
-        set_warmup_mode(old_warmup_mode)
+        with torch_sendnn.warmup_mode(skip_compilation=True):
+            self._generate_output(True)
 
     def warmup(self):
         """Perform warmup on the prepared input based on the model type."""
