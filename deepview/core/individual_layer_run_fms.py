@@ -35,7 +35,7 @@ from fms.models import get_model
 import torch_sendnn
 import torch
 import os
-os.environ["COMPILATION_MODE"] = "offline_decoder"
+os.environ["COMPILATION_MODE"] = "offline"
 
 model = get_model(
     "hf_pretrained",
@@ -55,9 +55,8 @@ rand_tensor = torch.rand(tuple({input_shape}))
 data_type = {datatype}
 layer = {sub_layer}
 layer.compile(backend="sendnn", dynamic=False)
-print(f"Warmup of layer {sub_layer}, input shape {input_shape}, data type {datatype}")
-with torch_sendnn.warmup_mode():
-   layer(rand_tensor.to(data_type))
+print(f"First run of the layer {sub_layer}, input shape {input_shape}, data type {datatype}")
+layer(rand_tensor.to(data_type))
 print(f"Second run of the layer {sub_layer}, input shape {input_shape}, data type {datatype}")
 layer(rand_tensor.to(data_type))
 """
