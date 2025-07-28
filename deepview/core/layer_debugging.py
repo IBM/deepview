@@ -1,80 +1,87 @@
 # Standard
 from pathlib import Path
+import os
+import pickle
+import re
 import subprocess
 
+# Local
+from deepview.core.individual_layer_run_fms import run_layers
 
-def run_individual_layers(model_path, model_type, layer_list, generate_repro_code_flag):
+
+def convert_attr_path(attr_path):
+    """Converts the name of the modules to match the format in thresholds file."""
+    attr_path = "model." + attr_path
+
+    def replace_numeric_attr(match):
+        number = match.group(1)
+        tail = match.group(2)
+        return f"[{number}]{tail}"
+
+    pattern = re.compile(r"\.(\d+)(\.|$)")
+    converted = pattern.sub(replace_numeric_attr, attr_path)
+    return converted
+
+
+def run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_code_flag):
     """Runs each unique layer of the model individually in layer_debugging mode.
 
     Iterates over the provided layers and attempts to compile and run each one in isolation.
     Stops at the first failure and optionally generates a minimal reproducible script for debugging.
 
     Args:
-        model_path (str): Path to the model checkpoint directory.
-        model_type (str): Model type, either 'hf' (HuggingFace) or 'fms' (Foundation Model Stack).
-        layer_list (dict): Dictionary mapping layer/module names to a set containing input shape and data type.
+
         generate_repro_code_flag (bool): If True, generates a minimal repro script when a layer fails.
     """
-    print("Running each layer individually........")
+    model = aiu_model_handler.model
     layers_done = []
     failed_layer = "No failed layer"
-    for str_layer, val in layer_list.items():
-        sub_layer = (
-            str_layer.rsplit(".", str_layer.count(".") - 3)[0]
-            if str_layer.count(".") > 3
-            else str_layer
-        )
-        val_list = list(val)
-        datatype, input_shape = val_list if "torch" in val_list[0] else val_list[::-1]
+
+    print("Running each layer individually........")
+    for str_layer in aiu_model_handler.layer_inputs.keys():
+        if str_layer:
+            sub_layer = convert_attr_path(str_layer)
+        else:
+            sub_layer = "model"
         if sub_layer in layers_done:
             continue
-
-        print(
-            "DEEPVIEW========================================================================\n"
-            f"DEEPVIEW Running {sub_layer}, {input_shape}, {datatype}"
+        # if sub_layer != "model" and sub_layer != "model.base_model":
+        # if sub_layer != "model.base_model":
+        layer_run = run_layers(
+            aiu_model_handler.model_path, sub_layer, str_layer, inputs_filename
         )
 
-        if model_type == "fms":
-            # Local
-            from deepview.core.individual_layer_run_fms import run_layers
-        elif model_type == "hf":
-            # Local
-            from deepview.core.individual_layer_run_hf import run_layers
-        else:
-            print(
-                "DEEPVIEW \033[1mError running individual layers - only fms and hf models area supported\n\033[0m"
-            )
-            return
-
-        layer_run = run_layers(model_path, sub_layer, input_shape, datatype)
         command1 = ["python3", "-c", layer_run]
         process = subprocess.run(
             command1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
         )
-
         for line in process.stdout:
             print(line, end="")
+        print(
+            "DEEPVIEW========================================================================\n"
+            f"DEEPVIEW Layer is {sub_layer}."
+        )
         if process.returncode != 0:
             print(
                 "DEEPVIEW========================================================================\n"
-                f"DEEPVIEW \033[1mError running {sub_layer}, {input_shape}, {datatype}\n\033[0m"
+                f"DEEPVIEW \033[1mError running {sub_layer}\n\033[0m"
                 "DEEPVIEW========================================================================\n"
             )
             failed_layer = sub_layer
             break
         else:
             print(
-                f"DEEPVIEW Successfully ran {sub_layer}, {input_shape}, {datatype}\n"
+                f"DEEPVIEW Successfully ran {sub_layer}\n"
                 "DEEPVIEW========================================================================\n"
             )
 
         layers_done.append(sub_layer)
 
-    if failed_layer != "No failed layer":
-        if generate_repro_code_flag:
-            generate_repro_code_layer_debugging(
-                model_path, model_type, failed_layer, input_shape, datatype
-            )
+    # if failed_layer != "No failed layer":
+    #     if generate_repro_code_flag:
+    #         generate_repro_code_layer_debugging(
+    #             model_path, model_type, failed_layer, input_shape, datatype
+    #         )
 
 
 def generate_repro_code_layer_debugging(

@@ -26,10 +26,10 @@ from torch_sendnn import torch_sendnn
 import torch
 
 # Local
+from deepview.core.aiu_input_capture import generate_layerwise_inputs_aiu
 from deepview.core.layer_debugging import run_individual_layers
 from deepview.core.layer_io_debugging import (
     SUCCESS,
-    generate_layerwise_inputs_aiu,
     generate_layerwise_output_diffs,
     get_layer_thresholds,
     get_layerwise_outputs_cpu,
@@ -87,17 +87,18 @@ def run_layer_debugging_mode(
     aiu_model_handler.insert_forward_hooks(deepview_mode)
     aiu_model_handler.safe_warmup()
     aiu_model_handler.remove_forward_hooks()
-    with open("model_list.txt", "w") as file:
-        json.dump(
-            {k: list(v) for k, v in aiu_model_handler.layer_list.items()},
-            file,
-        )
-    run_individual_layers(
-        model_path,
-        model_type,
-        aiu_model_handler.layer_list,
-        generate_repro_code_flag,
+    print(f"Saving layer inputs.....")
+
+    print("Capturing layerwise inputs....")
+    inputs_filename = model_path.split("/")[-1] + ".pkl"
+    aiu_model_handler.layer_inputs = generate_layerwise_inputs_aiu(
+        model_type, model_path, deepview_mode, inputs_filename
     )
+    if not aiu_model_handler.layer_inputs:
+        print(f"Input capture failed for {model_path}.")
+        sys.exit(0)
+
+    run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_code_flag)
 
 
 def run_layer_io_divergence_mode(model_path, model_type, deepview_mode):

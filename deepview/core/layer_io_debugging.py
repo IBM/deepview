@@ -13,9 +13,9 @@ from aiu_fms_testing_utils.utils.metrics_utils import (
     tensor_abs_diff,
     tensor_cos_sim,
 )
+import torch
 
 # Local
-from deepview.core.aiu_input_capture import run_model_for_inputs
 from deepview.core.individual_layer_run_with_inputs import run_layers_with_inputs
 from deepview.utils.model_handler import extract_hf_model_id
 
@@ -75,6 +75,13 @@ def get_thresholds_json_file(model_path):
 
 def calc_output_diff(cpu_output_tensor, aiu_output_tensor, metric):
     """Calculates the diff of outputs between the CPU and AIU runs."""
+    if isinstance(cpu_output_tensor, tuple) and isinstance(aiu_output_tensor, tuple):
+        if len(cpu_output_tensor) != len(aiu_output_tensor):
+            raise ValueError(
+                "Tuples must be of the same length for elementwise subtraction."
+            )
+        cpu_output_tensor = torch.cat([t.flatten() for t in cpu_output_tensor])
+        aiu_output_tensor = torch.cat([t.flatten() for t in aiu_output_tensor])
     if metric == "abs_diff":
         return abs_diff_linalg_norm(
             tensor_abs_diff(cpu_output_tensor, aiu_output_tensor).numpy()
@@ -109,35 +116,6 @@ def get_layerwise_outputs_cpu(model_handler):
             sub_layer = "model"
         full_output_dict[sub_layer] = output
     return full_output_dict
-
-
-def generate_layerwise_inputs_aiu(
-    model_type, model_path, deepview_mode, layer_inputs_file
-):
-    layer_inputs = None
-    model_run = run_model_for_inputs(
-        model_type, model_path, deepview_mode, layer_inputs_file
-    )
-    command1 = ["python3", "-c", model_run]
-    process = subprocess.run(
-        command1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
-    )
-    for line in process.stdout:
-        print(line, end="")
-    print(
-        "DEEPVIEW========================================================================\n"
-        f"DEEPVIEW Input capture for {model_path} ran succesfully.\n"
-        "DEEPVIEW========================================================================\n"
-    )
-    if process.returncode != 0:
-        print(
-            "DEEPVIEW========================================================================\n"
-            f"DEEPVIEW \033[1mError running {model_path}\n\033[0m\n"
-            "DEEPVIEW========================================================================\n"
-        )
-    with open(layer_inputs_file, "rb") as f:
-        layer_inputs = pickle.load(f)
-    return layer_inputs
 
 
 def generate_layerwise_output_diffs(

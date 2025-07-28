@@ -237,6 +237,7 @@ class ModelHandler:
                 data_type=torch.float16,
                 fused_weights=False,
             )
+            self.model.base_model.layers = self.model.base_model.layers[:1]
         elif self.model_type == "hf":
             # TODO: we can do specific handling per model class but for now everything apart from CausalLM is treated as AutoModel
             # Note: SentenceTransformer has to be loaded as AutoModel as torch.compile does not work for SentenceTransformer
@@ -357,41 +358,16 @@ class ModelHandler:
     def insert_forward_hooks(self, deepview_mode):
         """Insert forward hooks into the model layers to capture input shapes and types during forward pass."""
         print("Inserting forward hooks.............")
-        if deepview_mode == "layer_debugging":
-            module_instance_names = {}
-
-            def get_instance_names(module, current_depth=0, name="model"):
-                module_instance_names[module] = name
-                parent = name
-                array_layers = all(key.isdigit() for key in module._modules.keys())
-                for subname, child in module._modules.items():
-                    if array_layers:
-                        get_instance_names(
-                            child, current_depth + 1, f"{parent}[{subname}]"
-                        )
-                    else:
-                        get_instance_names(
-                            child, current_depth + 1, f"{parent}.{subname}"
-                        )
-
-            get_instance_names(self.model)
 
         def hook_fn(module, input, output):
             if len(input) == 0:
                 return
-            if deepview_mode == "layer_io_divergence":
-                module._debug_input = input
-                if self.device_to_run == "cpu":
-                    module._debug_output = output
-            if deepview_mode == "layer_debugging":
-                module_instance = module_instance_names.get(module, "unknown")
-                input_shape_str = f"[{', '.join(map(str, input[0].shape))}]"
-                input_type = str(input[0].dtype)
-                self.layer_list[module_instance] = {input_shape_str, input_type}
+            module._debug_input = input
+            if self.device_to_run == "cpu":
+                module._debug_output = output
 
         for name, layer in self.model.named_modules():
-            if name.count(".") <= 3:
-                self.hooks.append(layer.register_forward_hook(hook_fn))
+            self.hooks.append(layer.register_forward_hook(hook_fn))
 
     def remove_forward_hooks(self):
         """Remove all previously registered forward hooks from the model."""
@@ -402,15 +378,29 @@ class ModelHandler:
     def get_layer_io(self):
         """Get all inputs captured using forward hook."""
         print("Extracting layer IO ...")
+        first_two_keys = ["base_model", ""]
         for name, module in self.model.named_modules():
             if hasattr(module, "_debug_input"):
-                self.layer_inputs[name] = tuple(
+                inputs = tuple(
                     v.detach()
                     for v in module._debug_input
                     if isinstance(v, torch.Tensor)
                 )
+                if (self.device_to_run == "aiu") and (
+                    (name == "") or (name == "base_model")
+                ):
+                    shift_len = inputs[0].shape[-1]
+                    shifted_part = self.input_id[:, shift_len:]
+                    result = torch.cat((shifted_part, inputs[0]), dim=1)
+                    self.layer_inputs[name] = (result,) + inputs[1:]
+                else:
+                    self.layer_inputs[name] = inputs
             if hasattr(module, "_debug_output"):
                 self.layer_outputs[name] = module._debug_output
+        self.layer_inputs = {
+            k: self.layer_inputs[k]
+            for k in list(self.layer_inputs.keys())[2:] + first_two_keys
+        }
 
     def clear_layer_io(self):
         """Clear all inputs/outputs captured using forward hook."""

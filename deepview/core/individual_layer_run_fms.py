@@ -13,9 +13,11 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 # *******************************************************************************/
+# Third Party
+import torch
 
 
-def run_layers(modelpath, sub_layer, input_shape, datatype):
+def run_layers(modelpath, sub_layer, str_layer, filename):
     """Generates a minimal Python script to reproduce a layer-level failure in layer debugging mode.
 
     The generated code loads the model, compiles the specified sub-layer using the `sendnn` backend,
@@ -24,17 +26,21 @@ def run_layers(modelpath, sub_layer, input_shape, datatype):
     Args:
         modelpath (str): Path to the model checkpoint.
         sub_layer (str): The sub-layer (module) name to compile and test.
-        input_shape (str): Input tensor shape.
-        datatype (str): Torch datatype for the input tensor (e.g., 'torch.float16').
+        filename (str): Name of pkl file without extension in which inputs to the sublayer are stored.
 
     Returns:
         str: A complete Python script as a string that can be saved and executed to reproduce the failure.
     """
     return f"""
 from fms.models import get_model
+from torch import tensor
+import itertools
 import torch_sendnn
+import inspect
+import pickle
 import torch
 import os
+
 os.environ["COMPILATION_MODE"] = "offline_decoder"
 
 model = get_model(
@@ -51,13 +57,26 @@ model = get_model(
 device = torch.device("cpu")
 model.eval()
 torch.set_grad_enabled(False)
-rand_tensor = torch.rand(tuple({input_shape}))
-data_type = {datatype}
+
 layer = {sub_layer}
+target_layer = layer
+forward_signature = inspect.signature(target_layer.forward)
+expected_args = list(forward_signature.parameters.keys())
+
+with open("{filename}", "rb") as f:
+    layer_inputs_dict = pickle.load(f)
+inputval = layer_inputs_dict["{str_layer}"]
+inputvals = list(inputval)
+if len(inputval) < len(expected_args):
+    zipped_inputs = list(itertools.zip_longest(expected_args, inputval, fillvalue=None))
+else:
+    zipped_inputs = list(zip(expected_args, inputval))
+kwargs = dict(zipped_inputs)
+
+print(layer)
+print(kwargs)
 layer.compile(backend="sendnn", dynamic=False)
-print(f"Warmup of layer {sub_layer}, input shape {input_shape}, data type {datatype}")
 with torch_sendnn.warmup_mode():
-   layer(rand_tensor.to(data_type))
-print(f"Second run of the layer {sub_layer}, input shape {input_shape}, data type {datatype}")
-layer(rand_tensor.to(data_type))
+    result = layer(**kwargs)    
+result = layer(**kwargs)
 """
