@@ -13,42 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 # *******************************************************************************/
-# Standard
-import os
-import pickle
-import subprocess
-
-# Third Party
-import torch
-
-
-def generate_layerwise_inputs_aiu(
-    model_type, model_path, deepview_mode, layer_inputs_file
-):
-    layer_inputs = None
-    model_run = run_model_for_inputs(
-        model_type, model_path, deepview_mode, layer_inputs_file
-    )
-    command1 = ["python3", "-c", model_run]
-    process = subprocess.run(
-        command1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
-    )
-    for line in process.stdout:
-        print(line, end="")
-    print(
-        "DEEPVIEW========================================================================\n"
-        f"DEEPVIEW Input capture for {model_path} ran succesfully.\n"
-        "DEEPVIEW========================================================================\n"
-    )
-    if process.returncode != 0:
-        print(
-            "DEEPVIEW========================================================================\n"
-            f"DEEPVIEW \033[1mError running {model_path}\n\033[0m\n"
-            "DEEPVIEW========================================================================\n"
-        )
-    with open(layer_inputs_file, "rb") as f:
-        layer_inputs = pickle.load(f)
-    return layer_inputs
 
 
 def run_model_for_inputs(model_type, model_path, deepview_mode, layer_inputs_file):

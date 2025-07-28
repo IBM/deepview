@@ -237,7 +237,6 @@ class ModelHandler:
                 data_type=torch.float16,
                 fused_weights=False,
             )
-            self.model.base_model.layers = self.model.base_model.layers[:1]
         elif self.model_type == "hf":
             # TODO: we can do specific handling per model class but for now everything apart from CausalLM is treated as AutoModel
             # Note: SentenceTransformer has to be loaded as AutoModel as torch.compile does not work for SentenceTransformer

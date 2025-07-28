@@ -26,10 +26,10 @@ from torch_sendnn import torch_sendnn
 import torch
 
 # Local
-from deepview.core.aiu_input_capture import generate_layerwise_inputs_aiu
 from deepview.core.layer_debugging import run_individual_layers
 from deepview.core.layer_io_debugging import (
     SUCCESS,
+    generate_layerwise_inputs_aiu,
     generate_layerwise_output_diffs,
     get_layer_thresholds,
     get_layerwise_outputs_cpu,
@@ -86,17 +86,17 @@ def run_layer_debugging_mode(
     aiu_model_handler.prep_input()
     aiu_model_handler.insert_forward_hooks(deepview_mode)
     aiu_model_handler.safe_warmup()
-    aiu_model_handler.remove_forward_hooks()
-    print(f"Saving layer inputs.....")
 
-    print("Capturing layerwise inputs....")
+    print(f"Saving layer inputs.....")
+    aiu_model_handler.get_layer_io()
+    layer_inputs = aiu_model_handler.layer_inputs
     inputs_filename = model_path.split("/")[-1] + ".pkl"
-    aiu_model_handler.layer_inputs = generate_layerwise_inputs_aiu(
-        model_type, model_path, deepview_mode, inputs_filename
-    )
-    if not aiu_model_handler.layer_inputs:
-        print(f"Input capture failed for {model_path}.")
-        sys.exit(0)
+    with open(f"{inputs_filename}", "wb") as f:
+        pickle.dump(layer_inputs, f)
+    print(f"Saved inputs to {inputs_filename}")
+
+    aiu_model_handler.remove_forward_hooks()
+    aiu_model_handler.clear_layer_io()
 
     run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_code_flag)
 

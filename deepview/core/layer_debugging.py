@@ -30,7 +30,7 @@ def run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_cod
     Stops at the first failure and optionally generates a minimal reproducible script for debugging.
 
     Args:
-
+        aiu_model_handler (obj): Model handler object.
         generate_repro_code_flag (bool): If True, generates a minimal repro script when a layer fails.
     """
     model = aiu_model_handler.model
@@ -45,8 +45,6 @@ def run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_cod
             sub_layer = "model"
         if sub_layer in layers_done:
             continue
-        # if sub_layer != "model" and sub_layer != "model.base_model":
-        # if sub_layer != "model.base_model":
         layer_run = run_layers(
             aiu_model_handler.model_path, sub_layer, str_layer, inputs_filename
         )
@@ -74,35 +72,29 @@ def run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_cod
                 f"DEEPVIEW Successfully ran {sub_layer}\n"
                 "DEEPVIEW========================================================================\n"
             )
-
         layers_done.append(sub_layer)
 
-    # if failed_layer != "No failed layer":
-    #     if generate_repro_code_flag:
-    #         generate_repro_code_layer_debugging(
-    #             model_path, model_type, failed_layer, input_shape, datatype
-    #         )
+    if failed_layer != "No failed layer":
+        if generate_repro_code_flag:
+            generate_repro_code_layer_debugging(
+                aiu_model_handler, failed_layer, str_layer
+            )
 
 
-def generate_repro_code_layer_debugging(
-    model_path, model_type, layer, input_str, dtype_str
-):
+def generate_repro_code_layer_debugging(aiu_model_handler, failed_layer, str_layer):
     """Generates and saves layer-level repro script for debugging failures in layer_debugging mode.
 
     This function creates a standalone Python script that reproduces the issue for the specified layer
     by compiling and running it with given input shape and data type.
 
     Args:
-        model_path (str): Path to the model checkpoint.
-        model_type (str): Model type, either 'hf' (HuggingFace) or 'fms' (Foundation Model Stack).
+        aiu_model_handler (obj): Model handler object.
         layer (str): Python expression referring to the layer where the failure occurred.
-        input_str (str): String representation of the input tensor shape (e.g., '(1, 64, 64)').
-        dtype_str (str): PyTorch data type as a string (e.g., 'torch.float32').
     """
-    if model_type == "fms":
+    if aiu_model_handler.model_type == "fms":
         # Local
         from deepview.core.individual_layer_run_fms import run_layers
-    elif model_type == "hf":
+    elif aiu_model_handler.model_type == "hf":
         # Local
         from deepview.core.individual_layer_run_hf import run_layers
     else:
@@ -111,11 +103,19 @@ def generate_repro_code_layer_debugging(
         )
         return
 
-    dst_repro = f"{layer.split('.')[-1]}_repro_code.py"
+    dst_repro = f"{failed_layer.split('.')[-1]}_repro_code.py"
     try:
         Path(dst_repro).touch()
         with open(dst_repro, "w") as f:
-            f.write(run_layers(model_path, layer, input_str, dtype_str))
+            inputs_filename = aiu_model_handler.model_path.split("/")[-1] + ".pkl"
+            f.write(
+                run_layers(
+                    aiu_model_handler.model_path,
+                    failed_layer,
+                    str_layer,
+                    inputs_filename,
+                )
+            )
         print(f"The repro code is stored in file {dst_repro}\n")
     except Exception as e:
         print(f"Error: Repro code generation : {e}")

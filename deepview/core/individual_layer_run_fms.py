@@ -73,8 +73,6 @@ else:
     zipped_inputs = list(zip(expected_args, inputval))
 kwargs = dict(zipped_inputs)
 
-print(layer)
-print(kwargs)
 layer.compile(backend="sendnn", dynamic=False)
 with torch_sendnn.warmup_mode():
     result = layer(**kwargs)    
