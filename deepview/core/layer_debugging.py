@@ -50,15 +50,15 @@ def run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_cod
         )
 
         command1 = ["python3", "-c", layer_run]
+        print(
+            "DEEPVIEW========================================================================\n"
+            f"DEEPVIEW Running layer {sub_layer}."
+        )
         process = subprocess.run(
             command1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
         )
         for line in process.stdout:
             print(line, end="")
-        print(
-            "DEEPVIEW========================================================================\n"
-            f"DEEPVIEW Layer is {sub_layer}."
-        )
         if process.returncode != 0:
             print(
                 "DEEPVIEW========================================================================\n"
@@ -89,7 +89,7 @@ def generate_repro_code_layer_debugging(aiu_model_handler, failed_layer, str_lay
 
     Args:
         aiu_model_handler (obj): Model handler object.
-        layer (str): Python expression referring to the layer where the failure occurred.
+        failed_layer (str): Python expression referring to the layer where the failure occurred.
     """
     if aiu_model_handler.model_type == "fms":
         # Local
@@ -102,7 +102,7 @@ def generate_repro_code_layer_debugging(aiu_model_handler, failed_layer, str_lay
             "DEEPVIEW \033[1mError running individual layers - only fms and hf models area supported\n\033[0m"
         )
         return
-
+    print(failed_layer, str_layer)
     dst_repro = f"{failed_layer.split('.')[-1]}_repro_code.py"
     try:
         Path(dst_repro).touch()
