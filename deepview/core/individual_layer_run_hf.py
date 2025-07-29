@@ -34,6 +34,9 @@ from fms.models import get_model
 from deepview.utils.model_handler import ModelHandler, MODEL_CLASSES
 
 import torch_sendnn
+import itertools
+import pickle
+import inspect
 import torch
 import os
 os.environ["COMPILATION_MODE"] = "offline_decoder"
@@ -41,18 +44,19 @@ os.environ["COMPILATION_MODE"] = "offline_decoder"
 model_handler = ModelHandler(
     model_type='hf',
     model_path='{modelpath}',
-    prompt='What is the capital of India?',
+    device="aiu",
+    prompt='What is the capital of Egypt?',
 )
 
-model_class = model_handler._infer_model_class({modelpath})
-model_class = MODEL_CLASSES[self.model_class]
+model_handler.model_class = model_handler._infer_model_class('{modelpath}')
+model_class = MODEL_CLASSES[model_handler.model_class]
+
 if model_handler.model_class == "causal_lm":
-    model_handler.model = model_class.from_pretrained({modelpath})
+    model_handler.model = model_class.from_pretrained('{modelpath}')
 else:
-    model_handler.model = AutoModel.from_pretrained({modelpath})
+    model_handler.model = AutoModel.from_pretrained('{modelpath}')
 
 model = model_handler.model
-device = torch.device("cpu")
 model.eval()
 torch.set_grad_enabled(False)
 
@@ -61,9 +65,9 @@ target_layer = layer
 forward_signature = inspect.signature(target_layer.forward)
 expected_args = list(forward_signature.parameters.keys())
 
+
 with open("{filename}", "rb") as f:
     layer_inputs_dict = pickle.load(f)
-
 inputval = layer_inputs_dict["{sub_layer}"]
 inputvals = list(inputval)
 if len(inputval) < len(expected_args):

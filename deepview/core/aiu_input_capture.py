@@ -15,7 +15,7 @@
 # *******************************************************************************/
 
 
-def run_model_for_inputs(model_type, model_path, deepview_mode, layer_inputs_file):
+def run_model_for_inputs(model_type, model_path, layer_inputs_file):
     """Generates a minimal Python script to capture per layer inputs in the
       layer io divergence mode for AIU run of FMS models.
 
@@ -25,7 +25,6 @@ def run_model_for_inputs(model_type, model_path, deepview_mode, layer_inputs_fil
     Args:
         model_type (str): Model type (FMS/HF)
         modelpath (str): Path to the model checkpoint.
-        deepview_mode (str): In which mode deepview is running.
         layer_inputs_file (str): Name of pkl file with extension in which inputs are to be stored.
 
     Returns:
@@ -49,7 +48,7 @@ aiu_model_handler = ModelHandler(
                     
 aiu_model_handler.load_and_compile_model()
 aiu_model_handler.prep_input()
-aiu_model_handler.insert_forward_hooks("{deepview_mode}")
+aiu_model_handler.insert_forward_hooks()
 aiu_model_handler.warmup()
 
 print("Reached second infer call post compile.....")

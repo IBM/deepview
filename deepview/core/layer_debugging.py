@@ -5,9 +5,6 @@ import pickle
 import re
 import subprocess
 
-# Local
-from deepview.core.individual_layer_run_fms import run_layers
-
 
 def run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_code_flag):
     """Runs each unique layer of the model individually in layer_debugging mode.
@@ -23,6 +20,18 @@ def run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_cod
     model = aiu_model_handler.model
     layers_done = []
     failed_layer = "No failed layer"
+
+    if aiu_model_handler.model_type == "fms":
+        # Local
+        from deepview.core.individual_layer_run_fms import run_layers
+    elif aiu_model_handler.model_type == "hf":
+        # Local
+        from deepview.core.individual_layer_run_hf import run_layers
+    else:
+        print(
+            "DEEPVIEW \033[1mError running individual layers - only fms and hf models area supported\n\033[0m"
+        )
+        return
 
     print("Running each layer individually........")
     for layer in aiu_model_handler.layer_inputs.keys():

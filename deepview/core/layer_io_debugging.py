@@ -101,14 +101,10 @@ def get_layerwise_outputs_cpu(model_handler):
     return full_output_dict
 
 
-def generate_layerwise_inputs_aiu(
-    model_type, model_path, deepview_mode, layer_inputs_file
-):
+def generate_layerwise_inputs_aiu(model_type, model_path, layer_inputs_file):
     """Generates inputs per layer for AIU run by using hooks."""
     layer_inputs = None
-    model_run = run_model_for_inputs(
-        model_type, model_path, deepview_mode, layer_inputs_file
-    )
+    model_run = run_model_for_inputs(model_type, model_path, layer_inputs_file)
     command1 = ["python3", "-c", model_run]
     process = subprocess.run(
         command1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True

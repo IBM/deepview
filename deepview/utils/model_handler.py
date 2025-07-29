@@ -96,15 +96,18 @@ def validate_model_id(model_path: str) -> bool:
 
 def convert_attr_path(attr_path):
     """Converts the name of the modules to match the format in thresholds file."""
-    attr_path = "model." + attr_path
+    if attr_path:
+        attr_path = "model." + attr_path
 
-    def replace_numeric_attr(match):
-        number = match.group(1)
-        tail = match.group(2)
-        return f"[{number}]{tail}"
+        def replace_numeric_attr(match):
+            number = match.group(1)
+            tail = match.group(2)
+            return f"[{number}]{tail}"
 
-    pattern = re.compile(r"\.(\d+)(\.|$)")
-    converted = pattern.sub(replace_numeric_attr, attr_path)
+        pattern = re.compile(r"\.(\d+)(\.|$)")
+        converted = pattern.sub(replace_numeric_attr, attr_path)
+    else:
+        converted = "model"
     return converted
 
 
@@ -371,7 +374,7 @@ class ModelHandler:
         """Perform inference on the prepared input based on the model type."""
         return self._generate_output(False)
 
-    def insert_forward_hooks(self, deepview_mode):
+    def insert_forward_hooks(self):
         """Insert forward hooks into the model layers to capture input shapes and types during forward pass."""
         print("Inserting forward hooks.............")
 
@@ -396,10 +399,7 @@ class ModelHandler:
         print("Extracting layer IO ...")
         for module_name, module in self.model.named_modules():
             ## Modifying keys to match the layer names which can be used to run the layers later.
-            if module_name:
-                name = convert_attr_path(module_name)
-            else:
-                name = "model"
+            name = convert_attr_path(module_name)
             ## Capturing inputs
             if hasattr(module, "_debug_input"):
                 inputs = tuple(
@@ -424,11 +424,12 @@ class ModelHandler:
         ## The following lines basically rearrange the keys of the layer inputs dict to place the model and base_model layers in the end, such that the
         ## layers are run before those two. This is done in order to ensure that the offending layer can be captured. Otherwise, if we run model/base_model
         ## first, if there is any offending layer, the whole thing fails without giving any idea of the offending layer.
-        first_two_keys = ["model.base_model", "model"]
-        self.layer_inputs = {
-            k: self.layer_inputs[k]
-            for k in list(self.layer_inputs.keys())[2:] + first_two_keys
-        }
+        if self.model_type == "fms":
+            first_two_keys = ["model.base_model", "model"]
+            self.layer_inputs = {
+                k: self.layer_inputs[k]
+                for k in list(self.layer_inputs.keys())[2:] + first_two_keys
+            }
 
     def clear_layer_io(self):
         """Clear all inputs/outputs captured using forward hook."""
