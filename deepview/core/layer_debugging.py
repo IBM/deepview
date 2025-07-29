@@ -9,20 +9,6 @@ import subprocess
 from deepview.core.individual_layer_run_fms import run_layers
 
 
-def convert_attr_path(attr_path):
-    """Converts the name of the modules to match the format in thresholds file."""
-    attr_path = "model." + attr_path
-
-    def replace_numeric_attr(match):
-        number = match.group(1)
-        tail = match.group(2)
-        return f"[{number}]{tail}"
-
-    pattern = re.compile(r"\.(\d+)(\.|$)")
-    converted = pattern.sub(replace_numeric_attr, attr_path)
-    return converted
-
-
 def run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_code_flag):
     """Runs each unique layer of the model individually in layer_debugging mode.
 
@@ -31,6 +17,7 @@ def run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_cod
 
     Args:
         aiu_model_handler (obj): Model handler object.
+        inputs_filename (str): Name of the file storing the individual layer inputs.
         generate_repro_code_flag (bool): If True, generates a minimal repro script when a layer fails.
     """
     model = aiu_model_handler.model
@@ -38,21 +25,15 @@ def run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_cod
     failed_layer = "No failed layer"
 
     print("Running each layer individually........")
-    for str_layer in aiu_model_handler.layer_inputs.keys():
-        if str_layer:
-            sub_layer = convert_attr_path(str_layer)
-        else:
-            sub_layer = "model"
-        if sub_layer in layers_done:
+    for layer in aiu_model_handler.layer_inputs.keys():
+        if layer in layers_done:
             continue
-        layer_run = run_layers(
-            aiu_model_handler.model_path, sub_layer, str_layer, inputs_filename
-        )
+        layer_run = run_layers(aiu_model_handler.model_path, layer, inputs_filename)
 
         command1 = ["python3", "-c", layer_run]
         print(
             "DEEPVIEW========================================================================\n"
-            f"DEEPVIEW Running layer {sub_layer}."
+            f"DEEPVIEW Running layer {layer}."
         )
         process = subprocess.run(
             command1, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
@@ -62,26 +43,24 @@ def run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_cod
         if process.returncode != 0:
             print(
                 "DEEPVIEW========================================================================\n"
-                f"DEEPVIEW \033[1mError running {sub_layer}\n\033[0m"
+                f"DEEPVIEW \033[1mError running {layer}\n\033[0m"
                 "DEEPVIEW========================================================================\n"
             )
-            failed_layer = sub_layer
+            failed_layer = layer
             break
         else:
             print(
-                f"DEEPVIEW Successfully ran {sub_layer}\n"
+                f"DEEPVIEW Successfully ran {layer}\n"
                 "DEEPVIEW========================================================================\n"
             )
-        layers_done.append(sub_layer)
+        layers_done.append(layer)
 
     if failed_layer != "No failed layer":
         if generate_repro_code_flag:
-            generate_repro_code_layer_debugging(
-                aiu_model_handler, failed_layer, str_layer
-            )
+            generate_repro_code_layer_debugging(aiu_model_handler, failed_layer)
 
 
-def generate_repro_code_layer_debugging(aiu_model_handler, failed_layer, str_layer):
+def generate_repro_code_layer_debugging(aiu_model_handler, failed_layer):
     """Generates and saves layer-level repro script for debugging failures in layer_debugging mode.
 
     This function creates a standalone Python script that reproduces the issue for the specified layer
@@ -89,7 +68,7 @@ def generate_repro_code_layer_debugging(aiu_model_handler, failed_layer, str_lay
 
     Args:
         aiu_model_handler (obj): Model handler object.
-        failed_layer (str): Python expression referring to the layer where the failure occurred.
+        failed_layer (str): Python string referring to the layer where the failure occurred.
     """
     if aiu_model_handler.model_type == "fms":
         # Local
@@ -102,7 +81,6 @@ def generate_repro_code_layer_debugging(aiu_model_handler, failed_layer, str_lay
             "DEEPVIEW \033[1mError running individual layers - only fms and hf models area supported\n\033[0m"
         )
         return
-    print(failed_layer, str_layer)
     dst_repro = f"{failed_layer.split('.')[-1]}_repro_code.py"
     try:
         Path(dst_repro).touch()
@@ -112,7 +90,6 @@ def generate_repro_code_layer_debugging(aiu_model_handler, failed_layer, str_lay
                 run_layers(
                     aiu_model_handler.model_path,
                     failed_layer,
-                    str_layer,
                     inputs_filename,
                 )
             )

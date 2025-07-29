@@ -17,8 +17,8 @@
 import torch
 
 
-def run_layers(modelpath, sub_layer, str_layer, filename):
-    """Generates a minimal Python script to reproduce a layer-level failure in layer debugging mode.
+def run_layers(modelpath, sub_layer, filename):
+    """Generates a minimal Python script to reproduce a layer-level failure in layer debugging mode for FMS models.
 
     The generated code loads the model, compiles the specified sub-layer using the `sendnn` backend,
     and runs inference twice to simulate lazy compilation and execution.
@@ -26,7 +26,7 @@ def run_layers(modelpath, sub_layer, str_layer, filename):
     Args:
         modelpath (str): Path to the model checkpoint.
         sub_layer (str): The sub-layer (module) name to compile and test.
-        filename (str): Name of pkl file without extension in which inputs to the sublayer are stored.
+        filename (str): Name of pkl file with extension in which inputs to the sublayer are stored.
 
     Returns:
         str: A complete Python script as a string that can be saved and executed to reproduce the failure.
@@ -66,7 +66,7 @@ expected_args = list(forward_signature.parameters.keys())
 with open("{filename}", "rb") as f:
     layer_inputs_dict = pickle.load(f)
     
-inputval = layer_inputs_dict["{str_layer}"]
+inputval = layer_inputs_dict["{sub_layer}"]
 inputvals = list(inputval)
 if len(inputval) < len(expected_args):
     zipped_inputs = list(itertools.zip_longest(expected_args, inputval, fillvalue=None))
@@ -75,7 +75,10 @@ else:
 kwargs = dict(zipped_inputs)
 
 layer.compile(backend="sendnn", dynamic=False)
+
 with torch_sendnn.warmup_mode():
-    result = layer(**kwargs)    
+    result = layer(**kwargs) 
+print(f"Warmup for {sub_layer} completed")
 result = layer(**kwargs)
+print(f"Second run for {sub_layer} completed")
 """
