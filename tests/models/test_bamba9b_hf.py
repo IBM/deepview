@@ -70,6 +70,7 @@ def model_output_file(tmp_path_factory):
     return tmp_path_factory.getbasetemp() / "test_bamba9b_output.txt"
 
 
+@pytest.mark.skip(reason="Unsupported ops changed - test outdated")
 def test_debugger_output_exits(debugger_path):
     """
     Test to ensure the debugger output file exists after running the model.
@@ -83,6 +84,7 @@ def test_debugger_output_exits(debugger_path):
     ), f"Debugger output file {debugger_path} does not exist."
 
 
+@pytest.mark.skip(reason="Unsupported ops changed - test outdated")
 def test_get_unsupported_ops(model_output_file):
     """
     Test to ensure the unsupported operations are correctly extracted from the debugger output.

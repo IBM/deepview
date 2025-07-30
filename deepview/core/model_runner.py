@@ -22,7 +22,7 @@ import pickle
 import sys
 
 # Third Party
-from torch_sendnn import torch_sendnn
+from torch_sendnn import backends
 import torch
 
 # Local
@@ -196,7 +196,7 @@ def run_model(
         tee = Tee(sys.stdout, f)
         with redirect_stdout(tee), redirect_stderr(tee):
             if generate_repro_code_flag:
-                torch_sendnn.preserve_lazyhandle()
+                backends.preserve_lazyhandle()
 
             torch.set_default_dtype(torch.float16)
 
