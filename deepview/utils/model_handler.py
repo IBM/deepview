@@ -269,8 +269,6 @@ class ModelHandler:
             else:
                 self.model = AutoModel.from_pretrained(self.model_path)
 
-        self.model.base_model.layers = self.model.base_model.layers[:1]
-
         print(f"Loading complete, took {time.time() - start:.3f}s")
 
         self.model.eval()

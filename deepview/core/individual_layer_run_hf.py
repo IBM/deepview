@@ -70,7 +70,9 @@ with open("{filename}", "rb") as f:
     layer_inputs_dict = pickle.load(f)
 inputval = layer_inputs_dict["{sub_layer}"]
 inputvals = list(inputval)
+
 if len(inputval) < len(expected_args):
+    print("WARNING: Missing values of input arguments padded with None.")
     zipped_inputs = list(itertools.zip_longest(expected_args, inputval, fillvalue=None))
 else:
     zipped_inputs = list(zip(expected_args, inputval))
