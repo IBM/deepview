@@ -74,6 +74,9 @@ def generate_reproduction(lazy_handle_id, node_name, target_name, args):
     op_call = "torch.ops." + target_name.replace("::", ".") + "(" + v_full_set + ")"
 
     code = f"""
+import os
+os.environ["TORCH_SENDNN_LOG"] = "DEBUG"
+
 import torch
 from torch_sendnn import torch_sendnn
 
