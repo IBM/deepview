@@ -421,10 +421,11 @@ class ModelHandler:
         ## first, if there is any offending layer, the whole thing fails without giving any idea of the offending layer.
         if self.model_type == "fms":
             first_two_keys = ["model.base_model", "model"]
-            self.layer_inputs = {
-                k: self.layer_inputs[k]
-                for k in list(self.layer_inputs.keys())[2:] + first_two_keys
-            }
+            if "model.base_model" in self.layer_inputs.keys():
+                self.layer_inputs = {
+                    k: self.layer_inputs[k]
+                    for k in list(self.layer_inputs.keys())[2:] + first_two_keys
+                }
 
     def clear_layer_io(self):
         """Clear all inputs/outputs captured using forward hook."""
