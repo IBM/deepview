@@ -13,24 +13,22 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 # *******************************************************************************/
-# Third Party
-import torch
 
 
-def run_model_for_inputs(model_type, model_path, deepview_mode, layer_inputs_file):
-    """Generates a minimal Python script to generate per layer outputs on precaptured inputs in the
-      layer io divergence mode.
+def run_model_for_inputs(model_type, model_path, layer_inputs_file):
+    """Generates a minimal Python script to capture per layer inputs in the
+      layer io divergence mode for AIU run of FMS models.
 
-    The generated code loads the model, compiles the specified sub-layer using the `sendnn` backend,
-    and runs inference twice to simulate lazy compilation and execution.
+    The generated code loads the model, compiles it using the `sendnn` backend,
+    and runs inference twice to simulate lazy compilation and execution. It uses hooks to capture the inputs into a dict.
 
     Args:
+        model_type (str): Model type (FMS/HF)
         modelpath (str): Path to the model checkpoint.
-        sub_layer (str): The sub-layer (module) name to compile and test.
-        filename (str): Name of pkl file without extension in which inputs to the sublayer are stored.
+        layer_inputs_file (str): Name of pkl file with extension in which inputs are to be stored.
 
     Returns:
-        str: A complete Python script as a string that can be saved and executed to reproduce the failure.
+        str: A complete Python script as a string that can be executed to generate the inputs.
     """
     return f"""
 from deepview.utils.model_handler import ModelHandler
@@ -47,9 +45,10 @@ aiu_model_handler = ModelHandler(
                         device="aiu",
                         prompt="What is the capital of Egypt?",
                     )
+                    
 aiu_model_handler.load_and_compile_model()
 aiu_model_handler.prep_input()
-aiu_model_handler.insert_forward_hooks("{deepview_mode}")
+aiu_model_handler.insert_forward_hooks()
 aiu_model_handler.warmup()
 
 print("Reached second infer call post compile.....")
