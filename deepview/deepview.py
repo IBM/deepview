@@ -77,11 +77,10 @@ def main():
 
     args = parser.parse_args()
 
-    if args.mode not in ["unsupported_op"] and args.model_type == "hf":
-        print(f"{args.mode} is currently supported only for FMS models.")
-        sys.exit(1)
-
-    if args.mode not in ["unsupported_op"] and args.model_type == "hf":
+    if (
+        args.mode not in ["unsupported_op", "layer_debugging"]
+        and args.model_type == "hf"
+    ):
         print(f"{args.mode} is currently supported only for FMS models.")
         sys.exit(1)
 

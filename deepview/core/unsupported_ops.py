@@ -74,6 +74,9 @@ def generate_reproduction(lazy_handle_id, node_name, target_name, args):
     op_call = "torch.ops." + target_name.replace("::", ".") + "(" + v_full_set + ")"
 
     code = f"""
+import os
+os.environ["TORCH_SENDNN_LOG"] = "DEBUG"
+
 import torch
 from torch_sendnn import torch_sendnn
 
@@ -194,10 +197,13 @@ def process_unsupported_ops(show_details_flag, generate_repro_code_flag):
             "DEEPVIEW========================================================================\n\n\n"
         )
     else:
+        unique_unsupported_ops = [
+            "\033[1m" + op + "\033[0m" for op in unique_unsupported_ops
+        ]
         unique_unsupported_ops_str = "\n".join(sorted(unique_unsupported_ops))
         print(
             "DEEPVIEW========================================================================\n"
             "DEEPVIEW Unsupported operations list:\n"
-            f"\033[1m{unique_unsupported_ops_str}\033[0m\n"
+            f"{add_prefix_to_string(unique_unsupported_ops_str)}\n"
             "DEEPVIEW========================================================================\n\n\n"
         )
