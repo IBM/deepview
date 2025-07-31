@@ -251,7 +251,6 @@ class ModelHandler:
                 self.model = AutoModel.from_pretrained(self.model_path)
 
         print(f"Loading complete, took {time.time() - start:.3f}s")
-        self.model.base_model.layers  = self.model.base_model.layers[:1]
 
         self.model.eval()
         torch.set_grad_enabled(False)
