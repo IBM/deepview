@@ -411,7 +411,7 @@ class ModelHandler:
                     shift_len = inputs[0].shape[-1]
                     shifted_part = self.input_id[:, shift_len:]
                     inputs[0] = torch.cat((shifted_part, inputs[0]), dim=1)
-
+                    ## For base_model layer, input is padded with zeros in the front to make length 64.
                     if name == "model.base_model" and len(inputs) > 1:
                         current_width = inputs[1].shape[-1]
                         pad_len = 64 - current_width
