@@ -21,7 +21,7 @@ def run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_cod
     layers_done = []
     failed_layer = "No failed layer"
 
-    if aiu_model_handler.model_type == "fms":
+    if "fms" in aiu_model_handler.model_type:
         # Local
         from deepview.core.individual_layer_run_fms import run_layers
     elif aiu_model_handler.model_type == "hf":

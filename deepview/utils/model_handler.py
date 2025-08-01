@@ -245,7 +245,7 @@ class ModelHandler:
         print("Loading model")
         start = time.time()
 
-        if self.model_type == "fms":
+        if "fms" in self.model_type:
             # This get_model call assumes locally downloaded weights
             self.model = get_model(
                 "hf_pretrained",
@@ -307,6 +307,22 @@ class ModelHandler:
             self.input_id = self.tokenizer(
                 [self.prompt], padding=True, truncation=True, return_tensors="pt"
             )
+        elif self.model_type == "fms_vision":
+            from transformers import LlavaNextProcessor
+            from PIL import Image
+            import requests
+            
+            processor = LlavaNextProcessor.from_pretrained(self.model_path)
+            url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/pipeline-cat-chonk.jpeg"
+            image = Image.open(requests.get(url, stream=True).raw)
+            inputs = "<|system|>\nA chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions.\n<|user|>\n<image>\nWhat animal is shown in this image?\n<|assistant|>\n"
+            self.inputs = processor(text=inputs, images=image, return_tensors="pt").to(self.device)
+            self.input_id = self.inputs["input_ids"]
+            self.inputs.pop("input_ids")
+            self.input_id, padding_kwargs = pad_input_ids(self.input_id, min_pad_length=0)
+            self.inputs["mask"] = padding_kwargs["mask"].to(self.device)
+            self.inputs["position_ids"] = padding_kwargs["position_ids"].to(self.device)
+            self.input_id = self.input_id.to(self.device)            
 
     def _generate_output(self, is_warmup):
         """Calling generate function based on model_type."""
@@ -355,6 +371,20 @@ class ModelHandler:
                 )[0]
             else:
                 result = self.model(**self.input_id)
+        elif self.model_type == "fms_vision":
+            #import pdb
+            #pdb.set_trace()
+            result = generate(
+                self.model,
+                self.input_id,
+                max_new_tokens=self.max_new_tokens,
+                use_cache=True,
+                do_sample=False,
+                #max_seq_len=self.model.config.text_config.max_expected_seq_len,
+                max_seq_len = self.input_id.shape[1] + self.max_new_tokens,
+                extra_kwargs=self.inputs,
+                prepare_model_inputs_hook=self.model.prepare_inputs_for_generation,
+            )            
         return result
 
     def safe_warmup(self):
@@ -439,6 +469,12 @@ class ModelHandler:
             self.layer_inputs = {
                 k: self.layer_inputs[k] for k in layers[2:] + first_two_keys
             }
+        elif self.model_type == "fms_vision":
+            #TODO: change logic to drop vision components altogether
+            keys_to_relocate = ["model.language_model.base_model", "model.language_model", "model.vision_tower.base_model", "model.vision_tower", "model"]
+            for key in keys_to_relocate:
+                value = self.layer_inputs.pop(key)
+                self.layer_inputs[key] = value
 
     def clear_layer_io(self):
         """Clear all inputs/outputs captured using forward hook."""

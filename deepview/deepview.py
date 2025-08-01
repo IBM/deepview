@@ -36,10 +36,10 @@ def main():
 
     parser.add_argument(
         "--model_type",
-        choices=["fms", "hf"],
+        choices=["fms", "hf", "fms_vision"],
         required=True,
         default="fms",
-        help="The type of model you want to debug - fms or hf.",
+        help="The type of model you want to debug - fms or hf or fms_vision.",
     )
 
     parser.add_argument(
