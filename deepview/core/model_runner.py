@@ -22,7 +22,6 @@ import pickle
 import sys
 
 # Third Party
-from torch_sendnn import torch_sendnn
 import torch
 
 # Local
@@ -196,9 +195,6 @@ def run_model(
     with open(logfile, "a") as f:
         tee = Tee(sys.stdout, f)
         with redirect_stdout(tee), redirect_stderr(tee):
-            if generate_repro_code_flag:
-                torch_sendnn.preserve_lazyhandle()
-
             torch.set_default_dtype(torch.float16)
 
             if deepview_mode == "unsupported_op":
