@@ -35,7 +35,7 @@ To run our current e2e tests run it sequentially in the following order:
 pytest tests/models/test_bamba9b_hf.py
 ```
 ```bash
-pytest tests/models/mpnetV2_hf.py
+pytest tests/models/test_mpnetV2_hf.py
 ```
 
 ```bash
