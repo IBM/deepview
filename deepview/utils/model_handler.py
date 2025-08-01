@@ -407,10 +407,19 @@ class ModelHandler:
                 if (self.device_to_run == "aiu") and (
                     (name == "model") or (name == "model.base_model")
                 ):
+                    inputs = list(inputs)
                     shift_len = inputs[0].shape[-1]
                     shifted_part = self.input_id[:, shift_len:]
-                    result = torch.cat((shifted_part, inputs[0]), dim=1)
-                    self.layer_inputs[name] = (result,) + inputs[1:]
+                    inputs[0] = torch.cat((shifted_part, inputs[0]), dim=1)
+                    ## For base_model layer, input is padded with zeros in the front to make length 64.
+                    if name == "model.base_model" and len(inputs) > 1:
+                        current_width = inputs[1].shape[-1]
+                        pad_len = 64 - current_width
+                        padding = inputs[1].new_zeros(1, pad_len)
+                        new_tensor = torch.cat((padding, inputs[1]), dim=1)
+                        inputs[1] = new_tensor
+
+                    self.layer_inputs[name] = tuple(inputs)
                 else:
                     self.layer_inputs[name] = inputs
             ## Capturing outputs
