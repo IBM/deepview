@@ -40,8 +40,8 @@ def debugger_path(tmp_path_factory):
     """
     args = argparse.Namespace(
         model_type="fms",
-        model="ibm-granite/granite-3.2-2b-instruct",
-        output_file=tmp_path_factory.getbasetemp() / "test_granite2b_debugger.txt",
+        model="ibm-granite/granite-3.3-8b-base",
+        output_file=tmp_path_factory.getbasetemp() / "test_granite8b_debugger.txt",
         mode="layer_debugging",
         show_details=False,
         generate_repro_code=False,
@@ -74,7 +74,7 @@ def test_debugger_output_exits(debugger_path):
     ), f"Debugger output file {debugger_path} does not exist."
 
 
-@pytest.mark.skip(reason="Unsupported mode - this model has unsupported ops, so layer debugging is still unsupported.")
+@pytest.mark.skip(reason="Unsupported ops changed - test outdated")
 def test_layer_debugging_mode(model_output_file):
     """
     Test to ensure the layer debugging mode is correctly set in the debugger output.
@@ -86,6 +86,6 @@ def test_layer_debugging_mode(model_output_file):
         encoding="utf-8"
     ), "Expected Running each layer individually"
     assert (
-        "DEEPVIEW \x1b[1mError running model.base_model.layers[0].ln, [1, 1, 2048], torch.float16\n"
+        "DeepView run completed"
         in model_output_file.read_text(encoding="utf-8")
-    ), "Expected Error running model.base_model.layers[0].ln"
+    ), "Expected run successfully"
