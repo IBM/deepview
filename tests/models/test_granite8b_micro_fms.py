@@ -72,7 +72,7 @@ def test_debugger_output_exits(debugger_path):
     """
     assert (
         debugger_path.exists()
-        ), f"Debugger output file {debugger_path} does not exist."
+    ), f"Debugger output file {debugger_path} does not exist."
 
 
 def test_layer_debugging_mode(model_output_file):
