@@ -69,12 +69,14 @@ def test_debugger_output_exits(debugger_path):
     Args:
         debugger_path: A fixture that runs the model and generates the output file.
     """
-    assert (
-        debugger_path.exists()
-    ), f"Debugger output file {debugger_path} does not exist."
+    assert debugger_path.exists(), (
+        f"Debugger output file {debugger_path} does not exist."
+    )
 
 
-@pytest.mark.skip(reason="Unsupported mode - this model has unsupported ops, so layer debugging is still unsupported.")
+@pytest.mark.skip(
+    reason="Unsupported mode - this model has unsupported ops, so layer debugging is still unsupported."
+)
 def test_layer_debugging_mode(model_output_file):
     """
     Test to ensure the layer debugging mode is correctly set in the debugger output.

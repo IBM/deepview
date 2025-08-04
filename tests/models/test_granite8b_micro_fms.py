@@ -41,7 +41,8 @@ def debugger_path(tmp_path_factory):
     args = argparse.Namespace(
         model_type="fms",
         model="/home/senuser/models/tiny-models/granite-3.3-8b-layers-3-step-100000",
-        output_file=tmp_path_factory.getbasetemp() / "test_granite8b_micro_debugger.txt",
+        output_file=tmp_path_factory.getbasetemp()
+        / "test_granite8b_micro_debugger.txt",
         mode="layer_debugging",
         show_details=False,
         generate_repro_code=False,
@@ -69,9 +70,9 @@ def test_debugger_output_exits(debugger_path):
     Args:
         debugger_path: A fixture that runs the model and generates the output file.
     """
-    assert (
-        debugger_path.exists()
-    ), f"Debugger output file {debugger_path} does not exist."
+    assert debugger_path.exists(), (
+        f"Debugger output file {debugger_path} does not exist."
+    )
 
 
 @pytest.mark.skip(reason="Unsupported ops changed - test outdated")
@@ -85,7 +86,6 @@ def test_layer_debugging_mode(model_output_file):
     assert "Running each layer individually" in model_output_file.read_text(
         encoding="utf-8"
     ), "Expected Running each layer individually"
-    assert (
-        "DeepView run completed"
-        in model_output_file.read_text(encoding="utf-8")
-    ), "Expected run successfully"
+    assert "DeepView run completed" in model_output_file.read_text(encoding="utf-8"), (
+        "Expected run successfully"
+    )
