@@ -88,3 +88,6 @@ def test_layer_debugging_mode(model_output_file):
     assert "Successfully ran model" in model_output_file.read_text(
         encoding="utf-8"
         ), "Expected run successfully"
+    assert "Successfully ran model.base_model" in model_output_file.read_text(
+        encoding="utf-8"
+        ), "Expected model.base_model run successfully"
