@@ -122,9 +122,11 @@ def generate_layerwise_inputs_aiu(model_type, model_path, layer_inputs_file):
             f"DEEPVIEW \033[1mError running {model_path}\n\033[0m\n"
             "DEEPVIEW========================================================================\n"
         )
-    with open(layer_inputs_file, "rb") as f:
-        layer_inputs = pickle.load(f)
-    return layer_inputs
+        return None
+    else:
+        with open(layer_inputs_file, "rb") as f:
+            layer_inputs = pickle.load(f)
+        return layer_inputs
 
 
 def generate_layerwise_output_diffs(

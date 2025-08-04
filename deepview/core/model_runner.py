@@ -128,8 +128,6 @@ def run_layer_io_divergence_mode(model_path, model_type):
     cpu_model_handler.remove_forward_hooks()
     cpu_model_handler.clear_layer_io()
 
-    print(cpu_layer_outputs.keys())
-
     print("========= Running on AIU to capture layer divergence ==========")
     aiu_model_handler = ModelHandler(
         model_type=model_type,
@@ -143,7 +141,9 @@ def run_layer_io_divergence_mode(model_path, model_type):
         model_type, model_path, inputs_filename
     )
     if not aiu_model_handler.layer_inputs:
-        print(f"Input capture failed for {model_path}.")
+        print(
+            f"Input capture failed for {model_path} as model did not run successfully on AIU."
+        )
         sys.exit(0)
     print("Capturing layerwise outputs and calculating divergence....")
     diverging_layer, status = generate_layerwise_output_diffs(
