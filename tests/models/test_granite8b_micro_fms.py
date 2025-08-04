@@ -40,7 +40,7 @@ def debugger_path(tmp_path_factory):
     """
     args = argparse.Namespace(
         model_type="fms",
-        model="ibm-granite/granite-3.3-8b-base",
+        model="/home/senuser/models/tiny-models/granite-3.3-8b-layers-3-step-100000",
         output_file=tmp_path_factory.getbasetemp() / "test_granite8b_debugger.txt",
         mode="layer_debugging",
         show_details=False,
