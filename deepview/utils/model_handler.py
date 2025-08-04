@@ -15,7 +15,9 @@
 # *******************************************************************************/
 
 # Standard
+import json
 import os
+import re
 import time
 
 # Third Party
@@ -23,7 +25,6 @@ from fms.models import get_model
 from fms.utils import tokenizers
 from fms.utils.generation import generate, pad_input_ids
 from sentence_transformers import SentenceTransformer
-from torch_sendnn.backends import get_warmup_mode, set_warmup_mode
 from transformers import (
     AutoConfig,
     AutoModel,
@@ -54,6 +55,59 @@ MODEL_CLASSES = {
     "visual_question_answering": AutoModelForVisualQuestionAnswering,
     "sentence": SentenceTransformer,
 }
+
+
+def extract_hf_model_id(model_path: str) -> str:
+    """
+    Extracts the Hugging Face model ID from either a plain HF model ID string or an FMS model directory path.
+    """
+    if os.path.isdir(model_path):  # likely an FMS path
+        config_path = os.path.join(model_path, "config.json")
+        if os.path.exists(config_path):
+            with open(config_path, "r") as f:
+                config = json.load(f)
+            # Prefer 'original_model_id', fallback to 'model_id' or raise error
+            if "original_model_id" in config:
+                return config["original_model_id"]
+            elif "model_id" in config:
+                return config["model_id"]
+            else:
+                print(f"No Hugging Face model ID found in config.json at {config_path}")
+        else:
+            print(f"No config.json found in model directory: {model_path}")
+    elif "/" in model_path and len(model_path.strip("/")) > 2:
+        # Assume it's a Hugging Face ID
+        return model_path.strip("/")
+    else:
+        raise ValueError(
+            f"No valid ID was found at: {model_path} - please provide model id or path that contains organization_name/model_name"
+        )
+
+
+def validate_model_id(model_path: str) -> bool:
+    """
+    Basic validation: either a string model ID or a valid FMS directory with config.json.
+    """
+    if os.path.isdir(model_path):
+        return os.path.exists(os.path.join(model_path, "config.json"))
+    return isinstance(model_path, str) and ("/" in model_path or "-" in model_path)
+
+
+def convert_attr_path(attr_path):
+    """Converts the name of the modules to match the format in thresholds file."""
+    if attr_path:
+        attr_path = "model." + attr_path
+
+        def replace_numeric_attr(match):
+            number = match.group(1)
+            tail = match.group(2)
+            return f"[{number}]{tail}"
+
+        pattern = re.compile(r"\.(\d+)(\.|$)")
+        converted = pattern.sub(replace_numeric_attr, attr_path)
+    else:
+        converted = "model"
+    return converted
 
 
 class ModelHandler:
@@ -96,6 +150,18 @@ class ModelHandler:
 
         remove_forward_hooks():
             Removes all registered forward hooks from the model.
+
+        get_layer_io():
+            Extracts inputs and outputs captured by forward hooks into dictionaries.
+
+        clear_layer_io():
+            Clears the captured inputs and outputs from the model's modules.
+
+        safe_warmup():
+            Performs a warmup pass on the model without updating lazy handles.
+
+        warmup():
+            Performs a warmup pass on the model to initialize it for inference.
     """
 
     def __init__(self, model_type, model_path, device, prompt, model_class=None):
@@ -275,10 +341,12 @@ class ModelHandler:
             if self.model_class in ["causal_lm"]:
                 input_ids = self.input_id["input_ids"]
                 attention_mask = self.input_id.get("attention_mask", None)
+
                 generate_ids = self.model.generate(
                     input_ids,
                     attention_mask=attention_mask,
                     max_new_tokens=self.max_new_tokens,
+                    do_sample=False,  ## Somehow taking True as default which is resulting in error for models like Llama
                 )
                 result = self.tokenizer.batch_decode(
                     generate_ids,
@@ -291,10 +359,8 @@ class ModelHandler:
 
     def safe_warmup(self):
         """Perform warmup on the prepared input based on the model type, but skip update_lazyhandle()."""
-        old_warmup_mode = get_warmup_mode()
-        set_warmup_mode(True)
-        self._generate_output(True)
-        set_warmup_mode(old_warmup_mode)
+        with torch_sendnn.warmup_mode(skip_compilation=True):
+            self._generate_output(True)
 
     def warmup(self):
         """Perform warmup on the prepared input based on the model type."""
@@ -305,44 +371,19 @@ class ModelHandler:
         """Perform inference on the prepared input based on the model type."""
         return self._generate_output(False)
 
-    def insert_forward_hooks(self, deepview_mode):
+    def insert_forward_hooks(self):
         """Insert forward hooks into the model layers to capture input shapes and types during forward pass."""
         print("Inserting forward hooks.............")
-        if deepview_mode == "layer_debugging":
-            module_instance_names = {}
-
-            def get_instance_names(module, current_depth=0, name="model"):
-                module_instance_names[module] = name
-                parent = name
-                array_layers = all(key.isdigit() for key in module._modules.keys())
-                for subname, child in module._modules.items():
-                    if array_layers:
-                        get_instance_names(
-                            child, current_depth + 1, f"{parent}[{subname}]"
-                        )
-                    else:
-                        get_instance_names(
-                            child, current_depth + 1, f"{parent}.{subname}"
-                        )
-
-            get_instance_names(self.model)
 
         def hook_fn(module, input, output):
             if len(input) == 0:
                 return
-            if deepview_mode == "layer_io_divergence":
-                module._debug_input = input
-                if self.device_to_run == "cpu":
-                    module._debug_output = output
-            if deepview_mode == "layer_debugging":
-                module_instance = module_instance_names.get(module, "unknown")
-                input_shape_str = f"[{', '.join(map(str, input[0].shape))}]"
-                input_type = str(input[0].dtype)
-                self.layer_list[module_instance] = {input_shape_str, input_type}
+            module._debug_input = input
+            if self.device_to_run == "cpu":
+                module._debug_output = output
 
         for name, layer in self.model.named_modules():
-            if name.count(".") <= 3:
-                self.hooks.append(layer.register_forward_hook(hook_fn))
+            self.hooks.append(layer.register_forward_hook(hook_fn))
 
     def remove_forward_hooks(self):
         """Remove all previously registered forward hooks from the model."""
@@ -353,15 +394,51 @@ class ModelHandler:
     def get_layer_io(self):
         """Get all inputs captured using forward hook."""
         print("Extracting layer IO ...")
-        for name, module in self.model.named_modules():
+        for module_name, module in self.model.named_modules():
+            ## Modifying keys to match the layer names which can be used to run the layers later.
+            name = convert_attr_path(module_name)
+            ## Capturing inputs
             if hasattr(module, "_debug_input"):
-                self.layer_inputs[name] = tuple(
+                inputs = tuple(
                     v.detach()
                     for v in module._debug_input
                     if isinstance(v, torch.Tensor)
                 )
+                ## For these two layers, the input is generated by appending the captured input at the end of the input prompt
+                ## while maintaining the shape. Otherwise, these two layers throw error while running.
+                if (self.device_to_run == "aiu") and (
+                    (name == "model") or (name == "model.base_model")
+                ):
+                    inputs = list(inputs)
+                    shift_len = inputs[0].shape[-1]
+                    shifted_part = self.input_id[:, shift_len:]
+                    inputs[0] = torch.cat((shifted_part, inputs[0]), dim=1)
+                    ## For base_model layer, input is padded with zeros in the front to make length 64.
+                    if name == "model.base_model" and len(inputs) > 1:
+                        current_width = inputs[1].shape[-1]
+                        pad_len = 64 - current_width
+                        padding = inputs[1].new_zeros(1, pad_len)
+                        new_tensor = torch.cat((padding, inputs[1]), dim=1)
+                        inputs[1] = new_tensor
+
+                    self.layer_inputs[name] = tuple(inputs)
+                else:
+                    self.layer_inputs[name] = inputs
+            ## Capturing outputs
             if hasattr(module, "_debug_output"):
                 self.layer_outputs[name] = module._debug_output
+        ## The following lines basically rearrange the keys of the layer inputs dict to place the model and base_model layers in the end, such that the
+        ## layers are run before those two. This is done in order to ensure that the offending layer can be captured. Otherwise, if we run model/base_model
+        ## first, if there is any offending layer, the whole thing fails without giving any idea of the offending layer.
+        if self.model_type == "fms":
+            layers = list(self.layer_inputs.keys())
+            if "model.base_model" in layers:
+                first_two_keys = ["model.base_model", "model"]
+            elif "model.shared" in layers:
+                first_two_keys = ["model.shared", "model"]
+            self.layer_inputs = {
+                k: self.layer_inputs[k] for k in layers[2:] + first_two_keys
+            }
 
     def clear_layer_io(self):
         """Clear all inputs/outputs captured using forward hook."""

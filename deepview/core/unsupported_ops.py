@@ -40,15 +40,15 @@ def sanitize_arg(arg):
         return "[" + ", ".join([sanitize_arg(i) for i in arg]) + "]"
 
     if isinstance(arg, torch.fx.node.Node):
-        if "float" in str(arg.dtype):
-            return f"torch.rand({arg.shape})"
-        elif "int" in str(arg.dtype):
-            return f"torch.randint(1, {arg.shape})"
-        elif "bool" in str(arg.dtype):
-            return f"torch.rand({arg.shape}) < 0.9"
+        if "float" in str(arg.meta["val"].dtype):
+            return f"torch.rand({arg.meta['val'].shape})"
+        elif "int" in str(arg.meta["val"].dtype):
+            return f"torch.randint(1, {arg.meta['val'].shape})"
+        elif "bool" in str(arg.meta["val"].dtype):
+            return f"torch.rand({arg.meta['val'].shape}) < 0.9"
         else:
             # raise Exception("Unhandled arg.dtype {arg.dtype}")
-            print(f"Unhandled arg.dtype {arg.dtype}")
+            print(f"Unhandled arg.dtype {arg.meta['val'].dtype}")
             return str(arg)
 
     return str(arg)
@@ -74,6 +74,9 @@ def generate_reproduction(lazy_handle_id, node_name, target_name, args):
     op_call = "torch.ops." + target_name.replace("::", ".") + "(" + v_full_set + ")"
 
     code = f"""
+import os
+os.environ["TORCH_SENDNN_LOG"] = "DEBUG"
+
 import torch
 from torch_sendnn import torch_sendnn
 
@@ -119,29 +122,24 @@ def process_unsupported_ops_lazy_handle(
 
     Args:
         lazy_handle_id (int): Identifier for the lazy handle, used in naming output files.
-        lazy_handle: Object containing the original graph module (`ori_gm`) or metadata.
+        lazy_handle: Object containing the original graph module.
         unsupported_ops (list[str]): List of node names that are identified as unsupported.
         show_details_flag (bool): Whether to print stack traces for each unsupported op.
         generate_repro_code_flag (bool): Whether to generate a minimal script to reproduce the error.
     """
-    if hasattr(lazy_handle, "ori_gm"):
-        ori_gm = lazy_handle.ori_gm
-    else:
-        ori_gm = lazy_handle.meta["original_gm"]
-
-    for node in ori_gm.graph.nodes:
+    for node in lazy_handle.graph.nodes:
         if node.name not in unsupported_ops:
             continue
 
         # =================== Print the details of the unsupported ops =========================================
         # Note: This logic of finding data type and shape is taken from torch_sendnn
         IS_DYNAMIC = False
-        if isinstance(node.dtype, list):
-            dt = [convert.convert_datatype(t) for t in node.dtype]
-            shape = [convert.convert_shape(s, IS_DYNAMIC) for s in node.shape]
+        if isinstance(node.meta["val"], list):
+            dt = [convert.convert_datatype(t) for t in node.meta["val"]]
+            shape = [convert.convert_shape(s, IS_DYNAMIC) for s in node.meta["val"]]
         else:
-            dt = convert.convert_datatype(node.dtype)
-            shape = convert.convert_shape(node.shape, IS_DYNAMIC)
+            dt = convert.convert_datatype(node.meta["val"].dtype)
+            shape = convert.convert_shape(node.meta["val"].shape, IS_DYNAMIC)
 
         error = ""
         if show_details_flag:
@@ -199,10 +197,13 @@ def process_unsupported_ops(show_details_flag, generate_repro_code_flag):
             "DEEPVIEW========================================================================\n\n\n"
         )
     else:
+        unique_unsupported_ops = [
+            "\033[1m" + op + "\033[0m" for op in unique_unsupported_ops
+        ]
         unique_unsupported_ops_str = "\n".join(sorted(unique_unsupported_ops))
         print(
             "DEEPVIEW========================================================================\n"
             "DEEPVIEW Unsupported operations list:\n"
-            f"\033[1m{unique_unsupported_ops_str}\033[0m\n"
+            f"{add_prefix_to_string(unique_unsupported_ops_str)}\n"
             "DEEPVIEW========================================================================\n\n\n"
         )

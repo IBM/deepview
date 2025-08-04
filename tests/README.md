@@ -31,7 +31,11 @@ pytest tests/models/<path_to_your_test_file>
 To run our current e2e tests run it sequentially in the following order:
 
 ```bash
+# tests skipped as the unsupported ops changed.
 pytest tests/models/test_bamba9b_hf.py
+```
+```bash
+pytest tests/models/test_mpnetV2_hf.py
 ```
 
 ```bash
