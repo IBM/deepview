@@ -41,7 +41,7 @@ def debugger_path(tmp_path_factory):
     args = argparse.Namespace(
         model_type="fms",
         model="/home/senuser/models/tiny-models/granite-3.3-8b-layers-3-step-100000",
-        output_file=tmp_path_factory.getbasetemp() / "test_granite8b_debugger.txt",
+        output_file=tmp_path_factory.getbasetemp() / "test_granite8b_micro_debugger.txt",
         mode="layer_debugging",
         show_details=False,
         generate_repro_code=False,
@@ -57,8 +57,8 @@ def debugger_path(tmp_path_factory):
         args.show_details,
         args.generate_repro_code,
     )
-    debugger_path = tmp_path_factory.getbasetemp() / "test_granite2b_debugger.txt"
-    return debugger_path
+
+    return tmp_path_factory.getbasetemp() / "test_granite8b_micro_debugger.txt"
 
 
 def test_debugger_output_exits(debugger_path):
