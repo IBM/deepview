@@ -75,7 +75,6 @@ def test_debugger_output_exits(debugger_path):
     )
 
 
-@pytest.mark.skip(reason="Unsupported ops changed - test outdated")
 def test_layer_debugging_mode(model_output_file):
     """
     Test to ensure the layer debugging mode is correctly set in the debugger output.
