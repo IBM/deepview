@@ -77,6 +77,11 @@ kwargs = dict(zipped_inputs)
 
 layer.compile(backend="sendnn", dynamic=False)
 
+### The following two lines are required for running this mode on Llama model. 
+# TODO: Check if there is a way to remove the need for this in FMS 
+if 'reverse' in kwargs.keys():
+    kwargs['reverse'] = True
+
 with torch_sendnn.warmup_mode():
     result = layer(**kwargs) 
 print(f"Warmup for {sub_layer} completed")

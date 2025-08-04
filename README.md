@@ -87,38 +87,12 @@ pip3 install -e .
 ```
 
 # Usage
-> [!NOTE]
-> Please note that the instructions for torch_sendnn given below are temporary. We are working with torch_sendnn to get these changes incorporated into it.
-
-First, copy `torch_sendnn` from its installation directory to `/tmp/torch_sendnn`:
-
-If you are using the `e2e-stable` image, the installation directory of `torch_sendnn` is typically `/usr/local/lib/python3.12/site-packages/torch_sendnn`. Otherwise, you may use `python3 -m pip show torch_sendnn` to find out the installation directory.
-
-```bash
-mkdir -p /home/senuser/torch_sendnn && cp -r /usr/local/lib/python3.12/site-packages/torch_sendnn /home/senuser/torch_sendnn/
-```
-
-Replace the `/home/senuser/torch_sendnn/torch_sendnn/backends.py` and `/home/senuser/torch_sendnn/torch_sendnn/torch_sendnn.py` files with [deepview/tmp/backends.py](tmp/backends.py) and [deepview/tmp/torch_sendnn.py](tmp/torch_sendnn.py) files, respectively, given in this repository.
-
-```bash
-cp tmp/backends.py /home/senuser/torch_sendnn/torch_sendnn/backends.py
-```
-
-```bash
-cp tmp/torch_sendnn.py /home/senuser/torch_sendnn/torch_sendnn/torch_sendnn.py
-
-```
-
-Next, set the PYTHONPATH.
-```
-export PYTHONPATH=/home/senuser/torch_sendnn:$PYTHONPATH
-```
-Now, run deepview as follows :
+The command to run deepview is as follows :
 `deepview --help`
 
 ```shell
 usage: deepview [-h] --model_type {fms,hf} --model MODEL
-                   [--mode {unsupported_op,layer_debugging,aiu_input_capture,layer_io_divergence} [{unsupported_op,layer_debugging,aiu_input_capture,layer_io_divergence} ...]]
+                   [--mode {unsupported_op,layer_debugging,layer_io_divergence} [{unsupported_op,layer_debugging,layer_io_divergence} ...]]
                    [--show_details] [--generate_repro_code] --output_file OUTPUT_FILE --layer_inputs_file LAYER_INPUTS_FILE
 
 Script to run DeepView tool on any model.
@@ -128,8 +102,8 @@ options:
   --model_type {fms,hf}
                         The type of model you want to debug - fms or hf.
   --model MODEL         Model name in HF format or model path
-  --mode {unsupported_op,layer_debugging,aiu_input_capture,layer_io_divergence} 
-                        Modes: [unsupported_op, layer_debugging, aiu_input_capture, layer_io_divergence] (Choose ONLY one). Default is the
+  --mode {unsupported_op,layer_debugging,layer_io_divergence} 
+                        Modes: [unsupported_op, layer_debugging, layer_io_divergence] (Choose ONLY one). Default is the
                         unsupported_op mode.
   --show_details        Print stack trace and other details, valid only with unsupported_op.
   --generate_repro_code
