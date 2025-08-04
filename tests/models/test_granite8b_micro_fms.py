@@ -70,9 +70,9 @@ def test_debugger_output_exits(debugger_path):
     Args:
         debugger_path: A fixture that runs the model and generates the output file.
     """
-    assert debugger_path.exists(), (
-        f"Debugger output file {debugger_path} does not exist."
-    )
+    assert (
+        debugger_path.exists()
+        ), f"Debugger output file {debugger_path} does not exist."
 
 
 def test_layer_debugging_mode(model_output_file):
@@ -87,7 +87,7 @@ def test_layer_debugging_mode(model_output_file):
     ), "Expected Running each layer individually"
     assert "Successfully ran model" in model_output_file.read_text(
         encoding="utf-8"
-        ), "Expected run successfully"
+    ), "Expected run successfully"
     assert "Successfully ran model.base_model" in model_output_file.read_text(
         encoding="utf-8"
-        ), "Expected model.base_model run successfully"
+    ), "Expected model.base_model run successfully"
