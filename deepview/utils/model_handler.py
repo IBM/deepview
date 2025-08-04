@@ -341,10 +341,12 @@ class ModelHandler:
             if self.model_class in ["causal_lm"]:
                 input_ids = self.input_id["input_ids"]
                 attention_mask = self.input_id.get("attention_mask", None)
+
                 generate_ids = self.model.generate(
                     input_ids,
                     attention_mask=attention_mask,
                     max_new_tokens=self.max_new_tokens,
+                    do_sample=False,  ## Somehow taking True as default which is resulting in error for models like Llama
                 )
                 result = self.tokenizer.batch_decode(
                     generate_ids,
@@ -429,10 +431,13 @@ class ModelHandler:
         ## layers are run before those two. This is done in order to ensure that the offending layer can be captured. Otherwise, if we run model/base_model
         ## first, if there is any offending layer, the whole thing fails without giving any idea of the offending layer.
         if self.model_type == "fms":
-            first_two_keys = ["model.base_model", "model"]
+            layers = list(self.layer_inputs.keys())
+            if "model.base_model" in layers:
+                first_two_keys = ["model.base_model", "model"]
+            elif "model.shared" in layers:
+                first_two_keys = ["model.shared", "model"]
             self.layer_inputs = {
-                k: self.layer_inputs[k]
-                for k in list(self.layer_inputs.keys())[2:] + first_two_keys
+                k: self.layer_inputs[k] for k in layers[2:] + first_two_keys
             }
 
     def clear_layer_io(self):
