@@ -84,7 +84,6 @@ def test_layer_debugging_mode(model_output_file):
     assert "Running each layer individually" in model_output_file.read_text(
         encoding="utf-8"
     ), "Expected Running each layer individually"
-    assert (
-        "DEEPVIEW Successfully ran model"
-        in model_output_file.read_text(encoding="utf-8")
+    assert "DEEPVIEW Successfully ran model" in model_output_file.read_text(
+        encoding="utf-8"
     ), "Error Running Model"
