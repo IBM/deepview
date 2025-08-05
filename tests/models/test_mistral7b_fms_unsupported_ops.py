@@ -42,7 +42,7 @@ def debugger_path(tmp_path_factory):
         model_type="fms",
         model="mistralai/Mistral-7B-Instruct-v0.3",
         output_file=tmp_path_factory.getbasetemp() / "test_mistral7b_debugger.txt",
-        mode="unsupported_ops",
+        mode="unsupported_op",
         show_details=False,
         generate_repro_code=False,
     )

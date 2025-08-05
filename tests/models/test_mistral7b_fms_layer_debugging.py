@@ -85,6 +85,6 @@ def test_layer_debugging_mode(model_output_file):
         encoding="utf-8"
     ), "Expected Running each layer individually"
     assert (
-        "DEEPVIEW \033[1mError running model, [1, 1], torch.int64\n"
+        "DEEPVIEW Successfully ran model"
         in model_output_file.read_text(encoding="utf-8")
-    ), "Error running model, [1, 1], torch.int64"
+    ), "Error Running Model"
