@@ -164,6 +164,7 @@ deepview --model_type fms --model ibm-granite/granite-3.2-8b-instruct --mode lay
 
 > [!NOTE]
 > The `layer_io_divergence` mode assumes that the thresholds from GPU run is already present in the path pointed by `DEEPVIEW_THRESHOLDS_FOLDERPATH` env variable (specified in the Deepview pod yaml).
+> This mode runs succesfully only for models which have been enabled on AIU, i.e., run on AIU without any errors.
 
 
 #### Sample Output
