@@ -70,7 +70,7 @@ def test_debugger_output_exits(debugger_path):
         debugger_path: A fixture that runs the model and generates the output file.
     """
     assert (
-        debugger_path.exists() 
+        debugger_path.exists()
     ), f"Debugger output file {debugger_path} does not exist."
 
 
