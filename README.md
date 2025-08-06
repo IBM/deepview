@@ -26,8 +26,8 @@ DeepView is a modular debugging and diagnostics toolkit designed to streamline t
   - Specific locations in the model's forward path
 *	Minimal Reproduction Scripts: Generates self-contained, minimal scripts to reproduce failures and aid debugging workflows.
 * Compiler and Runtime Integration: Hooks into the model compilation pipeline to trace issues early and often.
-## Planned / Future Capabilities (draft)
 * Intermediate Tensor Comparison: Layer-wise comparison of outputs between CPU/GPU and AIU to identify numerical mismatches or accuracy regressions.
+## Planned / Future Capabilities (draft)
 *	Performance Diagnostics: Integration with runtime metrics (FLOPs, memory usage, latency) to pinpoint bottlenecks and inefficiencies.
 *	vLLM Testing: Support for running and validating model behavior on VLLM.
 *	Visualization Tools: Graph-based interfaces for analyzing PyTorch FX graphs, unsupported paths, and fallback decisions.
