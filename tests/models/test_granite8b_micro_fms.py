@@ -40,8 +40,9 @@ def debugger_path(tmp_path_factory):
     """
     args = argparse.Namespace(
         model_type="fms",
-        model="ibm-granite/granite-3.2-2b-instruct",
-        output_file=tmp_path_factory.getbasetemp() / "test_granite2b_debugger.txt",
+        model="/home/senuser/models/tiny-models/granite-3.3-8b-layers-3-step-100000",
+        output_file=tmp_path_factory.getbasetemp()
+        / "test_granite8b_micro_debugger.txt",
         mode="layer_debugging",
         show_details=False,
         generate_repro_code=False,
@@ -57,8 +58,8 @@ def debugger_path(tmp_path_factory):
         args.show_details,
         args.generate_repro_code,
     )
-    debugger_path = tmp_path_factory.getbasetemp() / "test_granite2b_debugger.txt"
-    return debugger_path
+
+    return tmp_path_factory.getbasetemp() / "test_granite8b_micro_debugger.txt"
 
 
 def test_debugger_output_exits(debugger_path):
@@ -74,9 +75,6 @@ def test_debugger_output_exits(debugger_path):
     ), f"Debugger output file {debugger_path} does not exist."
 
 
-@pytest.mark.skip(
-    reason="Unsupported mode - this model has unsupported ops, so layer debugging is still unsupported."
-)
 def test_layer_debugging_mode(model_output_file):
     """
     Test to ensure the layer debugging mode is correctly set in the debugger output.
@@ -87,7 +85,9 @@ def test_layer_debugging_mode(model_output_file):
     assert "Running each layer individually" in model_output_file.read_text(
         encoding="utf-8"
     ), "Expected Running each layer individually"
-    assert (
-        "DEEPVIEW \x1b[1mError running model.base_model.layers[0].ln, [1, 1, 2048], torch.float16\n"
-        in model_output_file.read_text(encoding="utf-8")
-    ), "Expected Error running model.base_model.layers[0].ln"
+    assert "Successfully ran model" in model_output_file.read_text(
+        encoding="utf-8"
+    ), "Expected run successfully"
+    assert "Successfully ran model.base_model" in model_output_file.read_text(
+        encoding="utf-8"
+    ), "Expected model.base_model run successfully"
