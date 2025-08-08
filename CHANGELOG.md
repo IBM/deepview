@@ -13,6 +13,49 @@ The format is based on [Keep a Changelog], and this project adheres to
 * `Security` in case of vulnerabilities.
 ## Unreleased
 
+## [0.2.0] - 2025/08/07
+
+### Added
+
+* Project restructuring and code updates to conform DeepView as an installable tool. (\#52)
+* Added Threshold Testing functionality through AIU-FMS to extend the Layer compilation to test decoder model comparisions. (\#64)
+* Added doc strings to all existing code base to improve code and API documenation. (\#69)
+* Added Travis CI build and Copyright headers. (\#74 and \#78)
+* Added separate log file for each DeepView mode. (\#80)
+* Initial but limited support for HF models in layer debugging mode. (\#81)
+* Migrate to Spyre DD2 infrastructure. This included several changes to the ENV variables, pod yaml, configurations, etc. (\#84)
+* Added the needed dependencies for Mistral models. (\#90)
+* Added Layerwise diversion as a new debugging mode. (\#101, \#103, )
+* Graceful exit of HF model type in modes other than unsupported. (\#112)
+* Combined AIU capture mode with AIU diversion mode to simplify the user experience for the new mode (Layer-diversion). (\#111)
+* Added micro granite model for testing. (\#141)
+
+
+### Changed
+* Replaced the sendnn_decoder with sendnn backend as the former is deprecated. (\#68)
+* Changed the layer debugging implementation to use the sendenn backend. (\#73) 
+* Updated the pytest to integrate all the new additions to DeepView. (\#121)
+* Updated the documentation for the examples. (\#123)
+* Changed to pytest to cover the new layer-diversio mode and new results from Bamba. (\#133)
+* Split Mistral pytests into two seperate files for each mode. (\#144)
+
+### Fixed
+
+* Fixed the python version requirement and removed MIT license. (\#55)
+* Fixed file path depedencies for layer debugging and generation of repro code. (\#67)
+* Fixed all formatting and linting issues. (\#65)
+* Fixed FMS version and HF environment variables. (\#89)
+* Fixed a bug fir Unsupported Ops mode. The arguments were passed in the wrong order. (\#119)
+* Cleanup of the pod yaml file and fixes to the HF ENV variable to allow correct use of the HF cache. (\#120)
+* Fixed bugs introduced with the latest AIU e2e image with layer debugging mode. (\#129)
+* Fixed the repro-code output generation by introducing the right AIU ENV variables. (\#134)
+* Fixed the error generated while trying to run base_model layer of fms models in layer_debugging mode. (\#135)
+* Fixed mpnet pytest. (\#136)
+* Fixes for running LLama and readme cleanup. (\#140)
+* Fixed test assertions. (\#141)
+* Added graceful exits for unsupported models and Readme updates. (\#143)
+
+
 ## [0.1.0] - 2025/05/20
 
 ### Added
