@@ -24,13 +24,21 @@ DeepView is a modular debugging and diagnostics toolkit designed to streamline t
 * Granular Debugging: Identifies offending layers and modules with fine-grained context, helping isolate
 	- Input characteristics triggering the issue
   - Specific locations in the model's forward path
-*	Minimal Reproduction Scripts: Generates self-contained, minimal scripts to reproduce failures and aid debugging workflows.
+*	Layer diversion or intermediate Tensor/layer Comparisons: Layer-wise comparison of outputs between CPU/GPU and AIU to identify numerical mismatches or accuracy regressions.
+* Minimal Reproduction Scripts: Generates self-contained, minimal scripts to reproduce failures and aid debugging workflows.
 * Compiler and Runtime Integration: Hooks into the model compilation pipeline to trace issues early and often.
-* Intermediate Tensor Comparison: Layer-wise comparison of outputs between CPU/GPU and AIU to identify numerical mismatches or accuracy regressions.
+
 ## Planned / Future Capabilities (draft)
-*	Performance Diagnostics: Integration with runtime metrics (FLOPs, memory usage, latency) to pinpoint bottlenecks and inefficiencies.
-*	vLLM Testing: Support for running and validating model behavior on VLLM.
-*	Visualization Tools: Graph-based interfaces for analyzing PyTorch FX graphs, unsupported paths, and fallback decisions.
+* Graph Break Root-Cause Tracing (with Graph Rewrite Suggestions)
+    * Suggest rewrites or decompositions using proxy operators or alternate subgraphs.
+* CPU vs. AIU Op Localization
+    * Identify which operations or subgraphs are executed on the CPU versus offloaded to the accelerator during runtime. This helps in understanding performance bottlenecks, fallback behavior, and correctness mismatches.    
+*	Performance Diagnostics
+    * Integration with runtime metrics (FLOPs, memory usage, latency) to pinpoint bottlenecks and inefficiencies.   
+*	DeepView Plugin for vLLM 
+    * Enable debugging and graph inspection directly inside inference servers.
+*	Visualization Tools
+    * Graph-based interfaces for analyzing PyTorch FX graphs, unsupported paths, and fallback decisions.
 
 
 # Environment & Installation
