@@ -4,12 +4,17 @@ import re
 import shutil
 
 # Third Party
+from deepview.utils.console import ConsoleWrapper
 from sendnn import opcodes
 from torch_sendnn.backends import lazy_handles
 from torch_sendnn.utils import convert
 import torch
+from rich.panel import Panel
+from rich.align import Align
+from rich.text import Text
+from rich.console import Group
 
-
+console = ConsoleWrapper()
 def get_unsupported_ops(lazy_handle):
     """Retrieves a list of operations marked as unsupported from the lazy handle's g2 graph.
 
@@ -96,9 +101,9 @@ g()
     with open(out_filename, "w") as fd:
         fd.write(code)
 
-    print(
-        f"Generated unsupported op reproduction test code for {node_name} at: {out_filename}\n\n"
-    )
+    console.print(
+    f"Generated unsupported op reproduction test code for [bold]{node_name}[/bold] at: [underline green]{out_filename}[/underline green]\n",
+    style="green")
 
 
 def add_prefix_to_string(original_string):
@@ -141,12 +146,18 @@ def process_unsupported_ops_lazy_handle(
             dt = convert.convert_datatype(node.meta["val"].dtype)
             shape = convert.convert_shape(node.meta["val"].shape, IS_DYNAMIC)
 
-        error = ""
+
+        error_lines = [
+            Text(f"Caught error for {node.name}: Operation not supported.\n", style="bold red"),
+            Text(f"Data type: {dt}, Shape: {shape}", style="cyan\n"),
+        ]
         if show_details_flag:
-            error = f"DEEPVIEW==================================== Stack Trace ====================================\n{add_prefix_to_string(node.stack_trace)}"
-        print(
-            f"DEEPVIEW Caught error for \033[1m{node}\033[0m: Operation not supported.\nDEEPVIEW Data type: {dt}, Shape: {shape}\n{error}"
-        )
+            error_lines.append(
+                Align.center(Text("\n==================================== Stack Trace ====================================", style="yellow"))
+            )
+            error_lines.append(Text(str(node.stack_trace), style="magenta"))
+
+       
         # ======================================================================================================
 
         if generate_repro_code_flag:
@@ -157,7 +168,14 @@ def process_unsupported_ops_lazy_handle(
             )
             args = [sanitize_arg(i) for i in node._args]
             generate_reproduction(lazy_handle_id, node.name, target_name, args)
-
+        console.print(
+        Panel(
+            Group(*error_lines),
+            title=f"Unsupported Operation {node.name}",
+            border_style="red",
+            expand=False
+        )
+    )
 
 def process_unsupported_ops(show_details_flag, generate_repro_code_flag):
     """Identifies unsupported operations and optionally generates reproduction scripts.
@@ -191,19 +209,25 @@ def process_unsupported_ops(show_details_flag, generate_repro_code_flag):
     ]
 
     if len(unique_unsupported_ops) == 0:
-        print(
-            "DEEPVIEW========================================================================\n"
-            "DEEPVIEW \033[1mNo unsupported operations detected.\033[0m\n"
-            "DEEPVIEW========================================================================\n\n\n"
+        msg = Text("No unsupported operations detected.", style="bold green")
+        console.print(
+            Panel(
+                msg,
+                border_style="green",
+                expand=False
+            )
         )
     else:
-        unique_unsupported_ops = [
-            "\033[1m" + op + "\033[0m" for op in unique_unsupported_ops
-        ]
-        unique_unsupported_ops_str = "\n".join(sorted(unique_unsupported_ops))
-        print(
-            "DEEPVIEW========================================================================\n"
-            "DEEPVIEW Unsupported operations list:\n"
-            f"{add_prefix_to_string(unique_unsupported_ops_str)}\n"
-            "DEEPVIEW========================================================================\n\n\n"
+        # Crea cada operación como un objeto Text en negrita
+        ops_texts = [Text(op, style="bold") for op in sorted(unique_unsupported_ops)]
+        group = Group(
+            *ops_texts
+        )
+        console.print(
+            Panel(
+                group,
+                title="Unsupported Operation List",
+                border_style="red",
+                expand=False
+            )
         )

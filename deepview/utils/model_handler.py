@@ -21,10 +21,12 @@ import re
 import time
 
 # Third Party
+from deepview.utils.console import ConsoleWrapper
 from fms.models import get_model
 from fms.utils import tokenizers
 from fms.utils.generation import generate, pad_input_ids
 from sentence_transformers import SentenceTransformer
+from rich.panel import Panel
 from transformers import (
     AutoConfig,
     AutoModel,
@@ -56,6 +58,7 @@ MODEL_CLASSES = {
     "sentence": SentenceTransformer,
 }
 
+console = ConsoleWrapper()
 
 def extract_hf_model_id(model_path: str) -> str:
     """
@@ -242,7 +245,7 @@ class ModelHandler:
         Returns:
             torch.nn.Module: The loaded and compiled PyTorch model.
         """
-        print("Loading model")
+        console.print(f":open_file_folder: [bold cyan]Loading model[/bold cyan] [yellow]{self.model_path}[/yellow] of type [magenta]{self.model_type}[/magenta]",  end="\n\n")
         start = time.time()
 
         if self.model_type == "fms":
@@ -258,9 +261,13 @@ class ModelHandler:
             # TODO: we can do specific handling per model class but for now everything apart from CausalLM is treated as AutoModel
             # Note: SentenceTransformer has to be loaded as AutoModel as torch.compile does not work for SentenceTransformer
             self.model_class = self._infer_model_class(self.model_path)
-            print("---------------------------------------------------------")
-            print(f"Model class is {self.model_class}")
-            print("---------------------------------------------------------")
+            console.print(
+                Panel(
+                    f"[bold cyan]Model class:[/bold cyan] [green]{self.model_class}[/green]",
+                    border_style="cyan",
+                    title="Model Info"
+                )
+            )
 
             model_class = MODEL_CLASSES[self.model_class]
             if self.model_class == "causal_lm":
@@ -268,21 +275,26 @@ class ModelHandler:
             else:
                 self.model = AutoModel.from_pretrained(self.model_path)
 
-        print(f"Loading complete, took {time.time() - start:.3f}s")
-
+        console.print(f"\n\n:white_check_mark: [bold green]Loading complete[/bold green] ([yellow]{time.time() - start:.3f}s[/yellow])",  end="\n\n")
         self.model.eval()
         torch.set_grad_enabled(False)
 
-        print("Compiling model")
+        console.print(":hammer_and_wrench: [bold magenta]Compiling model...[/bold magenta]",  end="\n\n")        
+        
         start = time.time()
-        if self.device_to_run == "aiu":
-            self.model.compile(backend="sendnn", dynamic=False)
-        elif self.device_to_run == "cpu":
-            self.model.compile(backend="inductor")
-        else:
-            print("Device not supported by Deepview yet.")
-        print(f"Compiling complete, took {time.time() - start:.3f}s")
+        compile_prop_by_device = {
+            "aiu": {"backend": "sendnn", "dynamic": False},
+            "cpu": {"backend": "inductor", "dynamic": True},
+        }
+        compile_props = compile_prop_by_device.get(self.device_to_run, None)
 
+        if compile_props is None:
+            console.error(console.error(":x: [bold red]Device not supported by DeepView yet.[/bold red]"))
+
+        self.model.compile(backend= compile_props["backend"], dynamic=compile_props["dynamic"])
+        
+        console.print(f":white_check_mark: [bold green]Compiling complete[/bold green] ([yellow]{time.time() - start:.3f}s[/yellow])",  end="\n\n")
+        
         return self.model
 
     def prep_input(self):

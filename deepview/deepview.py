@@ -23,10 +23,12 @@ DeepView CLI tool for debugging and analyzing deep learning models.
 import argparse
 import os
 import sys
+from deepview.utils.console import ConsoleWrapper
 
 # Local
 from deepview.core.model_runner import run_model, set_environment
 
+console = ConsoleWrapper()
 
 def main():
     """Main entry point for the deepview CLI."""
@@ -81,14 +83,14 @@ def main():
         args.mode not in ["unsupported_op", "layer_debugging"]
         and args.model_type == "hf"
     ):
-        print(f"{args.mode} is currently supported only for FMS models.")
+        console.error(f"{args.mode} is currently supported only for FMS models.")
         sys.exit(1)
 
     # Setting the environment variables
     set_environment()
-
+    console.print("\n[bold blue]DeepView running[/bold blue]", end="\n\n")
+    
     # Run the model
-    print("Running Deepview")
     run_model(
         args.model_type,
         args.model,
@@ -97,8 +99,7 @@ def main():
         args.show_details,
         args.generate_repro_code,
     )
-    print("DeepView run completed")
-
+    console.print("\n[bold green]✅ DeepView run completed[/bold green]", end="\n\n")
 
 if __name__ == "__main__":
     main()

@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: <pod-name>
+  name: borja3-dev-e2e-x1-aiu-deepview
 spec:
   schedulerName: aiu-scheduler
   containers:
-  - name: <pod-name>
+  - name: borja3-dev-e2e-x1-aiu-deepview
     resources:
       limits:
         ibm.com/aiu_pf: 1
