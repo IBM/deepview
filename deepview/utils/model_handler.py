@@ -417,6 +417,7 @@ class ModelHandler:
 
     def get_layer_io(self):
         """Get all inputs captured using forward hook."""
+        print("Extracting layer IO ...")
         for module_name, module in self.model.named_modules():
             ## Modifying keys to match the layer names which can be used to run the layers later.
             name = convert_attr_path(module_name)
