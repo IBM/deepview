@@ -19,7 +19,11 @@ import torch
 # Local
 from deepview.core.aiu_input_capture import run_model_for_inputs
 from deepview.core.individual_layer_run_with_inputs import run_layers_with_inputs
-from deepview.utils.model_handler import ModelHandler, extract_hf_model_id, setup_model_handler
+from deepview.utils.model_handler import (
+    ModelHandler,
+    extract_hf_model_id,
+    setup_model_handler,
+)
 
 # Defining some constants
 SUCCESS = 2
@@ -205,6 +209,7 @@ def generate_layerwise_output_diffs(
                 layers_done.append(layer)
     shutil.rmtree("dv_layer_io_debugging_tmp")
     return None, SUCCESS
+
 
 def run_layer_io_divergence_mode(model_path, model_type):
     """Runs the layer_io_divergence_mode mode. Uses inputs_filename to get the precaptured inputs if specified by the user.

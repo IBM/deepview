@@ -4,11 +4,13 @@ import re
 import shutil
 
 # Third Party
-from deepview.utils.model_handler import setup_model_handler
 from sendnn import opcodes
 from torch_sendnn.backends import lazy_handles
 from torch_sendnn.utils import convert
 import torch
+
+# Local
+from deepview.utils.model_handler import setup_model_handler
 
 
 def get_unsupported_ops(lazy_handle):
@@ -209,6 +211,7 @@ def process_unsupported_ops(show_details_flag, generate_repro_code_flag):
             "DEEPVIEW========================================================================\n\n\n"
         )
 
+
 def run_unsupported_op_mode(
     model_path, model_type, show_details_flag, generate_repro_code_flag
 ):
@@ -218,6 +221,6 @@ def run_unsupported_op_mode(
         model_path=model_path,
         device="aiu",
         prompt="What is the capital of Egypt?",
-        safe_warmup=True
+        safe_warmup=True,
     )
     process_unsupported_ops(show_details_flag, generate_repro_code_flag)

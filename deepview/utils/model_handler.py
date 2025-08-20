@@ -109,28 +109,30 @@ def convert_attr_path(attr_path):
         converted = "model"
     return converted
 
-def setup_model_handler(
-        model_type,
-        model_path,
-        device="aiu",
-        prompt="What is the capital of Egypt?",
-        safe_warmup=False,
-        insert_forward_hooks=False,
-    ):
-        handler = ModelHandler(
-            model_type=model_type,
-            model_path=model_path,
-            device=device,
-            prompt=prompt,
-        )
-        handler.load_and_compile_model()
-        handler.prep_input()
-        if insert_forward_hooks:
-            handler.insert_forward_hooks()
-        if safe_warmup:
-            handler.safe_warmup()
 
-        return handler
+def setup_model_handler(
+    model_type,
+    model_path,
+    device="aiu",
+    prompt="What is the capital of Egypt?",
+    safe_warmup=False,
+    insert_forward_hooks=False,
+):
+    handler = ModelHandler(
+        model_type=model_type,
+        model_path=model_path,
+        device=device,
+        prompt=prompt,
+    )
+    handler.load_and_compile_model()
+    handler.prep_input()
+    if insert_forward_hooks:
+        handler.insert_forward_hooks()
+    if safe_warmup:
+        handler.safe_warmup()
+
+    return handler
+
 
 class ModelHandler:
     """Handles loading, compiling, input preparation, inference, and debugging using hooks for ML models.
@@ -441,7 +443,7 @@ class ModelHandler:
                         padding = inputs[1].new_zeros(1, pad_len)
                         new_tensor = torch.cat((padding, inputs[1]), dim=1)
                         inputs[1] = new_tensor
-                    
+
                     self.layer_inputs[name] = tuple(inputs)
                 else:
                     self.layer_inputs[name] = inputs
