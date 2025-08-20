@@ -222,7 +222,7 @@ def run_layer_io_divergence_mode(model_path, model_type):
     cpu_model_handler = setup_model_handler(
         model_type=model_type,
         model_path=model_path,
-        device="aiu",
+        device="cpu",
         prompt="What is the capital of Egypt?",
         insert_forward_hooks=True,
     )

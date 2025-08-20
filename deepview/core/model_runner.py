@@ -25,7 +25,7 @@ import sys
 import torch
 
 # Local
-from deepview.core.layer_debugging import run_individual_layers
+from deepview.core.layer_debugging import run_individual_layers, run_layer_debugging_mode
 from deepview.core.layer_io_debugging import (
     SUCCESS,
     generate_layerwise_inputs_aiu,
@@ -33,8 +33,9 @@ from deepview.core.layer_io_debugging import (
     get_layer_thresholds,
     get_layerwise_outputs_cpu,
     get_thresholds_json_file,
+    run_layer_io_divergence_mode,
 )
-from deepview.core.unsupported_ops import process_unsupported_ops
+from deepview.core.unsupported_ops import process_unsupported_ops, run_unsupported_op_mode
 from deepview.utils.logger import save_deepview_logs
 from deepview.utils.model_handler import ModelHandler, validate_model_id
 from deepview.utils.tee import Tee
@@ -53,109 +54,6 @@ def set_environment():
     os.environ["DT_DEEPRT_VERBOSE"] = "-1"
     os.environ["PYTHONUNBUFFERED"] = "1"
     os.environ["COMPILATION_MODE"] = "offline_decoder"
-
-
-def run_unsupported_op_mode(
-    model_path, model_type, show_details_flag, generate_repro_code_flag
-):
-    """Runs the unsupported ops mode using the flags specified by the user."""
-    aiu_model_handler = ModelHandler(
-        model_type=model_type,
-        model_path=model_path,
-        device="aiu",
-        prompt="What is the capital of Egypt?",
-    )
-    aiu_model_handler.load_and_compile_model()
-    aiu_model_handler.prep_input()
-    aiu_model_handler.safe_warmup()
-    process_unsupported_ops(show_details_flag, generate_repro_code_flag)
-
-
-def run_layer_debugging_mode(model_path, model_type, generate_repro_code_flag):
-    """Runs the layer debugging mode using the flags specified by the user."""
-    aiu_model_handler = ModelHandler(
-        model_type=model_type,
-        model_path=model_path,
-        device="aiu",
-        prompt="What is the capital of Egypt?",
-    )
-    aiu_model_handler.load_and_compile_model()
-    aiu_model_handler.prep_input()
-    aiu_model_handler.insert_forward_hooks()
-    aiu_model_handler.safe_warmup()
-
-    print(f"Saving layer inputs.....")
-    aiu_model_handler.get_layer_io()
-    layer_inputs = aiu_model_handler.layer_inputs
-    inputs_filename = model_path.split("/")[-1] + ".pkl"
-    with open(f"{inputs_filename}", "wb") as f:
-        pickle.dump(layer_inputs, f)
-    print(f"Saved inputs to {inputs_filename}")
-
-    aiu_model_handler.remove_forward_hooks()
-    aiu_model_handler.clear_layer_io()
-
-    run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_code_flag)
-
-
-def run_layer_io_divergence_mode(model_path, model_type):
-    """Runs the layer_io_divergence_mode mode. Uses inputs_filename to get the precaptured inputs if specified by the user.
-
-    Returns True if all layers pass the thresholds test, otherwise False.
-    """
-    theshold_filepath = get_thresholds_json_file(model_path)
-    if not theshold_filepath:
-        print(f"Unable to find thresholds for {model_path}.")
-        sys.exit(0)
-    print("Getting layer output thresholds.....")
-    thesholds = get_layer_thresholds(theshold_filepath)
-
-    print("========= Running on CPU to capture layer IO ==========")
-    cpu_model_handler = ModelHandler(
-        model_type=model_type,
-        model_path=model_path,
-        device="cpu",
-        prompt="What is the capital of Egypt?",
-    )
-    cpu_model_handler.load_and_compile_model()
-    cpu_model_handler.prep_input()
-    cpu_model_handler.insert_forward_hooks()
-    print("Reached first infer call post compile.....")
-    cpu_model_handler.infer()
-    print(f"Getting layerwise outputs.....")
-    cpu_model_handler.get_layer_io()
-    cpu_layer_outputs = get_layerwise_outputs_cpu(cpu_model_handler)
-    cpu_model_handler.remove_forward_hooks()
-    cpu_model_handler.clear_layer_io()
-
-    print("========= Running on AIU to capture layer divergence ==========")
-    aiu_model_handler = ModelHandler(
-        model_type=model_type,
-        model_path=model_path,
-        device="aiu",
-        prompt="What is the capital of Egypt?",
-    )
-    print("Capturing layerwise inputs....")
-    inputs_filename = model_path.split("/")[-1] + ".pkl"
-    aiu_model_handler.layer_inputs = generate_layerwise_inputs_aiu(
-        model_type, model_path, inputs_filename
-    )
-    if not aiu_model_handler.layer_inputs:
-        print(
-            f"Input capture failed for {model_path} as model did not run successfully on AIU."
-        )
-        sys.exit(0)
-    print("Capturing layerwise outputs and calculating divergence....")
-    diverging_layer, status = generate_layerwise_output_diffs(
-        aiu_model_handler, inputs_filename, cpu_layer_outputs, thesholds
-    )
-    if diverging_layer is None and status == SUCCESS:
-        print(
-            f"DEEPVIEW Threshold test passed for all layers of {model_path}\n"
-            "DEEPVIEW========================================================================\n"
-        )
-        return True
-    return False
 
 
 def run_model(

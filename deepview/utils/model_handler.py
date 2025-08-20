@@ -114,8 +114,8 @@ def setup_model_handler(
         model_path,
         device="aiu",
         prompt="What is the capital of Egypt?",
-        safe_warmup=True,
-        inser_forward_hooks=False,
+        safe_warmup=False,
+        insert_forward_hooks=False,
     ):
         handler = ModelHandler(
             model_type=model_type,
@@ -125,10 +125,11 @@ def setup_model_handler(
         )
         handler.load_and_compile_model()
         handler.prep_input()
+        if insert_forward_hooks:
+            handler.insert_forward_hooks()
         if safe_warmup:
             handler.safe_warmup()
-        if inser_forward_hooks and hasattr(handler, "insertForwardHooks"):
-            handler.insertForwardHooks()
+
         return handler
 
 class ModelHandler:
@@ -414,7 +415,6 @@ class ModelHandler:
 
     def get_layer_io(self):
         """Get all inputs captured using forward hook."""
-        print("Extracting layer IO ...")
         for module_name, module in self.model.named_modules():
             ## Modifying keys to match the layer names which can be used to run the layers later.
             name = convert_attr_path(module_name)
@@ -441,7 +441,7 @@ class ModelHandler:
                         padding = inputs[1].new_zeros(1, pad_len)
                         new_tensor = torch.cat((padding, inputs[1]), dim=1)
                         inputs[1] = new_tensor
-
+                    
                     self.layer_inputs[name] = tuple(inputs)
                 else:
                     self.layer_inputs[name] = inputs
