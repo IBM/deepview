@@ -1,8 +1,12 @@
-from .model_handler import ModelHandlerBase
-import torch
+# Third Party
 from fms.models import get_model
 from fms.utils import tokenizers
 from fms.utils.generation import generate, pad_input_ids
+import torch
+
+# Local
+from .model_handler import ModelHandlerBase
+
 
 class ModelHandlerFMS(ModelHandlerBase):
     """Handles FMS models with specific input preparation and compilation methods."""
@@ -16,7 +20,7 @@ class ModelHandlerFMS(ModelHandlerBase):
             data_type=torch.float16,
             fused_weights=False,
         )
-        
+
     def _prep_input(self):
         """Prepare input tensors for FMS models."""
         self.tokenizer = tokenizers.get_tokenizer(self.model_path)
@@ -29,7 +33,7 @@ class ModelHandlerFMS(ModelHandlerBase):
         self.input_id, self.extra_generation_kwargs = pad_input_ids(
             [prompt1], min_pad_length=self.min_pad_length
         )
-        
+
     def _generate_output(self, is_warmup):
         """Generate output using the model's generate method."""
         self.extra_generation_kwargs["only_last_token"] = True
@@ -42,9 +46,7 @@ class ModelHandlerFMS(ModelHandlerBase):
                 hasattr(self.model.config, "ntk_scaling")
                 and self.model.config.ntk_scaling
             ):
-                max_len = max(
-                    len(self.prompt), self.model.config.max_expected_seq_len
-                )
+                max_len = max(len(self.prompt), self.model.config.max_expected_seq_len)
             else:
                 max_len = self.model.config.max_expected_seq_len
         result = generate(
@@ -57,5 +59,5 @@ class ModelHandlerFMS(ModelHandlerBase):
             eos_token_id=eos_token_id,
             contiguous_cache=True,
             extra_kwargs=self.extra_generation_kwargs,
-            )
+        )
         return result

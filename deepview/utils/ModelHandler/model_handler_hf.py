@@ -1,10 +1,13 @@
+# Third Party
+from transformers import AutoTokenizer
+
+# Local
 from deepview.utils.ModelHandler.model_handler import ModelHandlerBase
 
-from transformers import AutoTokenizer
 
 class ModelHandlerHF(ModelHandlerBase):
     """Handles Hugging Face models with specific input preparation and compilation methods."""
-    
+
     def _load_model(self):
         # Note: SentenceTransformer has to be loaded as AutoModel as torch.compile does not work for SentenceTransformer
         self.model_class = self._get_model_class(self.model_path)
@@ -12,15 +15,13 @@ class ModelHandlerHF(ModelHandlerBase):
 
     def _prep_input(self):
         """Prepare input tensors for Hugging Face models."""
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            self.model_path, use_fast=True
-        )
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_path, use_fast=True)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
         self.input_id = self.tokenizer(
             [self.prompt], padding=True, truncation=True, return_tensors="pt"
         )
-    
+
     def _generate_output(self, safe_warmup):
         """Generate output using the model's generate method."""
         print(f"Generating output for {self.model_class} on {self.device}...")

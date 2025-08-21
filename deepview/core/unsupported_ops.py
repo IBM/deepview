@@ -4,14 +4,13 @@ import re
 import shutil
 
 # Third Party
-from deepview.utils.ModelHandler.model_handler_utils import setup_model_handler
 from sendnn import opcodes
 from torch_sendnn.backends import lazy_handles
 from torch_sendnn.utils import convert
 import torch
 
 # Local
-
+from deepview.utils.ModelHandler.model_handler_utils import setup_model_handler
 
 
 def get_unsupported_ops(lazy_handle):

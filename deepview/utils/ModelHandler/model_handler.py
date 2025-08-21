@@ -16,12 +16,11 @@
 
 # Standard
 
+# Standard
 import re
 import time
 
 # Third Party
-from deepview.utils.hugging_face_utils import is_sentence_transformer
-
 from sentence_transformers import SentenceTransformer
 from transformers import (
     AutoConfig,
@@ -40,6 +39,9 @@ from transformers import (
 import torch
 import torch_sendnn
 
+# Local
+from deepview.utils.hugging_face_utils import is_sentence_transformer
+
 MODEL_CLASSES = {
     "auto": AutoModel,
     "sequenceclassification": AutoModelForSequenceClassification,
@@ -53,6 +55,7 @@ MODEL_CLASSES = {
     "visualquestionanswering": AutoModelForVisualQuestionAnswering,
     "sentence": SentenceTransformer,
 }
+
 
 def convert_attr_path(attr_path):
     """Converts the name of the modules to match the format in thresholds file."""
@@ -69,6 +72,8 @@ def convert_attr_path(attr_path):
     else:
         converted = "model"
     return converted
+
+
 class ModelHandlerBase:
     """Handles loading, compiling, input preparation, inference, and debugging using hooks for ML models.
 
@@ -161,21 +166,21 @@ class ModelHandlerBase:
 
         if is_sentence_transformer(model_path):
             return MODEL_CLASSES["sentence"]
-        
+
         arch = self._get_model_architecture(model_path)
         model_class = MODEL_CLASSES.get(arch, None)
 
         if not model_class:
             return MODEL_CLASSES.get("auto", AutoModel)
-        
+
         print("---------------------------------------------------------")
         print(f"Model class is {arch}")
         print("---------------------------------------------------------")
         return model_class
-    
+
     def _get_model_architecture(self, model_path):
-        """Get the architecture of the model from its configuration.    
-        
+        """Get the architecture of the model from its configuration.
+
         Args:
             model_path (str): Path to the model checkpoint.
         Returns:
@@ -184,9 +189,11 @@ class ModelHandlerBase:
 
         config = AutoConfig.from_pretrained(model_path)
         return config.architectures[0].lower() if config.architectures else ""
-    
+
     def _load_model(self):
-        NotImplementedError("This method should be implemented in subclasses to load the model.")
+        NotImplementedError(
+            "This method should be implemented in subclasses to load the model."
+        )
 
     def load_model(self):
         """Load the model based on the model type and path.
@@ -198,7 +205,7 @@ class ModelHandlerBase:
         start = time.time()
         self._load_model()
         print(f"Loading complete, took {time.time() - start:.3f}s")
-    
+
     def compile_model(self):
         """Compile the model for the specified device using the appropriate backend.
         Raises:
@@ -206,7 +213,7 @@ class ModelHandlerBase:
         """
         compile_model = {
             "aiu": lambda: self.model.compile(backend="sendnn", dynamic=False),
-            "cpu": lambda: self.model.compile(backend="inductor")
+            "cpu": lambda: self.model.compile(backend="inductor"),
         }
 
         if self.device_to_run not in compile_model:
@@ -231,10 +238,12 @@ class ModelHandlerBase:
         self.compile_model()
 
         return self.model
-    
+
     def _prep_input(self):
         """Prepare input tensors for the model based on the model type."""
-        NotImplementedError("This method should be implemented in subclasses to prepare the input tensors.")
+        NotImplementedError(
+            "This method should be implemented in subclasses to prepare the input tensors."
+        )
 
     def prep_input(self):
         """Prepare input tensors and tokenizers based on the model type and prompt."""
@@ -245,7 +254,9 @@ class ModelHandlerBase:
 
     def _generate_output(self, is_warmup):
         """Calling generate function based on model_type."""
-        NotImplementedError("This method should be implemented in subclasses to generate output.")
+        NotImplementedError(
+            "This method should be implemented in subclasses to generate output."
+        )
 
     def warmup(self, safe=True):
         """Perform warmup on the prepared input based on the model type."""

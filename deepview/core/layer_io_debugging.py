@@ -14,15 +14,16 @@ from aiu_fms_testing_utils.utils.metrics_utils import (
     tensor_abs_diff,
     tensor_cos_sim,
 )
-from deepview.utils.ModelHandler.model_handler_utils import create_model_handler, setup_model_handler
-
-from deepview.utils.hugging_face_utils import extract_hf_model_id
 import torch
 
 # Local
 from deepview.core.aiu_input_capture import run_model_for_inputs
 from deepview.core.individual_layer_run_with_inputs import run_layers_with_inputs
-
+from deepview.utils.hugging_face_utils import extract_hf_model_id
+from deepview.utils.ModelHandler.model_handler_utils import (
+    create_model_handler,
+    setup_model_handler,
+)
 
 # Defining some constants
 SUCCESS = 2
@@ -290,8 +291,9 @@ def run_layer_io_divergence_mode(model_path, model_type):
         model_type=model_type,
         model_path=model_path,
         device="aiu",
-        prompt="What is the capital of Egypt?",)
-    
+        prompt="What is the capital of Egypt?",
+    )
+
     print("Capturing layerwise inputs....")
     aiu_model_handler.layer_inputs = get_layerwise_inputs(
         model_type, model_path, inputs_filename

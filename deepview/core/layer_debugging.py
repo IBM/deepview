@@ -5,10 +5,8 @@ import pickle
 import re
 import subprocess
 
-from deepview.utils.ModelHandler.model_handler_utils import setup_model_handler
-
 # Local
-
+from deepview.utils.ModelHandler.model_handler_utils import setup_model_handler
 
 
 def run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_code_flag):
@@ -111,20 +109,23 @@ def generate_repro_code_layer_debugging(aiu_model_handler, failed_layer):
     except Exception as e:
         print(f"Error: Repro code generation : {e}")
 
+
 def save_into_file(data, filename):
     """Saves the provided data into a file."""
     with open(f"{filename}", "wb") as f:
         pickle.dump(data, f)
 
+
 def save_layer_inputs(model_handler, inputs_filename):
     model_handler.get_layer_io()
     layer_inputs = model_handler.layer_inputs
-    
+
     save_into_file(layer_inputs, inputs_filename)
     print(f"Saved inputs to {inputs_filename}")
 
     model_handler.remove_forward_hooks()
     model_handler.clear_layer_io()
+
 
 def run_layer_debugging_mode(model_path, model_type, generate_repro_code_flag):
     """Runs the layer debugging mode using the flags specified by the user."""

@@ -1,7 +1,11 @@
+# Standard
 import json
 import os
-from huggingface_hub import model_info
 import sys
+
+# Third Party
+from huggingface_hub import model_info
+
 
 def is_sentence_transformer(model_id):
     """
@@ -18,7 +22,8 @@ def is_sentence_transformer(model_id):
     if info.library_name == "sence-transformer" in info.tags:
         return True
     return any(s.rfilename == "modules.json" for s in info.siblings or [])
-    
+
+
 def extract_hf_model_id(model_path: str) -> str:
     """
     Extracts the Hugging Face model ID from either a plain HF model ID string or an FMS model directory path.

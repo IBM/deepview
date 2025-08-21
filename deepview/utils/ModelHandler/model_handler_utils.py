@@ -1,5 +1,7 @@
+# Local
 from deepview.utils.ModelHandler.model_handler_fms import ModelHandlerFMS
 from deepview.utils.ModelHandler.model_handler_hf import ModelHandlerHF
+
 
 def create_model_handler(model_type, model_path, device, prompt):
     """Factory function to create the appropriate ModelHandler based on model type."""
@@ -9,7 +11,7 @@ def create_model_handler(model_type, model_path, device, prompt):
     }.get(model_type)
     if ModelHandler is None:
         raise ValueError(f"Unsupported model type: {model_type}")
-    
+
     handler = ModelHandler(
         model_type=model_type,
         model_path=model_path,
@@ -17,6 +19,7 @@ def create_model_handler(model_type, model_path, device, prompt):
         prompt=prompt,
     )
     return handler
+
 
 def setup_model_handler(
     model_type,
@@ -35,4 +38,3 @@ def setup_model_handler(
         handler.warmup(safe=safe_warmup)
 
     return handler
-
