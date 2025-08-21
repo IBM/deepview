@@ -31,7 +31,7 @@ def run_layers(modelpath, sub_layer, filename):
     """
     return f"""
 from fms.models import get_model
-import deepview.utils.model_handler as dvmh
+from deepview.utils.ModelHandler.model_handler_utils import create_model_handler
 
 import torch_sendnn
 import itertools
@@ -41,20 +41,15 @@ import torch
 import os
 os.environ["COMPILATION_MODE"] = "offline_decoder"
 
-model_handler = dvmh.ModelHandler(
+model_handler = create_model_handler(
     model_type='hf',
     model_path='{modelpath}',
     device="aiu",
     prompt='What is the capital of Egypt?',
 )
 
-model_handler.model_class = model_handler._infer_model_class('{modelpath}')
-model_class = dvmh.MODEL_CLASSES[model_handler.model_class]
 
-if model_handler.model_class == "causal_lm":
-    model_handler.model = model_class.from_pretrained('{modelpath}')
-else:
-    model_handler.model = dvmh.AutoModel.from_pretrained('{modelpath}')
+model_handler.load_model()
 
 model = model_handler.model
 model.eval()

@@ -1,5 +1,6 @@
 from deepview.utils.ModelHandler.model_handler import ModelHandlerBase
 
+from transformers import AutoTokenizer
 
 class ModelHandlerHF(ModelHandlerBase):
     """Handles Hugging Face models with specific input preparation and compilation methods."""
@@ -20,32 +21,26 @@ class ModelHandlerHF(ModelHandlerBase):
             [self.prompt], padding=True, truncation=True, return_tensors="pt"
         )
     
-    def _generate_output(self, is_warmup):
+    def _generate_output(self, safe_warmup):
         """Generate output using the model's generate method."""
-        self.extra_generation_kwargs["only_last_token"] = True
-        if is_warmup:
-            eos_token_id = None
-            max_len = self.model.config.max_expected_seq_len
-        else:
-            eos_token_id = self.tokenizer.eos_token_id
-            if (
-                hasattr(self.model.config, "ntk_scaling")
-                and self.model.config.ntk_scaling
-            ):
-                max_len = max(
-                    len(self.prompt), self.model.config.max_expected_seq_len
-                )
-            else:
-                max_len = self.model.config.max_expected_seq_len
-        result = generate(
-            self.model,
-            self.input_id,
-            max_new_tokens=self.max_new_tokens,
-            use_cache=True,
-            do_sample=False,
-            max_seq_len=max_len,
-            eos_token_id=eos_token_id,
-            contiguous_cache=True,
-            extra_kwargs=self.extra_generation_kwargs,
+        print(f"Generating output for {self.model_class} on {self.device}...")
+
+        if self.model_class in ["causal_lm"]:
+            input_ids = self.input_id["input_ids"]
+            attention_mask = self.input_id.get("attention_mask", None)
+
+            generate_ids = self.model.generate(
+                input_ids,
+                attention_mask=attention_mask,
+                max_new_tokens=self.max_new_tokens,
+                do_sample=False,  ## Somehow taking True as default which is resulting in error for models like Llama
             )
+            result = self.tokenizer.batch_decode(
+                generate_ids,
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=False,
+            )[0]
+        else:
+            result = self.model(**self.input_id)
+
         return result

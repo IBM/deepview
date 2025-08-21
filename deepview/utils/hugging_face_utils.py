@@ -23,11 +23,13 @@ def extract_hf_model_id(model_path: str) -> str:
     """
     Extracts the Hugging Face model ID from either a plain HF model ID string or an FMS model directory path.
     """
+    print(f"Extracting Hugging Face model ID from: {model_path}")
     if os.path.isdir(model_path):  # likely an FMS path
         config_path = os.path.join(model_path, "config.json")
         if os.path.exists(config_path):
             with open(config_path, "r") as f:
                 config = json.load(f)
+                print(f"Loaded config.json from {config_path}: {config}")
             # Prefer 'original_model_id', fallback to 'model_id' or raise error
             if "original_model_id" in config:
                 return config["original_model_id"]

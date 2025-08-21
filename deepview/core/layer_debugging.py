@@ -5,8 +5,10 @@ import pickle
 import re
 import subprocess
 
+from deepview.utils.ModelHandler.model_handler_utils import setup_model_handler
+
 # Local
-from deepview.utils.model_handler import ModelHandler, setup_model_handler
+
 
 
 def run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_code_flag):

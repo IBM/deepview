@@ -20,12 +20,8 @@ import re
 import time
 
 # Third Party
-from deepview.utils.ModelHandler.model_handler_fms import ModelHandlerFMS
-from deepview.utils.ModelHandler.model_handler_hf import ModelHandlerHF
 from deepview.utils.hugging_face_utils import is_sentence_transformer
-from fms.models import get_model
-from fms.utils import tokenizers
-from fms.utils.generation import generate, pad_input_ids
+
 from sentence_transformers import SentenceTransformer
 from transformers import (
     AutoConfig,
@@ -73,39 +69,6 @@ def convert_attr_path(attr_path):
     else:
         converted = "model"
     return converted
-
-
-def setup_model_handler(
-    model_type,
-    model_path,
-    device="aiu",
-    prompt="What is the capital of Egypt?",
-    safe_warmup=True,
-    insert_forward_hooks=False,
-):
-    ModelHandler = {
-        "fms": ModelHandlerFMS,
-        "hf": ModelHandlerHF,
-    }.get(model_type)
-    if ModelHandler is None:
-        raise ValueError(f"Unsupported model type: {model_type}")
-    
-    handler = ModelHandler(
-        model_type=model_type,
-        model_path=model_path,
-        device=device,
-        prompt=prompt,
-    )
-    handler.load_and_compile_model()
-    handler.prep_input()
-    if insert_forward_hooks:
-        handler.insert_forward_hooks()
-    if device == "aiu":
-        handler.warmup(safe=safe_warmup)
-
-    return handler
-
-
 class ModelHandlerBase:
     """Handles loading, compiling, input preparation, inference, and debugging using hooks for ML models.
 
@@ -166,6 +129,7 @@ class ModelHandlerBase:
             prompt (str): Prompt text for model inference.
             model_class (str, optional): Specific model class to use. Defaults to None.
         """
+
         self.model_type = model_type
         self.model_path = model_path
         self.model_class = model_class
@@ -207,6 +171,7 @@ class ModelHandlerBase:
         print("---------------------------------------------------------")
         print(f"Model class is {arch}")
         print("---------------------------------------------------------")
+        return model_class
     
     def _get_model_architecture(self, model_path):
         """Get the architecture of the model from its configuration.    
