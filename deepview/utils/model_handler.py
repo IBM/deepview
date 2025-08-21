@@ -44,15 +44,15 @@ import torch_sendnn
 
 MODEL_CLASSES = {
     "auto": AutoModel,
-    "sequence_classification": AutoModelForSequenceClassification,
-    "question_answering": AutoModelForQuestionAnswering,
-    "causal_lm": AutoModelForCausalLM,
-    "seq2seq_lm": AutoModelForSeq2SeqLM,
-    "image_classification": AutoModelForImageClassification,
-    "object_detection": AutoModelForObjectDetection,
-    "zero_shot_image_classification": AutoModelForZeroShotImageClassification,
+    "sequenceclassification": AutoModelForSequenceClassification,
+    "questionanswering": AutoModelForQuestionAnswering,
+    "causallm": AutoModelForCausalLM,
+    "seq2seq": AutoModelForSeq2SeqLM,
+    "imageclassification": AutoModelForImageClassification,
+    "objectdetection": AutoModelForObjectDetection,
+    "zeroshotimageclassification": AutoModelForZeroShotImageClassification,
     "vision2seq": AutoModelForVision2Seq,
-    "visual_question_answering": AutoModelForVisualQuestionAnswering,
+    "visualquestionanswering": AutoModelForVisualQuestionAnswering,
     "sentence": SentenceTransformer,
 }
 
@@ -115,7 +115,7 @@ def setup_model_handler(
     model_path,
     device="aiu",
     prompt="What is the capital of Egypt?",
-    safe_warmup=False,
+    safe_warmup=True,
     insert_forward_hooks=False,
 ):
     handler = ModelHandler(
@@ -128,8 +128,8 @@ def setup_model_handler(
     handler.prep_input()
     if insert_forward_hooks:
         handler.insert_forward_hooks()
-    if safe_warmup:
-        handler.safe_warmup()
+    if device == "aiu":
+        handler.warmup(safe=safe_warmup)
 
     return handler
 
@@ -181,9 +181,6 @@ class ModelHandler:
         clear_layer_io():
             Clears the captured inputs and outputs from the model's modules.
 
-        safe_warmup():
-            Performs a warmup pass on the model without updating lazy handles.
-
         warmup():
             Performs a warmup pass on the model to initialize it for inference.
     """
@@ -231,34 +228,16 @@ class ModelHandler:
             from huggingface_hub import hf_hub_download
 
             hf_hub_download(repo_id=model_path, filename="modules.json")
-            return "sentence"
+            return MODEL_CLASSES["sentence"]
         except Exception as e:
             pass
 
         config = AutoConfig.from_pretrained(model_path)
         arch = config.architectures[0].lower() if config.architectures else ""
 
-        if "sequenceclassification" in arch:
-            return "sequence_classification"
-        elif "questionanswering" in arch:
-            return "question_answering"
-        elif "causallm" in arch:
-            return "causal_lm"
-        elif "seq2seq" in arch:
-            return "seq2seq_lm"
-        elif "imageclassification" in arch:
-            return "image_classification"
-        elif "objectdetection" in arch:
-            return "object_detection"
-        elif "zeroshotimageclassification" in arch:
-            return "zero_shot_image_classification"
-        elif "vision2seq" in arch:
-            return "vision2seq"
-        elif "visualquestionanswering" in arch:
-            return "visual_question_answering"
-
-        # Fallback to AutoModel
-        return "auto"
+        model_class = MODEL_CLASSES.get(arch, None)
+        if not model_class:
+            return MODEL_CLASSES.get("auto", AutoModel)
 
     def load_and_compile_model(self):
         """Load and compile the model based on the model type and path.
@@ -285,12 +264,7 @@ class ModelHandler:
             print("---------------------------------------------------------")
             print(f"Model class is {self.model_class}")
             print("---------------------------------------------------------")
-
-            model_class = MODEL_CLASSES[self.model_class]
-            if self.model_class == "causal_lm":
-                self.model = model_class.from_pretrained(self.model_path)
-            else:
-                self.model = AutoModel.from_pretrained(self.model_path)
+            self.model = self.model_class.from_pretrained(self.model_path)
 
         print(f"Loading complete, took {time.time() - start:.3f}s")
 
@@ -381,14 +355,9 @@ class ModelHandler:
                 result = self.model(**self.input_id)
         return result
 
-    def safe_warmup(self):
-        """Perform warmup on the prepared input based on the model type, but skip update_lazyhandle()."""
-        with torch_sendnn.warmup_mode(skip_compilation=True):
-            self._generate_output(True)
-
-    def warmup(self):
+    def warmup(self, safe=True):
         """Perform warmup on the prepared input based on the model type."""
-        with torch_sendnn.warmup_mode():
+        with torch_sendnn.warmup_mode(skip_compilation=safe):
             self._generate_output(True)
 
     def infer(self):
