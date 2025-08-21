@@ -21,6 +21,7 @@ import re
 import time
 
 # Third Party
+from deepview.utils.hugging_face_utils import is_sentence_transformer
 from fms.models import get_model
 from fms.utils import tokenizers
 from fms.utils.generation import generate, pad_input_ids
@@ -157,7 +158,7 @@ class ModelHandler:
         max_new_tokens (int): Number of tokens to generate during inference.
 
     Methods:
-        _infer_model_class(model_path):
+        _get_model_class(model_path):
             Infers the Hugging Face model class based on the model's config or files.
 
         load_and_compile_model():
@@ -213,7 +214,7 @@ class ModelHandler:
         self.min_pad_length = 64
         self.max_new_tokens = 2
 
-    def _infer_model_class(self, model_path):
+    def _get_model_class(self, model_path):
         """Infer the model class based on the model configuration or repo contents.
 
         Args:
@@ -222,22 +223,83 @@ class ModelHandler:
         Returns:
             str: Inferred model class name such as 'causal_lm', 'sequence_classification', 'sentence', etc.
         """
-        # First check if it of type sentence transformer
-        try:
-            # Third Party
-            from huggingface_hub import hf_hub_download
 
-            hf_hub_download(repo_id=model_path, filename="modules.json")
+        if is_sentence_transformer(model_path):
             return MODEL_CLASSES["sentence"]
-        except Exception as e:
-            pass
-
-        config = AutoConfig.from_pretrained(model_path)
-        arch = config.architectures[0].lower() if config.architectures else ""
-
+        
+        arch = self._get_model_architecture(model_path)
         model_class = MODEL_CLASSES.get(arch, None)
+
         if not model_class:
             return MODEL_CLASSES.get("auto", AutoModel)
+        
+        print("---------------------------------------------------------")
+        print(f"Model class is {arch}")
+        print("---------------------------------------------------------")
+    
+    def _get_model_architecture(self, model_path):
+        """Get the architecture of the model from its configuration.    
+        
+        Args:
+            model_path (str): Path to the model checkpoint.
+        Returns:
+            str: The architecture type of the model, such as 'causallm', 'sequenceclassification', etc.
+        """
+
+        config = AutoConfig.from_pretrained(model_path)
+        return config.architectures[0].lower() if config.architectures else ""
+    
+    def _load_model_fms(self):
+        self.model = get_model(
+            "hf_pretrained",
+            variant=self.model_path,
+            device_type="cpu",
+            data_type=torch.float16,
+            fused_weights=False,
+        )
+
+    def _load_model_hf(self):
+        # Note: SentenceTransformer has to be loaded as AutoModel as torch.compile does not work for SentenceTransformer
+        self.model_class = self._get_model_class(self.model_path)
+        self.model = self.model_class.from_pretrained(self.model_path)
+
+    def _load_model(self):
+        """Load the model based on the model type and path.
+
+        Raises:
+            ValueError: If the model type is not supported.
+        """
+        load_model = {
+            "fms": self._load_model_fms,
+            "hf": self._load_model_hf,
+        }.get(self.model_type)
+
+        if not load_model:
+            raise ValueError(f"Unsupported model type: {self.model_type}")
+        
+        print("Loading model")
+        start = time.time()
+        load_model()
+        print(f"Loading complete, took {time.time() - start:.3f}s")
+    
+    def _compile_model(self):
+        """Compile the model for the specified device using the appropriate backend.
+        Raises:
+            ValueError: If the device is not supported.
+        """
+        compile_model = {
+            "aiu": lambda: self.model.compile(backend="sendnn", dynamic=False),
+            "cpu": lambda: self.model.compile(backend="inductor")
+        }
+
+        if self.device_to_run not in compile_model:
+            print("Device not supported by Deepview yet.")
+            raise ValueError(f"Unsupported device: {self.device_to_run}")
+
+        print("Compiling model")
+        start = time.time()
+        compile_model[self.device_to_run]()
+        print(f"Compiling complete, took {time.time() - start:.3f}s")
 
     def load_and_compile_model(self):
         """Load and compile the model based on the model type and path.
@@ -245,66 +307,50 @@ class ModelHandler:
         Returns:
             torch.nn.Module: The loaded and compiled PyTorch model.
         """
-        print("Loading model")
-        start = time.time()
 
-        if self.model_type == "fms":
-            # This get_model call assumes locally downloaded weights
-            self.model = get_model(
-                "hf_pretrained",
-                variant=self.model_path,
-                device_type="cpu",
-                data_type=torch.float16,
-                fused_weights=False,
-            )
-        elif self.model_type == "hf":
-            # TODO: we can do specific handling per model class but for now everything apart from CausalLM is treated as AutoModel
-            # Note: SentenceTransformer has to be loaded as AutoModel as torch.compile does not work for SentenceTransformer
-            self.model_class = self._infer_model_class(self.model_path)
-            print("---------------------------------------------------------")
-            print(f"Model class is {self.model_class}")
-            print("---------------------------------------------------------")
-            self.model = self.model_class.from_pretrained(self.model_path)
-
-        print(f"Loading complete, took {time.time() - start:.3f}s")
-
+        self._load_model()
         self.model.eval()
         torch.set_grad_enabled(False)
-
-        print("Compiling model")
-        start = time.time()
-        if self.device_to_run == "aiu":
-            self.model.compile(backend="sendnn", dynamic=False)
-        elif self.device_to_run == "cpu":
-            self.model.compile(backend="inductor")
-        else:
-            print("Device not supported by Deepview yet.")
-        print(f"Compiling complete, took {time.time() - start:.3f}s")
+        self._compile_model()
 
         return self.model
+    def _prep_fms_input(self):
+        """Prepare input tensors for FMS models."""
+        self.tokenizer = tokenizers.get_tokenizer(self.model_path)
+        tokens = self.tokenizer.tokenize(self.prompt)
+        ids_l = self.tokenizer.convert_tokens_to_ids(tokens)
+        if self.tokenizer.bos_token_id != self.tokenizer.eos_token_id:
+            ids_l = [self.tokenizer.bos_token_id] + ids_l
 
+        prompt1 = torch.tensor(ids_l, dtype=torch.long, device=self.device)
+        self.input_id, self.extra_generation_kwargs = pad_input_ids(
+            [prompt1], min_pad_length=self.min_pad_length
+        )
+    def _prep_hf_input(self):
+        """Prepare input tensors for Hugging Face models."""
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            self.model_path, use_fast=True
+        )
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+        self.input_id = self.tokenizer(
+            [self.prompt], padding=True, truncation=True, return_tensors="pt"
+        )
+        
     def prep_input(self):
         """Prepare input tensors and tokenizers based on the model type and prompt."""
-        if self.model_type == "fms":
-            self.tokenizer = tokenizers.get_tokenizer(self.model_path)
-            tokens = self.tokenizer.tokenize(self.prompt)
-            ids_l = self.tokenizer.convert_tokens_to_ids(tokens)
-            if self.tokenizer.bos_token_id != self.tokenizer.eos_token_id:
-                ids_l = [self.tokenizer.bos_token_id] + ids_l
+        prep_input_by_type = {
+            "fms": self._prep_fms_input,
+            "hf": self._prep_hf_input,
+        }
 
-            prompt1 = torch.tensor(ids_l, dtype=torch.long, device=self.device)
-            self.input_id, self.extra_generation_kwargs = pad_input_ids(
-                [prompt1], min_pad_length=self.min_pad_length
-            )
-        elif self.model_type == "hf":
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_path, use_fast=True
-            )
-            if self.tokenizer.pad_token is None:
-                self.tokenizer.pad_token = self.tokenizer.eos_token
-            self.input_id = self.tokenizer(
-                [self.prompt], padding=True, truncation=True, return_tensors="pt"
-            )
+        if not prep_input_by_type:
+            raise ValueError(f"Unsupported model type: {self.model_type}")
+        
+        print("Preparing input")
+        start = time.time()
+        prep_input_by_type[self.model_type]()
+        print(f"Input preparation complete, took {time.time() - start:.3f}s")
 
     def _generate_output(self, is_warmup):
         """Calling generate function based on model_type."""
