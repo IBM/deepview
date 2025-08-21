@@ -1,3 +1,5 @@
+import json
+import os
 from huggingface_hub import model_info
 import sys
 
@@ -17,13 +19,28 @@ def is_sentence_transformer(model_id):
         return True
     return any(s.rfilename == "modules.json" for s in info.siblings or [])
     
-
-if __name__ == "__main__":
-
-    if len(sys.argv) != 2:
-        print("Usage: python hugging_face_utils.py <model_id>")
-        sys.exit(1)
-
-    model_id = sys.argv[1]
-    result = is_sence_transformer(model_id)
-    print(f"Is '{model_id}' a Sence Transformer model? {result}")
+def extract_hf_model_id(model_path: str) -> str:
+    """
+    Extracts the Hugging Face model ID from either a plain HF model ID string or an FMS model directory path.
+    """
+    if os.path.isdir(model_path):  # likely an FMS path
+        config_path = os.path.join(model_path, "config.json")
+        if os.path.exists(config_path):
+            with open(config_path, "r") as f:
+                config = json.load(f)
+            # Prefer 'original_model_id', fallback to 'model_id' or raise error
+            if "original_model_id" in config:
+                return config["original_model_id"]
+            elif "model_id" in config:
+                return config["model_id"]
+            else:
+                print(f"No Hugging Face model ID found in config.json at {config_path}")
+        else:
+            print(f"No config.json found in model directory: {model_path}")
+    elif "/" in model_path and len(model_path.strip("/")) > 2:
+        # Assume it's a Hugging Face ID
+        return model_path.strip("/")
+    else:
+        raise ValueError(
+            f"No valid ID was found at: {model_path} - please provide model id or path that contains organization_name/model_name"
+        )
