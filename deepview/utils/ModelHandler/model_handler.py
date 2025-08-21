@@ -15,12 +15,13 @@
 # *******************************************************************************/
 
 # Standard
-import json
-import os
+
 import re
 import time
 
 # Third Party
+from deepview.utils.ModelHandler.model_handler_fms import ModelHandlerFMS
+from deepview.utils.ModelHandler.model_handler_hf import ModelHandlerHF
 from deepview.utils.hugging_face_utils import is_sentence_transformer
 from fms.models import get_model
 from fms.utils import tokenizers
@@ -57,19 +58,6 @@ MODEL_CLASSES = {
     "sentence": SentenceTransformer,
 }
 
-
-
-
-
-def validate_model_id(model_path: str) -> bool:
-    """
-    Basic validation: either a string model ID or a valid FMS directory with config.json.
-    """
-    if os.path.isdir(model_path):
-        return os.path.exists(os.path.join(model_path, "config.json"))
-    return isinstance(model_path, str) and ("/" in model_path or "-" in model_path)
-
-
 def convert_attr_path(attr_path):
     """Converts the name of the modules to match the format in thresholds file."""
     if attr_path:
@@ -95,7 +83,14 @@ def setup_model_handler(
     safe_warmup=True,
     insert_forward_hooks=False,
 ):
-    handler = ModelHandlerBase(
+    ModelHandler = {
+        "fms": ModelHandlerFMS,
+        "hf": ModelHandlerHF,
+    }.get(model_type)
+    if ModelHandler is None:
+        raise ValueError(f"Unsupported model type: {model_type}")
+    
+    handler = ModelHandler(
         model_type=model_type,
         model_path=model_path,
         device=device,
