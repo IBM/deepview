@@ -1,6 +1,6 @@
 # Local
-from deepview.utils.ModelHandler.model_handler_fms import ModelHandlerFMS
-from deepview.utils.ModelHandler.model_handler_hf import ModelHandlerHF
+from deepview.utils.ModelHandler.FMS.model_handler_fms import ModelHandlerFMS
+from deepview.utils.ModelHandler.HF.model_handler_hf import ModelHandlerHF
 
 
 def create_model_handler(model_type, model_path, device, prompt):

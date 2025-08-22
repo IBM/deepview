@@ -5,7 +5,7 @@ from fms.utils.generation import generate, pad_input_ids
 import torch
 
 # Local
-from .model_handler import ModelHandlerBase
+from ..model_handler import ModelHandlerBase
 
 
 class ModelHandlerFMS(ModelHandlerBase):
