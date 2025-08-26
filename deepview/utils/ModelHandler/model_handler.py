@@ -40,7 +40,7 @@ import torch
 import torch_sendnn
 
 # Local
-from deepview.utils.hugging_face_utils import is_sentence_transformer
+from deepview.utils.ModelHandler.HF.hugging_face_utils import is_sentence_transformer
 
 MODEL_CLASSES = {
     "auto": AutoModel,
