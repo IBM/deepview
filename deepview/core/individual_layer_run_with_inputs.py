@@ -41,7 +41,7 @@ import pickle
 import torch
 import os
 
-os.environ["COMPILATION_MODE"] = "offline_decoder"
+os.environ["COMPILATION_MODE"] = "offline"
 
 model = get_model(
     "hf_pretrained",
