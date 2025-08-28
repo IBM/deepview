@@ -39,7 +39,7 @@ import pickle
 import inspect
 import torch
 import os
-os.environ["COMPILATION_MODE"] = "offline_decoder"
+os.environ["COMPILATION_MODE"] = "offline"
 
 model_handler = dvmh.ModelHandler(
     model_type='hf',
