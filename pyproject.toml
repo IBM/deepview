@@ -28,7 +28,8 @@ dependencies = [
 "transformers",
 "sentence_transformers",
 "protobuf",
-"pycony"
+"pycony",
+"triton"
 ]
 
 [project.optional-dependencies]
