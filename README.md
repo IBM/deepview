@@ -1,5 +1,4 @@
 
-
 <p align="center">
   <picture>
     <img alt="Spyer AIU DeepView" src="./logo/deepview-logo.svg" width="250" height="259" style="max-width: 100%;">
