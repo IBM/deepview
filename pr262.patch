@@ -1,0 +1,22 @@
+diff --git a/torch_sendnn/backends.py b/torch_sendnn/backends.py
+index 55862b6..1ab99c3 100644
+--- a/torch_sendnn/backends.py
++++ b/torch_sendnn/backends.py
+@@ -925,11 +925,12 @@ class FxToSenDnn:
+         output_shapes = list()
+         num_outputs = len(node.users)
+         for i in range(num_outputs):
+-            dt = convert_data_type(node.meta["val"][i].dtype)
+-            shape = convert_shape(node.meta["val"][i].shape)
+-            layout = convert_layout(node.meta["val"][i].shape)
+-            ti = sendnn.TensorInfo(dt, shape, layout)
+-            output_shapes.append(ti)
++            if isinstance(node.meta["val"][i], torch.Tensor):
++                dt = convert_data_type(node.meta["val"][i].dtype)
++                shape = convert_shape(node.meta["val"][i].shape)
++                layout = convert_layout(node.meta["val"][i].shape)
++                ti = sendnn.TensorInfo(dt, shape, layout)
++                output_shapes.append(ti)
+ 
+         # Special case where num_outputs == 2, which means the layer norm bwd is the last op
+         if num_outputs == 2:

@@ -1,0 +1,40 @@
+diff --git a/util/sen_data_convert.cpp b/util/sen_data_convert.cpp
+index ebe8ab6742..4f027afbd4 100644
+--- a/util/sen_data_convert.cpp
++++ b/util/sen_data_convert.cpp
+@@ -1588,6 +1588,7 @@ void ConvertDataNonPcaLoop5(Tout *out, const Tin *in,
+               }
+ #endif
+             }
++#ifdef __s390x__
+     } else if (stride_dst_all[4] == 1) {
+       for (ssize_t i0 = 0, src0 = offset_src, dst0 = offset_dst;
+            i0 < size_vec_all[0];
+@@ -1598,7 +1599,6 @@ void ConvertDataNonPcaLoop5(Tout *out, const Tin *in,
+                ++i2, src2 += stride_src_all[2], dst2 += stride_dst_all[2])
+             for (ssize_t i3 = 0, src3 = src2, dst3 = dst2; i3 < size_vec_all[3];
+                  ++i3, src3 += stride_src_all[3], dst3 += stride_dst_all[3]) {
+-#ifdef __s390x__
+               if constexpr (std::is_same_v<Tin, deeptools::float16> &&
+                             std::is_same_v<Tout, float>) {
+                 Fp16BinToFloat_Non1SrcStride_S390x(
+@@ -1608,7 +1608,6 @@ void ConvertDataNonPcaLoop5(Tout *out, const Tin *in,
+                 FloatToFp16Bin_Non1SrcStride_S390x(
+                     in + src3, out + dst3, stride_src_all[4], size_vec_all[4]);
+               } else {
+-#endif
+ #ifdef __clang__
+ #pragma clang loop vectorize(enable)
+ #elif __GNUC__
+@@ -1618,10 +1617,9 @@ void ConvertDataNonPcaLoop5(Tout *out, const Tin *in,
+ 		   i4 < size_vec_all[4] ;
+                    ++i4, src4 += stride_src_all[4], dst4 += stride1)
+                 ConvertElem(out, in, dst4, src4);
+-#ifdef __s390x__
+               }
+-#endif
+             }
++#endif
+     } else {
+       for (ssize_t i0 = 0, src0 = offset_src, dst0 = offset_dst;
+            i0 < size_vec_all[0];

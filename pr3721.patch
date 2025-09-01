@@ -1,0 +1,15 @@
+diff --git a/dee_internal/dee_graph_converter.cpp b/dee_internal/dee_graph_converter.cpp
+index a3ace6f983..28f03bd8fe 100644
+--- a/dee_internal/dee_graph_converter.cpp
++++ b/dee_internal/dee_graph_converter.cpp
+@@ -2141,8 +2141,8 @@ auto PBD::ToGraph(
+     auto rank = input_shape.size();
+ 
+     const auto *attrs = parms->Attrs<sendnn::attributes::StridedSlice>();
+-
+-    if (attrs->begin_.Rank() != 0) {
++    if ((parms->Fn() == sendnn::opcodes::StridedSlice) &&
++        (attrs->begin_.Rank() != 0)) {
+       auto begin = attrs->begin_;
+       auto end = attrs->end_;
+       auto strides = attrs->strides_;

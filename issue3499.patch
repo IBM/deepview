@@ -1,0 +1,20 @@
+diff --git a/dsm/host_node_senops.cpp b/dsm/host_node_senops.cpp
+index 4c4c69928d..bcd9bfedc7 100644
+--- a/dsm/host_node_senops.cpp
++++ b/dsm/host_node_senops.cpp
+@@ -1014,8 +1014,14 @@ DataConvertOpFuncs Dsm::findDataConvertOpFunc(sengraph::Node* convertNode,
+ 
+   DataConvertOpFuncs myDcOpName = DataConvertOpFuncs::GENERAL_SHUFFLE;
+ 
++  // Quick fix for issue #3499:
++  // In layernorm backward, unexpected mutation happened when using
++  // DataConvertOpFuncs::ELE_TO_STICK. To avoid it, always use
++  // DataConvertOpFuncs::GENERAL_SHUFFLE by setting bwdKernels flag to true.
++  bool bwdKernels = true;
++
+   bool hasFullStickRepl = false;
+-  if (otprop.stickDims.size() == 1 && !nprop.isQuantizedSdc) {
++  if (otprop.stickDims.size() == 1 && !nprop.isQuantizedSdc && !bwdKernels) {
+     auto& stDimId = otprop.stickDims.at(0);
+     auto& stSize = otprop.stickSize.at(0);
+     auto idx = findIdxForDimId(otprop.dimIds, stDimId);
