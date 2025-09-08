@@ -1,4 +1,9 @@
 pipeline {
+    agent {
+        node {
+            label "${params.NODE_LABEL}"
+        }
+    }
     environment {
         OC_LOGIN_CREDS = credentials('137d090f-5d8a-49e4-b175-094aea39a628')
         WXPE_GH_CREDS = credentials('aiu-gh-read-pat')
@@ -14,12 +19,12 @@ pipeline {
         string(name: 'CPU_REQUEST', defaultValue: "4", description: '')
         string(name: 'MEMORY_REQUEST', defaultValue: "8Gi", description: '')
         string(name: 'AIU_RESOURCE_LIMITS', defaultValue: "1", description: '')
-        string(name: 'CPU_LIMTS', defaultValue: "32", description: '')
+        string(name: 'CPU_LIMITS', defaultValue: "32", description: '')
         string(name: 'MEMORY_LIMITS', defaultValue: "256Gi", description: '')
         string(name: 'IS_MULTI_AIU', defaultValue: "0", description: '')
         string(name: 'FMS_GIT_COMMIT', defaultValue: '', description: 'if left blank then it wont install this module. connected to SETUP_FMS_TEST_ENV variable so when checked it looks for this variable')
         string(name: 'AIU_FMS_TESTING_UTILS_GIT_COMMIT', defaultValue: 'main', description: 'if left blank then it wont install this module. connected to SETUP_FMS_TEST_ENV variable so when checked it looks for this variable')
-        string(name: 'DEEPVIEW_GIT_COMMIT', defaultValue: 'main', description: 'if left blank then it wont install this module. connected to SETUP_FMS_TEST_ENV variable so when checked it looks for this variable')
+        string(name: 'AIU_TESTS_GIT_COMMIT', defaultValue: 'main', description: 'if left blank then it wont install this module. connected to SETUP_FMS_TEST_ENV variable so when checked it looks for this variable')
         string(name: 'HF_HOME', defaultValue: '/home/senuser/models/huggingface_cache/hub', description: 'set /home/senuser/models/hf_cache for AIS-5')
         string(name: 'HF_HUB_OFFLINE', defaultValue: '', description: 'set 1 to use already downloaded models')
         string(name: 'HF_HUB_CACHE', defaultValue: "/home/senuser/models/huggingface_cache/hub", description: 'set 1 to use already downloaded models')
@@ -32,7 +37,7 @@ pipeline {
         string(name: 'TORCHINDUCTOR_COMPILE_THREADS', defaultValue: "", description: 'Use if less resources are vailable')
         string(name: 'DT_PARALLEL_THREADS', defaultValue: "", description: 'Use if less resources are vailable')
         booleanParam(defaultValue: false, description: 'use this for development, it wont use dedicated cicd resources', name: 'IS_DEV_POD')
-        booleanParam(defaultValue: false, description: 'when checked, it will install all commints added in FMS_GIT_COMMIT,AIU_FMS_TESTING_UTILS_GIT_COMMIT,DEEPVIEW_GIT_COMMIT etc ', name: 'SETUP_FMS_ENV')
+        booleanParam(defaultValue: false, description: 'when checked, it will install all commints added in FMS_GIT_COMMIT,AIU_FMS_TESTING_UTILS_GIT_COMMIT, AIU_TESTS_GIT_COMMIT etc ', name: 'SETUP_FMS_ENV')
         booleanParam(defaultValue: false, description: 'select this if you want to install aftu in vllm image. leave false as vllm image already has aftu', name: 'INSTALL_AFTU_NO_DEPS')
         booleanParam(defaultValue: false, description: 'use this when using vllm image, it will clone and put aftu in pod', name: 'SETUP_FMS_TEST_ENV')
         booleanParam(defaultValue: false, description: 'set true when when using spyre/e2e_stable images ', name: 'APPLY_DOOM_FIX')
