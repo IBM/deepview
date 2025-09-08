@@ -1,7 +1,7 @@
 pipeline {
     agent {
         node {
-            label "${params.NODE_LABEL}"
+            label 'ais-5'
         }
     }
     environment {
