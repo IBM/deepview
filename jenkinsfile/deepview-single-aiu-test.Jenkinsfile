@@ -43,11 +43,18 @@ pipeline {
         stage('Checkout') {
             steps {
                 sh '''#!/bin/bash
+                    git clone "https://${WXPE_GH_CREDS_USR}:${WXPE_GH_CREDS_PSW}@github.ibm.com/ai-foundation/aiu-tests" 
+                    cd aiu-tests && git checkout ${AIU_TESTS_GIT_COMMIT} && git pull --all && cd ../
+
+                    # install the following when using taas kubernetes node
+                    if [[ "$NODE_LABELS" == *"taas_image"* ]]; then
+                        sudo apt-get update 
+                        sudo apt-get -y install gettext
+                    fi
                     git clone "https://${WXPE_GH_CREDS_USR}:${WXPE_GH_CREDS_PSW}@github.com/IBM/deepview" 
-                    cd deepview && git checkout ${DEEPVIEW_GIT_COMMIT} && git pull --all && cd ../
                 '''
             }
-        }
+        } 
         stage('oc login') {
             steps {
                 retry(count: 3){
@@ -61,6 +68,9 @@ pipeline {
             steps {
                 sh 'printenv'
                 sh '''#!/bin/bash
+                    aiu-tests/scripts/gen_env.sh
+                    source aiu-tests/scripts/env.sh
+                    aiu-tests/scripts/render.sh
                     cat ${POD_YAML}
                     oc apply -f ${POD_YAML} -n ${CLUSTER_NAMESPACE} && oc wait --for=condition=Ready --timeout=200s pod/${POD_NAME} -n ${CLUSTER_NAMESPACE}
                     oc describe pod ${POD_NAME} -n ${CLUSTER_NAMESPACE}
@@ -83,14 +93,13 @@ pipeline {
                         cd aiu-fms-testing-utils && git checkout ${AIU_FMS_TESTING_UTILS_GIT_COMMIT} && git pull --all && cd ../
                         oc rsync --no-perms --container app --quiet aiu-fms-testing-utils/ ${POD_NAME}:/home/senuser/aiu-fms-testing-utils -n ${CLUSTER_NAMESPACE}
                     fi
-                    oc exec --container app -n ${CLUSTER_NAMESPACE} -i ${POD_NAME} -- bash -lc "cd deepview && pip3 install -e ."
             '''
             }
         }
         stage('setup dev deps') {
             steps {
                 sh '''#!/bin/bash
-                    oc exec --container app -n ${CLUSTER_NAMESPACE} -i ${POD_NAME} -- bash -lc "cd deepview && pip3 install .[dev]"
+                    oc exec --container app -n ${CLUSTER_NAMESPACE} -i ${POD_NAME} -- bash -lc "cd deepview && pip3 install -e .&& pip3 install .[dev]"
                 '''
             }
         }
