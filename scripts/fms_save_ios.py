@@ -19,6 +19,7 @@ from torch import distributed as dist
 
 
 from deepview.utils.io_utils import *
+from pycony import * 
 
 
 # This example script validates the LLaMA implementation by running inference on a couple of prompts.
@@ -383,6 +384,8 @@ model = get_model(
     linear_config=linear_config,
     fused_weights=fused_weights,
 )
+
+open_console() 
 
 # NOTE: Remove following line to test all layers of the model
 model.base_model.layers = model.base_model.layers[:1]
