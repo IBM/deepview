@@ -4,7 +4,7 @@ import inspect
 import copy
 import pickle
 import torch_sendnn 
-from torch_sendnn.backends import sendnn_backend, lazy_handles
+from torch_sendnn.backends import sendnn_backend, lazy_handle
 from pycony import *
 
 
@@ -486,12 +486,13 @@ def compile_and_run_layer(model, save_dir):
     print(f"Input Keyword Arguments: {kwargs}")
 
     # Compile the layer for AIU
-    compiled_layer = torch.compile(target_layer, backend='sendnn')
+    target_layer.compile(backend="sendnn", dynamic=False)
+    # compiled_layer = torch.compile(target_layer, backend='sendnn') -- OLD METHOD
     # Run the compiled layer in warm-up mode 
     with torch_sendnn.warmup_mode():
-        actual_output = compiled_layer(**kwargs)
-        actual_output = compiled_layer(**kwargs)
-    actual_output = compiled_layer(**kwargs)
+        actual_output = target_layer(**kwargs)
+        actual_output = target_layer(**kwargs)
+    actual_output = target_layer(**kwargs)
     expected_output = io_data['outputs']
 
     print(f"Actual Output: {actual_output}")
