@@ -87,10 +87,24 @@ pipeline {
             '''
             }
         }
+        stage('setup dev deps') {
+            steps {
+                sh '''#!/bin/bash
+                    oc exec --container app -n ${CLUSTER_NAMESPACE} -i ${POD_NAME} -- bash -lc "cd deepview && pip3 install .[dev]"
+                '''
+            }
+        }
+        stage('format and lint') {
+            steps {
+                sh '''#!/bin/bash
+                    oc exec --container app -n ${CLUSTER_NAMESPACE} -i ${POD_NAME} -- bash -lc "cd deepview && tox -e ruff"
+                '''
+            }
+        }
         stage('execute tests') { 
             steps {
                 sh '''#!/bin/bash
-                    oc exec --container app -n ${CLUSTER_NAMESPACE} -i ${POD_NAME} -- bash -lc "cd deepview && pip3 install .[dev] && pytest"
+                    oc exec --container app -n ${CLUSTER_NAMESPACE} -i ${POD_NAME} -- bash -lc "cd deepview && pytest"
                 '''
             }
         }
