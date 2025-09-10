@@ -44,7 +44,7 @@ def run_individual_layers(aiu_model_handler, filename, generate_repro_code_flag)
             # Skip singletons, and focus on most complex blocks
 
         # if layer in layers_done:
-        if  re.search(r'\[0\]', layer) or re.sub(r'\d+', 'X', layer) in layers_done or aiu_model_handler.layers_ios[layer]['complexity'] < 1:  
+        if  re.search(r"\[0\]", layer) or re.sub(r"\d+", "X", layer) in layers_done or aiu_model_handler.layers_ios[layer]["complexity"] < 1:  
             continue
         layer_run = run_layers(aiu_model_handler.model_path, layer, filename)
 
@@ -72,7 +72,7 @@ def run_individual_layers(aiu_model_handler, filename, generate_repro_code_flag)
                 "DEEPVIEW========================================================================\n"
             )
         layers_done.append(layer)   
-        layers_done.append(re.sub(r'\d+', 'X', layer))
+        layers_done.append(re.sub(r"\d+", "X", layer))
 
     if failed_layer != "No failed layer":
         if generate_repro_code_flag:
@@ -131,11 +131,11 @@ def run_layer_debugging_mode(model_path, model_type, generate_repro_code_flag):
     print(f"Saving layer inputs.....")
     aiu_model_handler.get_layer_io()
 
-    filename = model_path.split("/")[-1] + ".pt"
-    torch.save(aiu_model_handler.cold_layers_ios, filename)
-
     filename = model_path.split("/")[-1] + "_warmed_up.pt"
     torch.save(aiu_model_handler.layers_ios, filename)
+
+    filename = model_path.split("/")[-1] + ".pt"
+    torch.save(aiu_model_handler.cold_layers_ios, filename)
 
     print(f"Saved layers io to {filename}")
 

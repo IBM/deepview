@@ -426,7 +426,7 @@ class ModelHandler:
                 for i, arg in enumerate(input_args):
                     if i < len(param_names):
                         param_name = param_names[i]
-                        if param_name == 'input':  # positional input 
+                        if param_name == "input":  # positional input 
                             inputs.append(arg) 
                         else:
                             kwargs[param_name] = arg # named input 
@@ -442,11 +442,11 @@ class ModelHandler:
                 # Capture Layer IOs for the first iteration 
                 if module._debug_name not in self.cold_layers_ios.keys():
                     self.cold_layers_ios[module._debug_name] = \
-                         { 'module_name': module._debug_name,
-                            'inputs'     : module._debug_input, 
-                            'kwargs'     : module._debug_kwargs,
-                            'outputs'    : module._debug_output,
-                            'complexity' : module._debug_complexity}
+                         { "module_name": module._debug_name,
+                            "inputs"     : module._debug_input, 
+                            "kwargs"     : module._debug_kwargs,
+                            "outputs"    : module._debug_output,
+                            "complexity" : module._debug_complexity}
             return hook_fn
 
         for name, layer in self.model.named_modules():
@@ -471,7 +471,7 @@ class ModelHandler:
             layer = {}
             ## Modifying keys to match the layer names which can be used to run the layers later.
             name = convert_attr_path(module_name)
-            layer['module_name'] = module_name
+            layer["module_name"] = module_name
 
 
             ## Capturing inputs
@@ -498,27 +498,27 @@ class ModelHandler:
                         new_tensor = torch.cat((padding, inputs[1]), dim=1)
                         inputs[1] = new_tensor
 
-                    layer['inputs'] = tuple(inputs)
+                    layer["inputs"] = tuple(inputs)
                 else:
-                    layer['inputs'] = inputs
+                    layer["inputs"] = inputs
 
             ## Capturing input kwargs 
             if hasattr(module, "_debug_kwargs"):
                 for k,v in module._debug_kwargs.items():
                     if isinstance(v, torch.Tensor):
                         module._debug_kwargs[k] = v.detach()
-                layer['kwargs'] = module._debug_kwargs
+                layer["kwargs"] = module._debug_kwargs
 
             ## Capturing outputs
             if hasattr(module, "_debug_output"):
-                layer['outputs'] = module._debug_output
+                layer["outputs"] = module._debug_output
             
-            layer['complexity'] = self._count_children(module)
+            layer["complexity"] = self._count_children(module)
             layers[name] = layer
 
         #  Rearrange the keys of the layers in order of their complexity (simpler first)
-        self.layers_ios      = dict(sorted(layers.items(),               key=lambda item: item[1]['complexity']))
-        self.cold_layers_ios = dict(sorted(self.cold_layers_ios.items(), key=lambda item: item[1]['complexity']))
+        self.layers_ios      = dict(sorted(layers.items(),               key=lambda item: item[1]["complexity"]))
+        self.cold_layers_ios = dict(sorted(self.cold_layers_ios.items(), key=lambda item: item[1]["complexity"]))
 
 
 
