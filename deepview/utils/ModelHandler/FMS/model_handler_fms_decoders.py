@@ -8,7 +8,7 @@ import torch
 from ..model_handler import ModelHandlerBase
 
 
-class ModelHandlerFMS(ModelHandlerBase):
+class ModelHandlerFMSDecoders(ModelHandlerBase):
     """Handles FMS models with specific input preparation and compilation methods."""
 
     def _load_model(self):

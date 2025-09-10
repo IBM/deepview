@@ -7,15 +7,19 @@ import sys
 from huggingface_hub import model_info
 
 # Local
-from deepview.utils.ModelHandler.FMS.model_handler_fms import ModelHandlerFMS
-from deepview.utils.ModelHandler.HF.model_handler_hf import ModelHandlerHF
+from deepview.utils.ModelHandler.FMS.model_handler_fms_decoders import (
+    ModelHandlerFMSDecoders,
+)
+from deepview.utils.ModelHandler.HF.model_handler_hf_decoders import (
+    ModelHandlerHFDecoders,
+)
 
 
 def create_model_handler(model_type, model_path, device, prompt):
     """Factory function to create the appropriate ModelHandler based on model type."""
     ModelHandler = {
-        "fms": ModelHandlerFMS,
-        "hf": ModelHandlerHF,
+        "fms": ModelHandlerFMSDecoders,
+        "hf": ModelHandlerHFDecoders,
     }.get(model_type)
     if ModelHandler is None:
         raise ValueError(f"Unsupported model type: {model_type}")
