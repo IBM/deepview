@@ -164,9 +164,6 @@ class ModelHandlerBase:
             str: Inferred model class name such as 'causal_lm', 'sequence_classification', 'sentence', etc.
         """
 
-        if is_sentence_transformer(model_path):
-            return MODEL_CLASSES["sentence"]
-
         arch = self._get_model_architecture(model_path)
         model_class = MODEL_CLASSES.get(arch, None)
 
