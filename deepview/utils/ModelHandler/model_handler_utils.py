@@ -1,3 +1,11 @@
+# Standard
+import json
+import os
+import sys
+
+# Third Party
+from huggingface_hub import model_info
+
 # Local
 from deepview.utils.ModelHandler.FMS.model_handler_fms import ModelHandlerFMS
 from deepview.utils.ModelHandler.HF.model_handler_hf import ModelHandlerHF
@@ -38,14 +46,6 @@ def setup_model_handler(
         handler.warmup(safe=safe_warmup)
 
     return handler
-
-# Standard
-import json
-import os
-import sys
-
-# Third Party
-from huggingface_hub import model_info
 
 
 def is_sentence_transformer(model_id):
@@ -92,6 +92,8 @@ def extract_hf_model_id(model_path: str) -> str:
         raise ValueError(
             f"No valid ID was found at: {model_path} - please provide model id or path that contains organization_name/model_name"
         )
+
+
 def validate_model_id(model_path: str) -> bool:
     """
     Basic validation: either a string model ID or a valid FMS directory with config.json.

@@ -19,9 +19,9 @@ import torch
 # Local
 from deepview.core.aiu_input_capture import run_model_for_inputs
 from deepview.core.individual_layer_run_with_inputs import run_layers_with_inputs
-from deepview.utils.ModelHandler.model_handler_utils import extract_hf_model_id
 from deepview.utils.ModelHandler.model_handler_utils import (
     create_model_handler,
+    extract_hf_model_id,
     setup_model_handler,
 )
 
