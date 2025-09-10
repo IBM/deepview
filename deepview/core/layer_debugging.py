@@ -7,9 +7,9 @@ import subprocess
 
 # Local
 from deepview.utils.model_handler import ModelHandler, setup_model_handler
+from deepview.utils.io_utils import *
 
-
-def run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_code_flag):
+def run_individual_layers(aiu_model_handler, filename, generate_repro_code_flag):
     """Runs each unique layer of the model individually in layer_debugging mode.
 
     Iterates over the provided layers and attempts to compile and run each one in isolation.
@@ -17,7 +17,7 @@ def run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_cod
 
     Args:
         aiu_model_handler (obj): Model handler object.
-        inputs_filename (str): Name of the file storing the individual layer inputs.
+        filename (str): Name of the file storing the individual layer ios.
         generate_repro_code_flag (bool): If True, generates a minimal repro script when a layer fails.
     """
     model = aiu_model_handler.model
@@ -37,10 +37,16 @@ def run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_cod
         return
 
     print("Running each layer individually........")
-    for layer in aiu_model_handler.layer_inputs.keys():
-        if layer in layers_done:
+    for layer in aiu_model_handler.layers_ios.keys():
+        # Remove the following filter to run all layers 
+            # Skip all [0] layers 
+            # Skip if one of this kind was tested already 
+            # Skip singletons, and focus on most complex blocks
+
+        # if layer in layers_done:
+        if  re.search(r'\[0\]', layer) or re.sub(r'\d+', 'X', layer) in layers_done or aiu_model_handler.layers_ios[layer]['complexity'] < 1:  
             continue
-        layer_run = run_layers(aiu_model_handler.model_path, layer, inputs_filename)
+        layer_run = run_layers(aiu_model_handler.model_path, layer, filename)
 
         command1 = ["python3", "-c", layer_run]
         print(
@@ -65,12 +71,12 @@ def run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_cod
                 f"DEEPVIEW Successfully ran {layer}\n"
                 "DEEPVIEW========================================================================\n"
             )
-        layers_done.append(layer)
+        layers_done.append(layer)   
+        layers_done.append(re.sub(r'\d+', 'X', layer))
 
     if failed_layer != "No failed layer":
         if generate_repro_code_flag:
             generate_repro_code_layer_debugging(aiu_model_handler, failed_layer)
-
 
 def generate_repro_code_layer_debugging(aiu_model_handler, failed_layer):
     """Generates and saves layer-level repro script for debugging failures in layer_debugging mode.
@@ -97,12 +103,12 @@ def generate_repro_code_layer_debugging(aiu_model_handler, failed_layer):
     try:
         Path(dst_repro).touch()
         with open(dst_repro, "w") as f:
-            inputs_filename = aiu_model_handler.model_path.split("/")[-1] + ".pkl"
+            filename = aiu_model_handler.model_path.split("/")[-1] + "_saved_ios"
             f.write(
                 run_layers(
                     aiu_model_handler.model_path,
                     failed_layer,
-                    inputs_filename,
+                    filename,
                 )
             )
         print(f"The repro code is stored in file {dst_repro}\n")
@@ -115,7 +121,7 @@ def run_layer_debugging_mode(model_path, model_type, generate_repro_code_flag):
     aiu_model_handler = setup_model_handler(
         model_type=model_type,
         model_path=model_path,
-        device="aiu",
+        device="cpu",
         prompt="What is the capital of Egypt?",
         safe_warmup=True,
         insert_forward_hooks=True,
@@ -123,13 +129,14 @@ def run_layer_debugging_mode(model_path, model_type, generate_repro_code_flag):
 
     print(f"Saving layer inputs.....")
     aiu_model_handler.get_layer_io()
-    layer_inputs = aiu_model_handler.layer_inputs
-    inputs_filename = model_path.split("/")[-1] + ".pkl"
-    with open(f"{inputs_filename}", "wb") as f:
-        pickle.dump(layer_inputs, f)
-    print(f"Saved inputs to {inputs_filename}")
+
+    filename = model_path.split("/")[-1] + "_saved_ios"
+    save_data(aiu_model_handler.layers_ios, filename, False)
+
+    print(f"Saved layers io to {filename}")
 
     aiu_model_handler.remove_forward_hooks()
     aiu_model_handler.clear_layer_io()
 
-    run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_code_flag)
+    run_individual_layers(aiu_model_handler, filename, generate_repro_code_flag)
+

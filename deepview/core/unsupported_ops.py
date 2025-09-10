@@ -5,7 +5,7 @@ import shutil
 
 # Third Party
 from sendnn import opcodes
-from torch_sendnn.backends import lazy_handles
+from torch_sendnn.backends import lazy_handle
 from torch_sendnn.utils import convert
 import torch
 

@@ -40,6 +40,7 @@ import inspect
 import pickle
 import torch
 import os
+from deepview.utils.io_utils import *
 
 os.environ["COMPILATION_MODE"] = "offline"
 
@@ -58,33 +59,21 @@ device = torch.device("cpu")
 model.eval()
 torch.set_grad_enabled(False)
 
-layer = {sub_layer}
-target_layer = layer
-forward_signature = inspect.signature(target_layer.forward)
+
+forward_signature = inspect.signature({sub_layer}.forward)
 expected_args = list(forward_signature.parameters.keys())
+layers_ios = load_data("{filename}")
+layer_io = layers_ios["{sub_layer}"]
 
-with open("{filename}", "rb") as f:
-    layer_inputs_dict = pickle.load(f)
-inputval = layer_inputs_dict["{sub_layer}"]
-inputvals = list(inputval)
+args = layer_io["inputs"]
+kwargs = layer_io["kwargs"]
 
-if len(inputval) < len(expected_args):
-    print("WARNING: Missing values of input arguments padded with None.")
-    zipped_inputs = list(itertools.zip_longest(expected_args, inputval, fillvalue=None))
-else:
-    zipped_inputs = list(zip(expected_args, inputval))
-kwargs = dict(zipped_inputs)
-
-layer.compile(backend="sendnn", dynamic=False)
-
-### The following two lines are required for running this mode on Llama model. 
-# TODO: Check if there is a way to remove the need for this in FMS 
-if 'reverse' in kwargs.keys():
-    kwargs['reverse'] = True
+{sub_layer}.compile(backend="sendnn", dynamic=False)
 
 with torch_sendnn.warmup_mode():
-    result = layer(**kwargs) 
+    result = {sub_layer}(*args, **kwargs) 
+
 print(f"Warmup for {sub_layer} completed")
-result = layer(**kwargs)
+result = {sub_layer}(*args, **kwargs)
 print(f"Second run for {sub_layer} completed")
 """

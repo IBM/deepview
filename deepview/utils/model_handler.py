@@ -19,6 +19,7 @@ import json
 import os
 import re
 import time
+import inspect
 
 # Third Party
 from fms.models import get_model
@@ -399,15 +400,55 @@ class ModelHandler:
         """Insert forward hooks into the model layers to capture input shapes and types during forward pass."""
         print("Inserting forward hooks.............")
 
-        def hook_fn(module, input, output):
-            if len(input) == 0:
-                return
-            module._debug_input = input
-            if self.device_to_run == "cpu":
-                module._debug_output = output
+        def named_fwd_hook_fn(module_name, signature):
+            param_names = [p.name for p in signature.parameters.values()]
+
+            def hook_fn(module, input_args, input_kwargs, output):
+                inputs = []
+                kwargs = {}
+                # Match positional arguments with parameter names
+                for i, arg in enumerate(input_args):
+                    if i < len(param_names):
+                        param_name = param_names[i]
+                        if param_name == 'input':  # positional input 
+                            inputs.append(arg) 
+                        else:
+                            kwargs[param_name] = arg # named input 
+                # Add keyword arguments
+                for name, value in input_kwargs.items():
+                    kwargs[name] = value
+
+                module._debug_input = inputs
+                module._debug_kwargs = kwargs
+                module._debug_name = convert_attr_path(module_name)
+                if self.device_to_run == "cpu":
+                    module._debug_output = output
+
+                # print(f"\n--- Hook for '{module._debug_name}' ({module.__class__.__name__}) ---")
+                # for arg_value in inputs:
+                #     if isinstance(arg_value, tuple) and all(torch.is_tensor(t) for t in arg_value):
+                #         shapes = tuple(t.shape for t in arg_value)
+                #         print(f"pos input:  => (tuple of tensors with shapes {shapes})")
+                #     elif isinstance(arg_value, torch.Tensor):
+                #         print(f"pos input:  => (tensor of shape {arg_value.shape})")
+                #     else:
+                #         print(f"pos input:  => ({arg_value})")
+                # for arg_name, arg_value in kwargs.items():
+                #     if isinstance(arg_value, tuple) and all(torch.is_tensor(t) for t in arg_value):
+                #         shapes = tuple(t.shape for t in arg_value)
+                #         print(f"kwarg: {arg_name} => (tuple of tensors with shapes {shapes})")
+                #     elif isinstance(arg_value, torch.Tensor):
+                #         print(f"kwarg: {arg_name} => (tensor of shape {arg_value.shape})")
+                #     else:
+                #         print(f"kwarg: {arg_name} => ({arg_value})")
+                
+            return hook_fn
 
         for name, layer in self.model.named_modules():
-            self.hooks.append(layer.register_forward_hook(hook_fn))
+            forward_signature = inspect.signature(layer.forward)
+            fwd_hook_fn = named_fwd_hook_fn(name, forward_signature)
+            self.hooks.append(layer.register_forward_hook(fwd_hook_fn, with_kwargs=True))
+
 
     def remove_forward_hooks(self):
         """Remove all previously registered forward hooks from the model."""
@@ -415,12 +456,19 @@ class ModelHandler:
             hook.remove()
         self.hooks = []
 
+
     def get_layer_io(self):
-        """Get all inputs captured using forward hook."""
-        print("Extracting layer IO ...")
+        """Get all inputs, kwargs, and output captured using forward hook."""
+        print("Extracting Extended layer IO ...")
+        layers = {} # name, module_name, inputs, kwargs, outputs, complexity 
+
         for module_name, module in self.model.named_modules():
+            layer = {}
             ## Modifying keys to match the layer names which can be used to run the layers later.
             name = convert_attr_path(module_name)
+            layer['module_name'] = module_name
+
+
             ## Capturing inputs
             if hasattr(module, "_debug_input"):
                 inputs = tuple(
@@ -445,24 +493,41 @@ class ModelHandler:
                         new_tensor = torch.cat((padding, inputs[1]), dim=1)
                         inputs[1] = new_tensor
 
-                    self.layer_inputs[name] = tuple(inputs)
+                    layer['inputs'] = tuple(inputs)
                 else:
-                    self.layer_inputs[name] = inputs
+                    layer['inputs'] = inputs
+
+            ## Capturing input kwargs 
+            if hasattr(module, "_debug_kwargs"):
+                for k,v in module._debug_kwargs.items():
+                    if isinstance(v, torch.Tensor):
+                        module._debug_kwargs[k] = v.detach()
+                layer['kwargs'] = module._debug_kwargs
             ## Capturing outputs
             if hasattr(module, "_debug_output"):
-                self.layer_outputs[name] = module._debug_output
-        ## The following lines basically rearrange the keys of the layer inputs dict to place the model and base_model layers in the end, such that the
-        ## layers are run before those two. This is done in order to ensure that the offending layer can be captured. Otherwise, if we run model/base_model
-        ## first, if there is any offending layer, the whole thing fails without giving any idea of the offending layer.
-        if self.model_type == "fms":
-            layers = list(self.layer_inputs.keys())
-            if "model.base_model" in layers:
-                first_two_keys = ["model.base_model", "model"]
-            elif "model.shared" in layers:
-                first_two_keys = ["model.shared", "model"]
-            self.layer_inputs = {
-                k: self.layer_inputs[k] for k in layers[2:] + first_two_keys
-            }
+                layer['outputs'] = module._debug_output
+            
+            
+            ## Capture the number of children of the module
+            def count_children(module):
+                """
+                Recursively counts all submodules of a given nn.Module.
+                """
+                count = 0
+                for child in module.children():
+                    count += 1
+                    count += count_children(child)
+                return count
+
+            layer['complexity'] = count_children(module)
+
+            layers[name] = layer
+
+        #  Rearrange the keys of the layers in order of their complexity (simpler first)
+        self.layers_ios = dict(sorted(layers.items(), key=lambda item: item[1]['complexity']))
+        
+
+
 
     def clear_layer_io(self):
         """Clear all inputs/outputs captured using forward hook."""
@@ -472,3 +537,7 @@ class ModelHandler:
                 module._debug_input = None
             if hasattr(module, "_debug_output"):
                 module._debug_output = None
+            if hasattr(module, "_debug_kwargs"):
+                module._debug_kwargs = None
+            if hasattr(module, "_debug_name"):
+                module._debug_name = None
