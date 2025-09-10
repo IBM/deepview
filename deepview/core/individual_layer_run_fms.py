@@ -62,7 +62,7 @@ torch.set_grad_enabled(False)
 
 forward_signature = inspect.signature({sub_layer}.forward)
 expected_args = list(forward_signature.parameters.keys())
-layers_ios = load_data("{filename}")
+layers_ios = torch.load("{filename}")
 layer_io = layers_ios["{sub_layer}"]
 
 args = layer_io["inputs"]

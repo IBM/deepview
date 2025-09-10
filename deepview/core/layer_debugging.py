@@ -4,10 +4,10 @@ import os
 import pickle
 import re
 import subprocess
+import torch 
 
 # Local
 from deepview.utils.model_handler import ModelHandler, setup_model_handler
-from deepview.utils.io_utils import *
 
 def run_individual_layers(aiu_model_handler, filename, generate_repro_code_flag):
     """Runs each unique layer of the model individually in layer_debugging mode.
@@ -103,7 +103,7 @@ def generate_repro_code_layer_debugging(aiu_model_handler, failed_layer):
     try:
         Path(dst_repro).touch()
         with open(dst_repro, "w") as f:
-            filename = aiu_model_handler.model_path.split("/")[-1] + "_saved_ios"
+            filename = aiu_model_handler.model_path.split("/")[-1] + ".pt"
             f.write(
                 run_layers(
                     aiu_model_handler.model_path,
@@ -123,15 +123,19 @@ def run_layer_debugging_mode(model_path, model_type, generate_repro_code_flag):
         model_path=model_path,
         device="cpu",
         prompt="What is the capital of Egypt?",
-        safe_warmup=True,
+        safe_warmup=False,
         insert_forward_hooks=True,
     )
+
 
     print(f"Saving layer inputs.....")
     aiu_model_handler.get_layer_io()
 
-    filename = model_path.split("/")[-1] + "_saved_ios"
-    save_data(aiu_model_handler.layers_ios, filename, False)
+    filename = model_path.split("/")[-1] + ".pt"
+    torch.save(aiu_model_handler.cold_layers_ios, filename)
+
+    filename = model_path.split("/")[-1] + "_warmed_up.pt"
+    torch.save(aiu_model_handler.layers_ios, filename)
 
     print(f"Saved layers io to {filename}")
 

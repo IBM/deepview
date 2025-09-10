@@ -129,7 +129,9 @@ def setup_model_handler(
     handler.prep_input()
     if insert_forward_hooks:
         handler.insert_forward_hooks()
-    if safe_warmup:
+        # print('Running infer()')
+        handler.infer()
+    elif safe_warmup:
         handler.safe_warmup()
 
     return handler
@@ -209,9 +211,9 @@ class ModelHandler:
         self.tokenizer = None
         self.input_id = None
         self.hooks = []
-        self.layer_list = {}
-        self.layer_inputs = {}
-        self.layer_outputs = {}
+        self.cold_layers_ios = {}
+        # self.layer_inputs = {}
+        # self.layer_outputs = {}
         self.extra_generation_kwargs = None
         self.batch_size = 1
         self.min_pad_length = 64
@@ -303,7 +305,8 @@ class ModelHandler:
         if self.device_to_run == "aiu":
             self.model.compile(backend="sendnn", dynamic=False)
         elif self.device_to_run == "cpu":
-            self.model.compile(backend="inductor")
+            # self.model.compile(backend="inductor")
+            pass
         else:
             print("Device not supported by Deepview yet.")
         print(f"Compiling complete, took {time.time() - start:.3f}s")
@@ -351,6 +354,7 @@ class ModelHandler:
                     )
                 else:
                     max_len = self.model.config.max_expected_seq_len
+            
             result = generate(
                 self.model,
                 self.input_id,
@@ -382,6 +386,17 @@ class ModelHandler:
                 result = self.model(**self.input_id)
         return result
 
+    def _count_children(self, module):
+        """
+        Recursively counts all submodules of a given nn.Module.
+        """
+        count = 0
+        for child in module.children():
+            count += 1
+            count += self._count_children(child)
+        return count
+
+
     def safe_warmup(self):
         """Perform warmup on the prepared input based on the model type, but skip update_lazyhandle()."""
         with torch_sendnn.warmup_mode(skip_compilation=True):
@@ -404,6 +419,7 @@ class ModelHandler:
             param_names = [p.name for p in signature.parameters.values()]
 
             def hook_fn(module, input_args, input_kwargs, output):
+                module._debug_name = convert_attr_path(module_name)
                 inputs = []
                 kwargs = {}
                 # Match positional arguments with parameter names
@@ -417,31 +433,20 @@ class ModelHandler:
                 # Add keyword arguments
                 for name, value in input_kwargs.items():
                     kwargs[name] = value
-
                 module._debug_input = inputs
                 module._debug_kwargs = kwargs
-                module._debug_name = convert_attr_path(module_name)
+                module._debug_complexity = self._count_children(module)
                 if self.device_to_run == "cpu":
                     module._debug_output = output
-
-                # print(f"\n--- Hook for '{module._debug_name}' ({module.__class__.__name__}) ---")
-                # for arg_value in inputs:
-                #     if isinstance(arg_value, tuple) and all(torch.is_tensor(t) for t in arg_value):
-                #         shapes = tuple(t.shape for t in arg_value)
-                #         print(f"pos input:  => (tuple of tensors with shapes {shapes})")
-                #     elif isinstance(arg_value, torch.Tensor):
-                #         print(f"pos input:  => (tensor of shape {arg_value.shape})")
-                #     else:
-                #         print(f"pos input:  => ({arg_value})")
-                # for arg_name, arg_value in kwargs.items():
-                #     if isinstance(arg_value, tuple) and all(torch.is_tensor(t) for t in arg_value):
-                #         shapes = tuple(t.shape for t in arg_value)
-                #         print(f"kwarg: {arg_name} => (tuple of tensors with shapes {shapes})")
-                #     elif isinstance(arg_value, torch.Tensor):
-                #         print(f"kwarg: {arg_name} => (tensor of shape {arg_value.shape})")
-                #     else:
-                #         print(f"kwarg: {arg_name} => ({arg_value})")
                 
+                # Capture Layer IOs for the first iteration 
+                if module._debug_name not in self.cold_layers_ios.keys():
+                    self.cold_layers_ios[module._debug_name] = \
+                         { 'module_name': module._debug_name,
+                            'inputs'     : module._debug_input, 
+                            'kwargs'     : module._debug_kwargs,
+                            'outputs'    : module._debug_output,
+                            'complexity' : module._debug_complexity}
             return hook_fn
 
         for name, layer in self.model.named_modules():
@@ -503,29 +508,17 @@ class ModelHandler:
                     if isinstance(v, torch.Tensor):
                         module._debug_kwargs[k] = v.detach()
                 layer['kwargs'] = module._debug_kwargs
+
             ## Capturing outputs
             if hasattr(module, "_debug_output"):
                 layer['outputs'] = module._debug_output
             
-            
-            ## Capture the number of children of the module
-            def count_children(module):
-                """
-                Recursively counts all submodules of a given nn.Module.
-                """
-                count = 0
-                for child in module.children():
-                    count += 1
-                    count += count_children(child)
-                return count
-
-            layer['complexity'] = count_children(module)
-
+            layer['complexity'] = self._count_children(module)
             layers[name] = layer
 
         #  Rearrange the keys of the layers in order of their complexity (simpler first)
-        self.layers_ios = dict(sorted(layers.items(), key=lambda item: item[1]['complexity']))
-        
+        self.layers_ios      = dict(sorted(layers.items(),               key=lambda item: item[1]['complexity']))
+        self.cold_layers_ios = dict(sorted(self.cold_layers_ios.items(), key=lambda item: item[1]['complexity']))
 
 
 

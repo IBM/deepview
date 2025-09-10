@@ -274,8 +274,97 @@ if __name__ == "__main__":
 
 
 
+def compare_tensor_tuples(tuple1, tuple2):
+    """
+    Compares two tuples of tensors for equality.
+    Args:
+        tuple1: The first tuple of tensors.
+        tuple2: The second tuple of tensors.
+    Returns:
+        True if the tuples are equal, False otherwise.
+    """
+    # Check if tuples have the same length
+    if len(tuple1) != len(tuple2):
+        return False
+    # Iterate through the elements and compare tensors
+    for i, (tensor1, tensor2) in enumerate(zip(tuple1, tuple2)):
+        if not torch.equal(tensor1, tensor2):
+            return False
+    # If all tensors are equal, return True
+    return True
+
+def compare_tensor_tuples_stats(tuple1, tuple2):
+    """
+    Calculates the mean, median, Q1, and Q3 of the absolute difference
+    between two tuples of tensors.
+
+    Args:
+        tuple1: The first tuple of tensors.
+        tuple2: The second tuple of tensors.
+
+    Returns:
+        A dictionary containing the mean, median, Q1, and Q3 of the
+        absolute differences. Returns None if the input tuples have
+        different lengths or contain non-tensor elements.
+    """
+    if len(tuple1) != len(tuple2):
+        return None
+    absolute_differences = []
+    for tensor1, tensor2 in zip(tuple1, tuple2):     
+        if not isinstance(tensor1, torch.Tensor) or not isinstance(tensor2, torch.Tensor):
+            return None
+        absolute_diff = torch.abs(tensor1 - tensor2).flatten().tolist()
+        absolute_differences.extend(absolute_diff)
+        print("DEBUG: compare_tensor_tuples_stats")
+
+    if len(absolute_differences) == 0:
+        return {"mean": float('nan'), "median": float('nan'), "q1": float('nan'), "q3": float('nan')}
+
+    abs_diff_tensor = torch.tensor(absolute_differences)
+    abs_diff_tensor = torch.nan_to_num(abs_diff_tensor, nan=0.0) 
+    mean_diff = torch.mean(abs_diff_tensor).item()
+    median_diff = torch.median(abs_diff_tensor).item()
+
+    q1_diff = torch.quantile(abs_diff_tensor, 0.25).item()
+    q3_diff = torch.quantile(abs_diff_tensor, 0.75).item()
+
+    return {
+        "mean": mean_diff,
+        "median": median_diff,
+        "q1": q1_diff,
+        "q3": q3_diff
+    }
 
 
 
 
-    
+import torch # Example for PyTorch tensors
+
+def crawl_and_print(data, name="root", indent=0):
+    """
+    Recursively crawls a data structure and prints information about its elements.
+
+    Args:
+        data: The data structure or element to examine.
+        name: The name of the current element (e.g., dictionary key, attribute name).
+        indent: The current indentation level for pretty printing.
+    """
+    prefix = "  " * indent
+    data_type = type(data)
+
+    print(f"{prefix}Name: {name}, Type: {data_type.__name__}")
+
+    if isinstance(data, (torch.Tensor)):
+        print(f"{prefix}  Value: (Tensor)")
+        print(f"{prefix}  Shape: {data.shape}")
+        print(f"{prefix}  Tensor Type: {data.dtype}")
+    elif isinstance(data, dict):
+        print(f"{prefix}  Value: (Dictionary)")
+        for key, value in data.items():
+            crawl_and_print(value, name=key, indent=indent + 1)
+    elif isinstance(data, (list, tuple)):
+        print(f"{prefix}  Value: (Sequence)")
+        for i, item in enumerate(data):
+            crawl_and_print(item, name=f"[{i}]", indent=indent + 1)
+    else:
+        print(f"{prefix}  Value: {data}")
