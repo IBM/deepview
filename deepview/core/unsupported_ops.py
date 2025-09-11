@@ -5,7 +5,7 @@ import shutil
 
 # Third Party
 from sendnn import opcodes
-from torch_sendnn.backends import lazy_handle
+from torch_sendnn.backends.backend_utils import lazy_handles
 from torch_sendnn.utils import convert
 import torch
 
@@ -138,11 +138,11 @@ def process_unsupported_ops_lazy_handle(
         # Note: This logic of finding data type and shape is taken from torch_sendnn
         IS_DYNAMIC = False
         if isinstance(node.meta["val"], list):
-            dt = [convert.convert_datatype(t) for t in node.meta["val"]]
-            shape = [convert.convert_shape(s, IS_DYNAMIC) for s in node.meta["val"]]
+            dt = [convert.torch_datatype_to_sendnn(t) for t in node.meta["val"]]
+            shape = [convert.shape_to_list(s, IS_DYNAMIC) for s in node.meta["val"]]
         else:
-            dt = convert.convert_datatype(node.meta["val"].dtype)
-            shape = convert.convert_shape(node.meta["val"].shape, IS_DYNAMIC)
+            dt = convert.torch_datatype_to_sendnn(node.meta["val"].dtype)
+            shape = convert.shape_to_list(node.meta["val"].shape, IS_DYNAMIC)
 
         error = ""
         if show_details_flag:
