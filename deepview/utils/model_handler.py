@@ -354,7 +354,7 @@ class ModelHandler:
                     )
                 else:
                     max_len = self.model.config.max_expected_seq_len
-            
+
             result = generate(
                 self.model,
                 self.input_id,
@@ -396,7 +396,6 @@ class ModelHandler:
             count += self._count_children(child)
         return count
 
-
     def safe_warmup(self):
         """Perform warmup on the prepared input based on the model type, but skip update_lazyhandle()."""
         with torch_sendnn.warmup_mode(skip_compilation=True):
@@ -426,10 +425,10 @@ class ModelHandler:
                 for i, arg in enumerate(input_args):
                     if i < len(param_names):
                         param_name = param_names[i]
-                        if param_name == "input":  # positional input 
-                            inputs.append(arg) 
+                        if param_name == "input":  # positional input
+                            inputs.append(arg)
                         else:
-                            kwargs[param_name] = arg # named input 
+                            kwargs[param_name] = arg  # named input
                 # Add keyword arguments
                 for name, value in input_kwargs.items():
                     kwargs[name] = value
@@ -438,22 +437,25 @@ class ModelHandler:
                 module._debug_complexity = self._count_children(module)
                 if self.device_to_run == "cpu":
                     module._debug_output = output
-                
-                # Capture Layer IOs for the first iteration 
+
+                # Capture Layer IOs for the first iteration
                 if module._debug_name not in self.cold_layers_ios.keys():
-                    self.cold_layers_ios[module._debug_name] = \
-                         { "module_name": module._debug_name,
-                            "inputs"     : module._debug_input, 
-                            "kwargs"     : module._debug_kwargs,
-                            "outputs"    : module._debug_output,
-                            "complexity" : module._debug_complexity}
+                    self.cold_layers_ios[module._debug_name] = {
+                        "module_name": module._debug_name,
+                        "inputs": module._debug_input,
+                        "kwargs": module._debug_kwargs,
+                        "outputs": module._debug_output,
+                        "complexity": module._debug_complexity,
+                    }
+
             return hook_fn
 
         for name, layer in self.model.named_modules():
             forward_signature = inspect.signature(layer.forward)
             fwd_hook_fn = named_fwd_hook_fn(name, forward_signature)
-            self.hooks.append(layer.register_forward_hook(fwd_hook_fn, with_kwargs=True))
-
+            self.hooks.append(
+                layer.register_forward_hook(fwd_hook_fn, with_kwargs=True)
+            )
 
     def remove_forward_hooks(self):
         """Remove all previously registered forward hooks from the model."""
@@ -461,18 +463,16 @@ class ModelHandler:
             hook.remove()
         self.hooks = []
 
-
     def get_layer_io(self):
         """Get all inputs, kwargs, and output captured using forward hook."""
         print("Extracting Extended layer IO ...")
-        layers = {} # name, module_name, inputs, kwargs, outputs, complexity 
+        layers = {}  # name, module_name, inputs, kwargs, outputs, complexity
 
         for module_name, module in self.model.named_modules():
             layer = {}
             ## Modifying keys to match the layer names which can be used to run the layers later.
             name = convert_attr_path(module_name)
             layer["module_name"] = module_name
-
 
             ## Capturing inputs
             if hasattr(module, "_debug_input"):
@@ -502,9 +502,9 @@ class ModelHandler:
                 else:
                     layer["inputs"] = inputs
 
-            ## Capturing input kwargs 
+            ## Capturing input kwargs
             if hasattr(module, "_debug_kwargs"):
-                for k,v in module._debug_kwargs.items():
+                for k, v in module._debug_kwargs.items():
                     if isinstance(v, torch.Tensor):
                         module._debug_kwargs[k] = v.detach()
                 layer["kwargs"] = module._debug_kwargs
@@ -512,15 +512,17 @@ class ModelHandler:
             ## Capturing outputs
             if hasattr(module, "_debug_output"):
                 layer["outputs"] = module._debug_output
-            
+
             layer["complexity"] = self._count_children(module)
             layers[name] = layer
 
         #  Rearrange the keys of the layers in order of their complexity (simpler first)
-        self.layers_ios      = dict(sorted(layers.items(),               key=lambda item: item[1]["complexity"]))
-        self.cold_layers_ios = dict(sorted(self.cold_layers_ios.items(), key=lambda item: item[1]["complexity"]))
-
-
+        self.layers_ios = dict(
+            sorted(layers.items(), key=lambda item: item[1]["complexity"])
+        )
+        self.cold_layers_ios = dict(
+            sorted(self.cold_layers_ios.items(), key=lambda item: item[1]["complexity"])
+        )
 
     def clear_layer_io(self):
         """Clear all inputs/outputs captured using forward hook."""

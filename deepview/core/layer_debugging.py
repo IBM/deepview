@@ -4,10 +4,11 @@ import os
 import pickle
 import re
 import subprocess
-import torch 
+import torch
 
 # Local
 from deepview.utils.model_handler import ModelHandler, setup_model_handler
+
 
 def run_individual_layers(aiu_model_handler, filename, generate_repro_code_flag):
     """Runs each unique layer of the model individually in layer_debugging mode.
@@ -38,13 +39,17 @@ def run_individual_layers(aiu_model_handler, filename, generate_repro_code_flag)
 
     print("Running each layer individually........")
     for layer in aiu_model_handler.layers_ios.keys():
-        # Remove the following filter to run all layers 
-            # Skip all [0] layers 
-            # Skip if one of this kind was tested already 
-            # Skip singletons, and focus on most complex blocks
+        # Remove the following filter to run all layers
+        # Skip all [0] layers
+        # Skip if one of this kind was tested already
+        # Skip singletons, and focus on most complex blocks
 
         # if layer in layers_done:
-        if  re.search(r"\[0\]", layer) or re.sub(r"\d+", "X", layer) in layers_done or aiu_model_handler.layers_ios[layer]["complexity"] < 1:  
+        if (
+            re.search(r"\[0\]", layer)
+            or re.sub(r"\d+", "X", layer) in layers_done
+            or aiu_model_handler.layers_ios[layer]["complexity"] < 1
+        ):
             continue
         layer_run = run_layers(aiu_model_handler.model_path, layer, filename)
 
@@ -71,12 +76,13 @@ def run_individual_layers(aiu_model_handler, filename, generate_repro_code_flag)
                 f"DEEPVIEW Successfully ran {layer}\n"
                 "DEEPVIEW========================================================================\n"
             )
-        layers_done.append(layer)   
+        layers_done.append(layer)
         layers_done.append(re.sub(r"\d+", "X", layer))
 
     if failed_layer != "No failed layer":
         if generate_repro_code_flag:
             generate_repro_code_layer_debugging(aiu_model_handler, failed_layer)
+
 
 def generate_repro_code_layer_debugging(aiu_model_handler, failed_layer):
     """Generates and saves layer-level repro script for debugging failures in layer_debugging mode.
@@ -127,7 +133,6 @@ def run_layer_debugging_mode(model_path, model_type, generate_repro_code_flag):
         insert_forward_hooks=True,
     )
 
-
     print(f"Saving layer inputs.....")
     aiu_model_handler.get_layer_io()
 
@@ -143,4 +148,3 @@ def run_layer_debugging_mode(model_path, model_type, generate_repro_code_flag):
     aiu_model_handler.clear_layer_io()
 
     run_individual_layers(aiu_model_handler, filename, generate_repro_code_flag)
-
