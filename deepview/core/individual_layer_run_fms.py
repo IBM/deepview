@@ -64,7 +64,7 @@ expected_args = list(forward_signature.parameters.keys())
 layers_ios = torch.load("{filename}")
 layer_io = layers_ios["{sub_layer}"]
 
-args = layer_io["inputs"]
+args = layer_io["args"]
 kwargs = layer_io["kwargs"]
 
 {sub_layer}.compile(backend="sendnn", dynamic=False)

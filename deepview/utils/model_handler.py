@@ -15,11 +15,11 @@
 # *******************************************************************************/
 
 # Standard
+import inspect
 import json
 import os
 import re
 import time
-import inspect
 
 # Third Party
 from fms.models import get_model
@@ -129,7 +129,6 @@ def setup_model_handler(
     handler.prep_input()
     if insert_forward_hooks:
         handler.insert_forward_hooks()
-        # print('Running infer()')
         handler.infer()
     elif safe_warmup:
         handler.safe_warmup()
@@ -211,9 +210,7 @@ class ModelHandler:
         self.tokenizer = None
         self.input_id = None
         self.hooks = []
-        self.cold_layers_ios = {}
-        # self.layer_inputs = {}
-        # self.layer_outputs = {}
+        self.layers_ios = {}
         self.extra_generation_kwargs = None
         self.batch_size = 1
         self.min_pad_length = 64
@@ -263,6 +260,16 @@ class ModelHandler:
         # Fallback to AutoModel
         return "auto"
 
+    def _count_children(self, module):
+        """
+        Recursively counts all submodules of a given nn.Module.
+        """
+        count = 0
+        for child in module.children():
+            count += 1
+            count += self._count_children(child)
+        return count
+
     def load_and_compile_model(self):
         """Load and compile the model based on the model type and path.
 
@@ -305,8 +312,7 @@ class ModelHandler:
         if self.device_to_run == "aiu":
             self.model.compile(backend="sendnn", dynamic=False)
         elif self.device_to_run == "cpu":
-            # self.model.compile(backend="inductor")
-            pass
+            self.model.compile(backend="inductor")
         else:
             print("Device not supported by Deepview yet.")
         print(f"Compiling complete, took {time.time() - start:.3f}s")
@@ -354,7 +360,6 @@ class ModelHandler:
                     )
                 else:
                     max_len = self.model.config.max_expected_seq_len
-
             result = generate(
                 self.model,
                 self.input_id,
@@ -386,16 +391,6 @@ class ModelHandler:
                 result = self.model(**self.input_id)
         return result
 
-    def _count_children(self, module):
-        """
-        Recursively counts all submodules of a given nn.Module.
-        """
-        count = 0
-        for child in module.children():
-            count += 1
-            count += self._count_children(child)
-        return count
-
     def safe_warmup(self):
         """Perform warmup on the prepared input based on the model type, but skip update_lazyhandle()."""
         with torch_sendnn.warmup_mode(skip_compilation=True):
@@ -414,48 +409,16 @@ class ModelHandler:
         """Insert forward hooks into the model layers to capture input shapes and types during forward pass."""
         print("Inserting forward hooks.............")
 
-        def named_fwd_hook_fn(module_name, signature):
-            param_names = [p.name for p in signature.parameters.values()]
-
-            def hook_fn(module, input_args, input_kwargs, output):
-                module._debug_name = convert_attr_path(module_name)
-                inputs = []
-                kwargs = {}
-                # Match positional arguments with parameter names
-                for i, arg in enumerate(input_args):
-                    if i < len(param_names):
-                        param_name = param_names[i]
-                        if param_name == "input":  # positional input
-                            inputs.append(arg)
-                        else:
-                            kwargs[param_name] = arg  # named input
-                # Add keyword arguments
-                for name, value in input_kwargs.items():
-                    kwargs[name] = value
-                module._debug_input = inputs
-                module._debug_kwargs = kwargs
-                module._debug_complexity = self._count_children(module)
-                if self.device_to_run == "cpu":
-                    module._debug_output = output
-
-                # Capture Layer IOs for the first iteration
-                if module._debug_name not in self.cold_layers_ios.keys():
-                    self.cold_layers_ios[module._debug_name] = {
-                        "module_name": module._debug_name,
-                        "inputs": module._debug_input,
-                        "kwargs": module._debug_kwargs,
-                        "outputs": module._debug_output,
-                        "complexity": module._debug_complexity,
-                    }
-
-            return hook_fn
+        def hook_fn(module, input, kwarg, output):
+            if len(input) == 0 and len(kwarg) == 0:
+                return
+            module._debug_input = input
+            module._debug_kwarg = kwarg
+            if self.device_to_run == "cpu":
+                module._debug_output = output
 
         for name, layer in self.model.named_modules():
-            forward_signature = inspect.signature(layer.forward)
-            fwd_hook_fn = named_fwd_hook_fn(name, forward_signature)
-            self.hooks.append(
-                layer.register_forward_hook(fwd_hook_fn, with_kwargs=True)
-            )
+            self.hooks.append(layer.register_forward_hook(hook_fn, with_kwargs=True))
 
     def remove_forward_hooks(self):
         """Remove all previously registered forward hooks from the model."""
@@ -464,22 +427,29 @@ class ModelHandler:
         self.hooks = []
 
     def get_layer_io(self):
-        """Get all inputs, kwargs, and output captured using forward hook."""
-        print("Extracting Extended layer IO ...")
-        layers = {}  # name, module_name, inputs, kwargs, outputs, complexity
-
+        """Get all inputs captured using forward hook."""
+        print("Extracting layer IO ...")
         for module_name, module in self.model.named_modules():
-            layer = {}
+            if not hasattr(module, "_debug_input") and not hasattr(
+                module, "_debug_input"
+            ):
+                continue
             ## Modifying keys to match the layer names which can be used to run the layers later.
             name = convert_attr_path(module_name)
-            layer["module_name"] = module_name
+            # Initialize the inputs and outputs dict for this module (layer or sublayer)
+            self.layers_ios[name] = {}
+            self.layers_ios[name]["args"] = []
+            self.layers_ios[name]["kwargs"] = {}
+            self.layers_ios[name]["outputs"] = []
+
+            # Calculate the layer complexity based on _count_children
+            self.layers_ios[name]["complexity"] = self._count_children(module)
 
             ## Capturing inputs
             if hasattr(module, "_debug_input"):
                 inputs = tuple(
-                    v.detach()
+                    v.detach() if isinstance(v, torch.Tensor) else v
                     for v in module._debug_input
-                    if isinstance(v, torch.Tensor)
                 )
                 ## For these two layers, the input is generated by appending the captured input at the end of the input prompt
                 ## while maintaining the shape. Otherwise, these two layers throw error while running.
@@ -498,30 +468,44 @@ class ModelHandler:
                         new_tensor = torch.cat((padding, inputs[1]), dim=1)
                         inputs[1] = new_tensor
 
-                    layer["inputs"] = tuple(inputs)
-                else:
-                    layer["inputs"] = inputs
+                    inputs = tuple(inputs)
 
-            ## Capturing input kwargs
-            if hasattr(module, "_debug_kwargs"):
-                for k, v in module._debug_kwargs.items():
+                self.layers_ios[name]["args"] = inputs
+                # Match positional args to arguments names in the layer forward signature
+                args = []
+                kwargs = {}
+                forward_signature = inspect.signature(module.forward)
+                arg_names = [p.name for p in forward_signature.parameters.values()]
+                for i, arg_value in enumerate(inputs):
+                    if i < len(arg_names):
+                        arg_name = arg_names[i]
+                        if arg_name == "input":
+                            args.append(arg_value)
+                        else:
+                            kwargs[arg_name] = arg_value
+
+                self.layers_ios[name]["args"] = args
+                self.layers_ios[name]["kwargs"] = kwargs
+
+            ## Capturing kwargs
+            if hasattr(module, "_debug_kwarg"):
+                for k, v in module._debug_kwarg.items():
                     if isinstance(v, torch.Tensor):
-                        module._debug_kwargs[k] = v.detach()
-                layer["kwargs"] = module._debug_kwargs
+                        module._debug_kwarg[k] = v.detach()
+                self.layers_ios[name]["kwargs"] = (
+                    self.layers_ios[name]["kwargs"] | module._debug_kwarg
+                )
 
             ## Capturing outputs
             if hasattr(module, "_debug_output"):
-                layer["outputs"] = module._debug_output
-
-            layer["complexity"] = self._count_children(module)
-            layers[name] = layer
+                self.layers_ios[name]["outputs"] = tuple(
+                    v.detach() if isinstance(v, torch.Tensor) else v
+                    for v in module._debug_output
+                )
 
         #  Rearrange the keys of the layers in order of their complexity (simpler first)
         self.layers_ios = dict(
-            sorted(layers.items(), key=lambda item: item[1]["complexity"])
-        )
-        self.cold_layers_ios = dict(
-            sorted(self.cold_layers_ios.items(), key=lambda item: item[1]["complexity"])
+            sorted(self.layers_ios.items(), key=lambda item: item[1]["complexity"])
         )
 
     def clear_layer_io(self):
@@ -530,9 +514,7 @@ class ModelHandler:
         for name, module in self.model.named_modules():
             if hasattr(module, "_debug_input"):
                 module._debug_input = None
+            if hasattr(module, "_debug_kwarg"):
+                module._debug_kwargs = None
             if hasattr(module, "_debug_output"):
                 module._debug_output = None
-            if hasattr(module, "_debug_kwargs"):
-                module._debug_kwargs = None
-            if hasattr(module, "_debug_name"):
-                module._debug_name = None

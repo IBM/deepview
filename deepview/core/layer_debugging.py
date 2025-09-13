@@ -4,6 +4,8 @@ import os
 import pickle
 import re
 import subprocess
+
+# Third Party
 import torch
 
 # Local
@@ -136,11 +138,8 @@ def run_layer_debugging_mode(model_path, model_type, generate_repro_code_flag):
     print(f"Saving layer inputs.....")
     aiu_model_handler.get_layer_io()
 
-    filename = model_path.split("/")[-1] + "_warmed_up.pt"
-    torch.save(aiu_model_handler.layers_ios, filename)
-
     filename = model_path.split("/")[-1] + ".pt"
-    torch.save(aiu_model_handler.cold_layers_ios, filename)
+    torch.save(aiu_model_handler.layers_ios, filename)
 
     print(f"Saved layers io to {filename}")
 
