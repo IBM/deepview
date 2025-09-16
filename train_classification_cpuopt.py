@@ -5,8 +5,10 @@ from contextlib import nullcontext
 from datetime import timedelta
 from pathlib import Path
 import random
+import sys
 
 import torch
+import torch_sendnn
 from torch import distributed as dist
 from torch import nn
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
@@ -18,7 +20,8 @@ from fms import datasets, models
 from fms.training import plugins as trainplugins
 from mytrainer import train
 from fms.utils import fusion, print0, tokenizers
-
+from torch_sendnn.backends import preserve_lazyhandle
+from tuning_testgen import generate_repro_code_all_ops
 #
 # This is a fairly minimal training/tuning script for causal language models.
 #
@@ -220,6 +223,11 @@ parser.add_argument(
     help="Whether to trace input/output tensors for backward pass.",
 )
 
+parser.add_argument(
+    "--test_gen",
+    action="store_true",
+    help="Whether to genretae test case for all ops.",
+)
 
 args = parser.parse_args()
 
@@ -334,6 +342,10 @@ def main():
         torch.set_default_dtype(default_dtype)
 
     print0("Loading model...")
+
+    if args.test_gen:
+	preserve_lazyhandle()
+
     model = models.get_model(
         args.architecture,
         args.variant,
@@ -487,23 +499,35 @@ def main():
       register_hooks(model, is_forward=True)
     if args.backward_hook:
       register_hooks(model, is_forward=False)
-    with torch.cuda.device(local_rank) if device.type == "cuda" else nullcontext():
-        train(
-            model,
-            optimizer,
-            dataloader,
-            device,
-            loss_fn,
-            start_epoch=epoch,
-            epochs=args.epochs,
-            prev_step=prev_step,
-            trainer_plugins=plugins,
-            grad_accum_iters=args.grad_accum_steps,
-            compile_loss=compile_loss,
-            compile_loss_only=compile_loss_only,
-            compile_backend=args.compile_backend,
-        )
 
+    if args.test_gen:
+        torch_sendnn.warmup_mode()
+
+    with torch.cuda.device(local_rank) if device.type == "cuda" else nullcontext():
+        try:
+            train(
+                model,
+                optimizer,
+                dataloader,
+                device,
+                loss_fn,
+                start_epoch=epoch,
+                epochs=args.epochs,
+                prev_step=prev_step,
+                trainer_plugins=plugins,
+                grad_accum_iters=args.grad_accum_steps,
+                compile_loss=compile_loss,
+                compile_loss_only=compile_loss_only,
+                compile_backend=args.compile_backend,
+            )
+
+        except Exception as e:
+            print(f"Exception occurred: {e}")
+        finally:
+            print("Training completed.")
+
+    if args.test_gen:
+        generate_repro_code_all_ops()
 
 if __name__ == "__main__":
     main()
