@@ -86,7 +86,7 @@ oc rsh <pod-name> bash -l
 ## Installation
 ### local install
 
-Command to setup and run bert tuning model:
+Command to setup and run BERT tuning model:
 ```shell
 cd deepview
 
@@ -96,6 +96,7 @@ Edit "SEN_PROJECT_SRC=$HOME" line in the "env.sh" if necessary.(c.f The source c
 Check out the source code by "./checkout.sh"
 Apply to patches to run BERT by "./patch.sh"
 Build the souce code by "./build.sh"
+
 cd /mnt/home/.local/lib/python3.12/site-packages/
 rm -rf fms fms_mo fms_model_optimizer-0.5.0.dist-info ibm_fms-1.2.0.dist-info
 
@@ -114,7 +115,7 @@ pip3 uninstall -y torch
 ```
 
 # Usage
-Command to run BERT to generate test case:
+Command to run BERT:
 ```shell
 ./bert.sh <options>
 
