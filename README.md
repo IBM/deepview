@@ -88,22 +88,24 @@ oc rsh <pod-name> bash -l
 
 Command to setup and run bert tuning model:
 ```shell
--cd deepview
--copy id_rsa file into ~/.ssh and chmod 600 ~/.ssh/id_rsa
--Edit "SEN_PROJECT_SRC=$HOME" line in the "env.sh" if necessary.(c.f The source code will be checked out under "$SEN_PROJECT_SRC/aiu-src",
+cd deepview
+
+copy id_rsa file into ~/.ssh and chmod 600 ~/.ssh/id_rsa
+Edit "SEN_PROJECT_SRC=$HOME" line in the "env.sh" if necessary.(c.f The source code will be checked out under "$SEN_PROJECT_SRC/aiu-src",
     which will be created automatically if it does not exist.)
--Check out the source code by "./checkout.sh"
--Apply to patches to run BERT by "./patch.sh"
--Build the souce code by "./build.sh"
+Check out the source code by "./checkout.sh"
+Apply to patches to run BERT by "./patch.sh"
+Build the souce code by "./build.sh"
+cd /mnt/home/.local/lib/python3.12/site-packages/
+rm -rf fms fms_mo fms_model_optimizer-0.5.0.dist-info ibm_fms-1.2.0.dist-info
+
+cd $SEN_PROJECT_SRC/aiu-src/foundational_model_stack/
+pip3 install -e .
 ```
 ```shell
--cd /mnt/home/.local/lib/python3.12/site-packages/
--rm -rf fms fms_mo fms_model_optimizer-0.5.0.dist-info ibm_fms-1.2.0.dist-info
--cd $SEN_PROJECT_SRC/aiu-src/foundational_model_stack/
--pip3 install -e .
--cd deepview
--Install torch 2.3.1 by "./install-torch231.sh" after "./build.sh" (c.f. torch 2.5.1 is installed in the build process.)
--Run BERT by "./bert.sh"
+cd deepview
+Install torch 2.3.1 by "./install-torch231.sh" after "./build.sh" (c.f. torch 2.5.1 is installed in the build process.)
+Run BERT by "./bert.sh"
 ```
 Command to run deepview:
 ```shell
