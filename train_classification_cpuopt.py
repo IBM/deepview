@@ -229,6 +229,12 @@ parser.add_argument(
     help="Whether to genretae test case for all ops.",
 )
 
+parser.add_argument(
+    "--yaml_gen",
+    action="store_true",
+    help="Whether to genretae yaml file with ops and input shapes along with input files.",
+)
+
 args = parser.parse_args()
 
 local_rank = int(os.getenv("LOCAL_RANK", 0))
@@ -343,7 +349,7 @@ def main():
 
     print0("Loading model...")
 
-    if args.test_gen:
+    if args.test_gen or args.yaml_gen:
 	preserve_lazyhandle()
 
     model = models.get_model(
@@ -500,7 +506,7 @@ def main():
     if args.backward_hook:
       register_hooks(model, is_forward=False)
 
-    if args.test_gen:
+    if args.test_gen or args.yaml_gen:
         torch_sendnn.warmup_mode()
 
     with torch.cuda.device(local_rank) if device.type == "cuda" else nullcontext():
@@ -526,8 +532,8 @@ def main():
         finally:
             print("Training completed.")
 
-    if args.test_gen:
-        generate_repro_code_all_ops()
+    if args.test_gen or args.yaml_gen:
+        generate_repro_code_all_ops(args.test_gen,args.yaml_gen)
 
 if __name__ == "__main__":
     main()

@@ -116,7 +116,11 @@ pip3 uninstall -y torch
 # Usage
 Command to run BERT to generate test case:
 ```shell
-./bert.sh --test_gen
+./bert.sh <options>
+
+options:
+--test_gen : Generate test case for every ops in folder <repro_codes> 
+--yaml_gen : Generate yaml file and input files that is used as input for ops testing in torch_sendnn repo
 ```
 
 The command to run deepview is as follows :
