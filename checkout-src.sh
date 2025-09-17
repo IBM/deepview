@@ -27,8 +27,11 @@ function checkout_repo() {
         torch_sendnn)   tag=${TORCH_SENDNN_TAG:-$_TAG} ;;
     esac
 
-    if [ -n "$tag" ]; then
-        (cd "$_NAME" && git checkout -q "$tag")
+    if [ -n "$tag" ]; then        
+        if [ "$_NAME" = "senbfcc" ]; then
+            rm "$_NAME/common/"*.hpp "$_NAME/common/CMakeLists.txt"
+        fi
+	(cd "$_NAME" && git checkout -q "$tag")
     fi
 }
 
