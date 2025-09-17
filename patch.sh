@@ -1,5 +1,5 @@
 
-DRYRUN=--dry-run
+#DRYRUN=--dry-run
 
 . env.sh
 

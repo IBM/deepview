@@ -14,6 +14,6 @@ mkdir -p $SEN_PROJECT_SRC/build
 mv $SEN_PROJECT_SRC/llvm.save $SEN_PROJECT_SRC/build/llvm
 
 # Checkout other repositories
-git clone https://huggingface.co/google-bert/bert-base-uncased $SEN_PROJECT_SRC
+git clone https://huggingface.co/google-bert/bert-base-uncased $SEN_PROJECT_SRC/bert-base-uncased
 
 ) 2>&1 | tee ${0%.*}.log
