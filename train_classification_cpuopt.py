@@ -6,6 +6,7 @@ from datetime import timedelta
 from pathlib import Path
 import random
 import sys
+import traceback
 
 import torch
 import torch_sendnn
@@ -350,7 +351,7 @@ def main():
     print0("Loading model...")
 
     if args.test_gen or args.yaml_gen:
-	preserve_lazyhandle()
+	    preserve_lazyhandle()
 
     model = models.get_model(
         args.architecture,
@@ -529,6 +530,7 @@ def main():
 
         except Exception as e:
             print(f"Exception occurred: {e}")
+            traceback.print_exc()
         finally:
             print("Training completed.")
 
