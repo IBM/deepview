@@ -90,7 +90,7 @@ Command to setup and run BERT tuning model:
 ```shell
 cd deepview
 
-copy id_rsa file into ~/.ssh and chmod 600 ~/.ssh/id_rsa
+copy your private id_rsa file into ~/.ssh and chmod 600 ~/.ssh/id_rsa
 Edit "SEN_PROJECT_SRC=$HOME" line in the "env.sh" if necessary.(c.f The source code will be checked out under "$SEN_PROJECT_SRC/aiu-src",
     which will be created automatically if it does not exist.)
 Check out the source code by "./checkout.sh"
