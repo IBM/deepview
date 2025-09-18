@@ -1,0 +1,40 @@
+diff --git a/torch_sendnn/backends.py b/torch_sendnn/backends.py
+index 55862b6..3553205 100644
+--- a/torch_sendnn/backends.py
++++ b/torch_sendnn/backends.py
+@@ -925,11 +925,12 @@ class FxToSenDnn:
+         output_shapes = list()
+         num_outputs = len(node.users)
+         for i in range(num_outputs):
+-            dt = convert_data_type(node.meta["val"][i].dtype)
+-            shape = convert_shape(node.meta["val"][i].shape)
+-            layout = convert_layout(node.meta["val"][i].shape)
+-            ti = sendnn.TensorInfo(dt, shape, layout)
+-            output_shapes.append(ti)
++            if isinstance(node.meta["val"][i], torch.Tensor):
++                dt = convert_data_type(node.meta["val"][i].dtype)
++                shape = convert_shape(node.meta["val"][i].shape)
++                layout = convert_layout(node.meta["val"][i].shape)
++                ti = sendnn.TensorInfo(dt, shape, layout)
++                output_shapes.append(ti)
+ 
+         # Special case where num_outputs == 2, which means the layer norm bwd is the last op
+         if num_outputs == 2:
+@@ -2372,8 +2373,16 @@ class LazyHandle(torch.fx.GraphModule):
+         else:
+             output_nodes = self.meta["output_nodes"]
+             outputs = []
+-
+             for output_node in output_nodes:
++                if output_node is not None:
++                    output_tmp = output_node
++                    break
++            for output_node in output_nodes:
++                if output_node is None:
++                    dt = output_tmp.meta["val"].dtype
++                    shape = output_tmp.meta["val"].shape
++                    outputs.append(torch.empty(shape, dtype=dt, device="cpu"))
++                    continue
+                 if isinstance(output_node.meta["val"], torch.Tensor):
+                     shape = list(output_node.meta["val"].shape)
+                     for idx, shape_elem in enumerate(shape):
