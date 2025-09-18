@@ -97,19 +97,23 @@ Check out the source code by "./checkout.sh"
 Apply to patches to run BERT by "./patch.sh"
 Build the souce code by "./build.sh"
 
-cd /home/senuser/.local/lib/python3.12/site-packages/
-rm -rf fms fms_mo fms_model_optimizer-0.5.0.dist-info ibm_fms-1.2.0.dist-info
-
 cd $SEN_PROJECT_SRC/foundational_model_stack/
 pip3 install -e .
 
 cd deepview
-Run BERT by "./bert.sh"
-```
-Command to run deepview:
-```shell
+
 pip3 install -e .
 pip3 uninstall -y torch
+
+Run BERT by "./bert.sh"
+```
+Command to run deepview after running above steps:
+```shell
+cd $SEN_PROJECT_SRC/foundational_model_stack/
+git checkout main  //For BERT model, switch to branch "bwdkernels" <git checkout bwdkerenls>
+
+cd deepview
+deepview <--options>
 ```
 
 # Usage
