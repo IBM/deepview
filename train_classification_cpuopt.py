@@ -22,7 +22,7 @@ from fms.training import plugins as trainplugins
 from mytrainer import train
 from fms.utils import fusion, print0, tokenizers
 from torch_sendnn.backends import preserve_lazyhandle
-from tuning_testgen import generate_repro_code_all_ops
+from deepview.core.tuning_testgen import generate_repro_code_all_ops
 #
 # This is a fairly minimal training/tuning script for causal language models.
 #
