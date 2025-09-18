@@ -80,7 +80,19 @@ def get_nn_module(op: str, test_gen):
     elif op_name == "nll_loss_forward":
         return "torch.ops.aten.nll_loss_forward", "nll_loss_forward"
     elif op_name == "nll_loss_backward":
-        return "torch.ops.aten.nll_loss_forward", "nll_loss_backward"
+        return "torch.ops.aten.nll_loss_backward", "nll_loss_backward"
+    elif op_name == "native_layer_norm_backward":
+        return "torch.ops.aten.native_layer_norm_backward", "native_layer_norm_backward"
+    elif op_name == "gelu_backward":
+        return "torch.ops.aten.gelu_backward", "gelu_backward"
+    elif op_name == "tanh_backward":
+        return "torch.ops.aten.tanh_backward", "tanh_backward"
+    elif op_name == "select_backward":
+        return "torch.ops.aten.select_backward", "select_backward"
+    elif op_name == "slice_backward":
+        return "torch.ops.aten.slice_backward", "slice_backward"
+    elif op_name == "sum.dim_intlist":
+        return "lambda x, dim, keepdim=False: torch.sum(x, dim=dim, keepdim=keepdim)", "sum"
     elif hasattr(torch.nn,class_name):
         if class_name == "Embedding":
             return "getattr(torch.nn, \"" + class_name + "\")(num_embeddings=1000, embedding_dim=64)", "nn.functional.embedding"
