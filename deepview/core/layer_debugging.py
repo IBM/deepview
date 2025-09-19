@@ -37,8 +37,9 @@ def run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_cod
         return
 
     print("Running each layer individually........")
-    for layer in aiu_model_handler.layer_inputs.keys():
-        if layer in layers_done:
+
+    for layer in aiu_model_handler.layers_ios.keys():
+        if layer in layers_done or layer.endswith("]"):
             continue
         layer_run = run_layers(aiu_model_handler.model_path, layer, inputs_filename)
 
@@ -123,10 +124,10 @@ def run_layer_debugging_mode(model_path, model_type, generate_repro_code_flag):
 
     print(f"Saving layer inputs.....")
     aiu_model_handler.get_layer_io()
-    layer_inputs = aiu_model_handler.layer_inputs
+    layers_ios = aiu_model_handler.layers_ios
     inputs_filename = model_path.split("/")[-1] + ".pkl"
     with open(f"{inputs_filename}", "wb") as f:
-        pickle.dump(layer_inputs, f)
+        pickle.dump(layers_ios, f)
     print(f"Saved inputs to {inputs_filename}")
 
     aiu_model_handler.remove_forward_hooks()

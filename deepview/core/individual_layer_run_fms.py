@@ -58,24 +58,51 @@ device = torch.device("cpu")
 model.eval()
 torch.set_grad_enabled(False)
 
-layer = {sub_layer}
-target_layer = layer
-forward_signature = inspect.signature(target_layer.forward)
-expected_args = list(forward_signature.parameters.keys())
+{sub_layer}.compile(backend="sendnn", dynamic=False)
 
 with open("{filename}", "rb") as f:
-    layer_inputs_dict = pickle.load(f)
-inputval = layer_inputs_dict["{sub_layer}"]
-inputvals = list(inputval)
+    layers_ios_dict = pickle.load(f)
 
-if len(inputval) < len(expected_args):
-    print("WARNING: Missing values of input arguments padded with None.")
-    zipped_inputs = list(itertools.zip_longest(expected_args, inputval, fillvalue=None))
-else:
-    zipped_inputs = list(zip(expected_args, inputval))
-kwargs = dict(zipped_inputs)
+inputargs = layers_ios_dict["{sub_layer}"]["args"]
+inputkwargs = layers_ios_dict["{sub_layer}"]["kwargs"]
 
-layer.compile(backend="sendnn", dynamic=False)
+forward_signature = inspect.signature({sub_layer}.forward)
+expected_args = list(forward_signature.parameters.keys())
+
+
+args = []
+kwargs = dict()
+
+for i, arg_value in enumerate(inputargs):
+    if i < len(expected_args):
+        arg_name = expected_args[i]
+        if arg_name == "input":
+            args.append(arg_value)
+        else:
+            kwargs[arg_name] = arg_value
+
+print(kwargs.keys())            
+
+kwargs = (kwargs | inputkwargs)
+
+print(kwargs.keys())   
+
+if 'attn_kwargs' in forward_signature.parameters:
+    if "mask" in kwargs:
+        kwargs["attn_kwargs"] = kwargs.pop("mask")
+
+print(kwargs.keys())   
+
+# if 'attn_kwargs' in forward_signature.parameters.keys():
+#     if len(inputargs) < len(expected_args):
+#         print("WARNING: Missing values of input arguments padded with None.")
+#         zipped_inputs = list(itertools.zip_longest(expected_args, inputargs, fillvalue=None))
+#     else:
+#         zipped_inputs = list(zip(expected_args, inputargs))
+#     kwargs = dict(zipped_inputs)
+
+#     print(kwargs)
+
 
 ### The following two lines are required for running this mode on Llama model. 
 # TODO: Check if there is a way to remove the need for this in FMS 
@@ -83,8 +110,8 @@ if 'reverse' in kwargs.keys():
     kwargs['reverse'] = True
 
 with torch_sendnn.warmup_mode():
-    result = layer(**kwargs) 
+    result = {sub_layer}(*args, **kwargs) 
 print(f"Warmup for {sub_layer} completed")
-result = layer(**kwargs)
+result = {sub_layer}(*args, **kwargs) 
 print(f"Second run for {sub_layer} completed")
 """
