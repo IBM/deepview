@@ -61,7 +61,9 @@ torch.set_grad_enabled(False)
 
 forward_signature = inspect.signature({sub_layer}.forward)
 expected_args = list(forward_signature.parameters.keys())
-layers_ios = torch.load("{filename}")
+
+with open("{filename}", "rb") as f:
+    layers_ios = pickle.load(f)
 layer_io = layers_ios["{sub_layer}"]
 
 args = layer_io["args"]

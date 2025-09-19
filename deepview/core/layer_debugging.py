@@ -48,9 +48,9 @@ def run_individual_layers(aiu_model_handler, filename, generate_repro_code_flag)
 
         # if layer in layers_done:
         if (
-            re.search(r"\[0\]", layer)
-            or re.sub(r"\d+", "X", layer) in layers_done
-            or aiu_model_handler.layers_ios[layer]["complexity"] < 1
+            re.sub(r"\d+", "X", layer) in layers_done
+            # or re.search(r"\[0\]", layer)
+            # or aiu_model_handler.layers_ios[layer]["complexity"] < 1
         ):
             continue
         layer_run = run_layers(aiu_model_handler.model_path, layer, filename)
@@ -111,7 +111,7 @@ def generate_repro_code_layer_debugging(aiu_model_handler, failed_layer):
     try:
         Path(dst_repro).touch()
         with open(dst_repro, "w") as f:
-            filename = aiu_model_handler.model_path.split("/")[-1] + ".pt"
+            filename = aiu_model_handler.model_path.split("/")[-1] + ".pkl"
             f.write(
                 run_layers(
                     aiu_model_handler.model_path,
@@ -138,8 +138,10 @@ def run_layer_debugging_mode(model_path, model_type, generate_repro_code_flag):
     print(f"Saving layer inputs.....")
     aiu_model_handler.get_layer_io()
 
-    filename = model_path.split("/")[-1] + ".pt"
-    torch.save(aiu_model_handler.layers_ios, filename)
+    filename = model_path.split("/")[-1] + ".pkl"
+
+    with open(f"{filename}", "wb") as f:
+        pickle.dump(aiu_model_handler.layers_ios, f)
 
     print(f"Saved layers io to {filename}")
 

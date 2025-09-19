@@ -60,28 +60,20 @@ model = model_handler.model
 model.eval()
 torch.set_grad_enabled(False)
 
-layer = {sub_layer}
-target_layer = layer
-forward_signature = inspect.signature(target_layer.forward)
+forward_signature = inspect.signature({sub_layer}.forward)
 expected_args = list(forward_signature.parameters.keys())
 
-
 with open("{filename}", "rb") as f:
-    layer_inputs_dict = pickle.load(f)
-inputval = layer_inputs_dict["{sub_layer}"]
-inputvals = list(inputval)
+    layers_ios = pickle.load(f)
+layer_io = layers_ios["{sub_layer}"]
 
-if len(inputval) < len(expected_args):
-    print("WARNING: Missing values of input arguments padded with None.")
-    zipped_inputs = list(itertools.zip_longest(expected_args, inputval, fillvalue=None))
-else:
-    zipped_inputs = list(zip(expected_args, inputval))
-kwargs = dict(zipped_inputs)
-    
-layer.compile(backend="sendnn", dynamic=False)
+args = layer_io["args"]
+kwargs = layer_io["kwargs"]
+
+{sub_layer}.compile(backend="sendnn", dynamic=False)
 
 with torch_sendnn.warmup_mode():
-   result = layer(**kwargs)    
+    result = {sub_layer}(*args, **kwargs)     
 print(f"Warmup for {sub_layer} completed")
 result = layer(**kwargs)
 print(f"Second run for {sub_layer} completed")
