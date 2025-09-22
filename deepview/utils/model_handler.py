@@ -15,6 +15,7 @@
 # *******************************************************************************/
 
 # Standard
+import inspect
 import json
 import os
 import re
@@ -456,9 +457,26 @@ class ModelHandler:
                 else:
                     self.layers_ios[name]["args"] = inputs
 
+                args = []
+                kwargs = {}
+                forward_signature = inspect.signature(module.forward)
+                arg_names = [p.name for p in forward_signature.parameters.values()]
+                for i, arg_value in enumerate(self.layers_ios[name]["args"]):
+                    if i < len(arg_names):
+                        arg_name = arg_names[i]
+                        if arg_name == "input":
+                            args.append(arg_value)
+                        else:
+                            kwargs[arg_name] = arg_value
+
+                self.layers_ios[name]["args"] = args
+                self.layers_ios[name]["kwargs"] = kwargs
+
             ## Capturing kwargs
             if hasattr(module, "_debug_kwarg"):
-                self.layers_ios[name]["kwargs"] = module._debug_kwarg
+                self.layers_ios[name]["kwargs"] = (
+                    self.layers_ios[name]["kwargs"] | module._debug_kwarg
+                )
 
             ## Capturing outputs
             if hasattr(module, "_debug_output"):
