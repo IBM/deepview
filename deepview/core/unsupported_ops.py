@@ -5,9 +5,12 @@ import shutil
 
 # Third Party
 from sendnn import opcodes
-from torch_sendnn.backends import lazy_handles
+from torch_sendnn.backends.backend_utils import lazy_handles
 from torch_sendnn.utils import convert
 import torch
+
+# Local
+from deepview.utils.model_handler import setup_model_handler
 
 
 def get_unsupported_ops(lazy_handle):
@@ -135,11 +138,11 @@ def process_unsupported_ops_lazy_handle(
         # Note: This logic of finding data type and shape is taken from torch_sendnn
         IS_DYNAMIC = False
         if isinstance(node.meta["val"], list):
-            dt = [convert.convert_datatype(t) for t in node.meta["val"]]
-            shape = [convert.convert_shape(s, IS_DYNAMIC) for s in node.meta["val"]]
+            dt = [convert.torch_datatype_to_sendnn(t) for t in node.meta["val"]]
+            shape = [convert.shape_to_list(s, IS_DYNAMIC) for s in node.meta["val"]]
         else:
-            dt = convert.convert_datatype(node.meta["val"].dtype)
-            shape = convert.convert_shape(node.meta["val"].shape, IS_DYNAMIC)
+            dt = convert.torch_datatype_to_sendnn(node.meta["val"].dtype)
+            shape = convert.shape_to_list(node.meta["val"].shape, IS_DYNAMIC)
 
         error = ""
         if show_details_flag:
@@ -207,3 +210,17 @@ def process_unsupported_ops(show_details_flag, generate_repro_code_flag):
             f"{add_prefix_to_string(unique_unsupported_ops_str)}\n"
             "DEEPVIEW========================================================================\n\n\n"
         )
+
+
+def run_unsupported_op_mode(
+    model_path, model_type, show_details_flag, generate_repro_code_flag
+):
+    """Runs the unsupported ops mode using the flags specified by the user."""
+    setup_model_handler(
+        model_type=model_type,
+        model_path=model_path,
+        device="aiu",
+        prompt="What is the capital of Egypt?",
+        safe_warmup=True,
+    )
+    process_unsupported_ops(show_details_flag, generate_repro_code_flag)

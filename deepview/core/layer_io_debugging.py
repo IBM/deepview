@@ -5,6 +5,7 @@ import pickle
 import re
 import shutil
 import subprocess
+import sys
 
 # Third Party
 from aiu_fms_testing_utils.utils.metrics_utils import (
@@ -18,7 +19,11 @@ import torch
 # Local
 from deepview.core.aiu_input_capture import run_model_for_inputs
 from deepview.core.individual_layer_run_with_inputs import run_layers_with_inputs
-from deepview.utils.model_handler import extract_hf_model_id
+from deepview.utils.model_handler import (
+    ModelHandler,
+    extract_hf_model_id,
+    setup_model_handler,
+)
 
 # Defining some constants
 SUCCESS = 2
@@ -204,3 +209,93 @@ def generate_layerwise_output_diffs(
                 layers_done.append(layer)
     shutil.rmtree("dv_layer_io_debugging_tmp")
     return None, SUCCESS
+
+
+def get_thresholds(model_path):
+    """Returns the thresholds from the environment variable DEEPVIEW_THRESHOLDS_FILEPATH."""
+    threshold_filepath = get_thresholds_json_file(model_path)
+    if not threshold_filepath:
+        print(f"Unable to find thresholds for {model_path}.")
+        sys.exit(0)
+    print("Getting layer output thresholds.....")
+    thresholds = get_layer_thresholds(threshold_filepath)
+    return thresholds
+
+
+def get_layerwise_outputs(model_handler):
+    model_handler.get_layer_io()
+    layer_outputs = get_layerwise_outputs_cpu(model_handler)
+    model_handler.remove_forward_hooks()
+    model_handler.clear_layer_io()
+    return layer_outputs
+
+
+def get_layerwise_inputs(model_type, model_path, inputs_filename):
+    """Generates inputs per layer for AIU run by using hooks."""
+    layer_inputs = generate_layerwise_inputs_aiu(
+        model_type, model_path, inputs_filename
+    )
+    if not layer_inputs:
+        print(
+            f"Input capture failed for {model_path} as model did not run successfully on AIU."
+        )
+        sys.exit(0)
+
+    return layer_inputs
+
+
+def is_diverging_layers(
+    model_path, aiu_model_handler, cpu_layer_outputs, thresholds, inputs_filename
+):
+    """Checks if the layer outputs diverge from the CPU run outputs."""
+    diverging_layer, status = generate_layerwise_output_diffs(
+        aiu_model_handler, inputs_filename, cpu_layer_outputs, thresholds
+    )
+    divergence = diverging_layer is None and status == SUCCESS
+    if divergence:
+        print(
+            f"DEEPVIEW Threshold test passed for all layers of {model_path}\n"
+            "DEEPVIEW========================================================================\n"
+        )
+
+    return divergence
+
+
+def run_layer_io_divergence_mode(model_path, model_type):
+    """Runs the layer_io_divergence_mode mode. Uses inputs_filename to get the precaptured inputs if specified by the user.
+
+    Returns True if all layers pass the thresholds test, otherwise False.
+    """
+    thresholds = get_thresholds(model_path)
+    inputs_filename = model_path.split("/")[-1] + ".pkl"
+
+    # Here start the inference on CPU to capture the layer IO
+    print("========= Running on CPU to capture layer IO ==========")
+    cpu_model_handler = setup_model_handler(
+        model_type=model_type,
+        model_path=model_path,
+        device="cpu",
+        prompt="What is the capital of Egypt?",
+        insert_forward_hooks=True,
+    )
+    print("Reached first infer call post compile.....")
+    cpu_model_handler.infer()
+    print(f"Getting layerwise outputs.....")
+    cpu_layer_outputs = get_layerwise_outputs(cpu_model_handler)
+
+    print("========= Running on AIU to capture layer divergence ==========")
+    aiu_model_handler = ModelHandler(
+        model_type=model_type,
+        model_path=model_path,
+        device="aiu",
+        prompt="What is the capital of Egypt?",
+    )
+    print("Capturing layerwise inputs....")
+    aiu_model_handler.layer_inputs = get_layerwise_inputs(
+        model_type, model_path, inputs_filename
+    )
+
+    print("Capturing layerwise outputs and calculating divergence....")
+    return is_diverging_layers(
+        model_path, aiu_model_handler, cpu_layer_outputs, thresholds, inputs_filename
+    )
