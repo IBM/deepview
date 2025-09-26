@@ -4,7 +4,7 @@ from fms.models import get_model
 from fms.utils import tokenizers
 from fms.utils.generation import generate, pad_input_ids
 
-#REQUIRED FOR DEEPVIEW AS A LIBRARY
+#STEP 1 REQUIRED FOR DEEPVIEW AS A LIBRARY
 import torch_sendnn
 from deepview.core.unsupported_ops import process_unsupported_ops
 
@@ -12,7 +12,7 @@ if __name__ == "__main__":
     model_path = "ibm-ai-platform/Bamba-9B-v2"
     prompt="What is the capital of Egypt?"
 
-    # STEP 1 REQUIRED FOR DEEPVIEW AS A LIBRARY: prep input
+    # STEP 2 REQUIRED FOR DEEPVIEW AS A LIBRARY: prep input
     tokenizer = tokenizers.get_tokenizer(model_path)
     tokens = tokenizer.tokenize(prompt)
     ids_l = tokenizer.convert_tokens_to_ids(tokens)
@@ -24,7 +24,7 @@ if __name__ == "__main__":
         [prompt1], min_pad_length=64
     )
 
-    # STEP 2 REQUIRED FOR DEEPVIEW AS A LIBRARY: load & Compile (ensure to add compile for sendnn backend)
+    # STEP 3 REQUIRED FOR DEEPVIEW AS A LIBRARY: load & Compile (ensure to add compile for sendnn backend)
     model = get_model(
                 "hf_pretrained",
                 variant=model_path,
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     # Set Autograd to false
     model.requires_grad_(False)
     
-    # STEP 3 REQUIRED FOR DEEPVIEW AS A LIBRARY: generate call with sendnn warmup
+    # STEP 4 REQUIRED FOR DEEPVIEW AS A LIBRARY: generate call with sendnn warmup
     with torch_sendnn.warmup_mode(skip_compilation=True):
         extra_generation_kwargs["only_last_token"] = True
         eos_token_id = None
@@ -55,5 +55,5 @@ if __name__ == "__main__":
                 extra_kwargs=extra_generation_kwargs,
             )
 
-    # STEP 4 REQUIRED FOR DEEPVIEW AS A LIBRARY: Process unsupported Ops
+    # STEP 5 REQUIRED FOR DEEPVIEW AS A LIBRARY: Process unsupported Ops
     process_unsupported_ops(True, False) 
