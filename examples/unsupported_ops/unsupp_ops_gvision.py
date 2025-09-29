@@ -1,7 +1,7 @@
 # Command to run script: python3 gvision_inference_library.py > gvision_aiu_out.txt 2>&1
 # Third Party
 from PIL import Image
-from transformers import  LlavaNextForConditionalGeneration, LlavaNextProcessor
+from transformers import LlavaNextForConditionalGeneration, LlavaNextProcessor
 import requests
 import torch
 
