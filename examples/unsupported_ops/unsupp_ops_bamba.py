@@ -35,7 +35,6 @@ if __name__ == "__main__":
 
     # Set Autograd to false
     model.requires_grad_(False)
-    
     # STEP 4 REQUIRED FOR DEEPVIEW AS A LIBRARY: generate call with sendnn warmup
     with torch_sendnn.warmup_mode(skip_compilation=True):
         extra_generation_kwargs["only_last_token"] = True
@@ -55,4 +54,3 @@ if __name__ == "__main__":
 
     # STEP 5 REQUIRED FOR DEEPVIEW AS A LIBRARY: Process unsupported Ops
     process_unsupported_ops(True, False)
-    

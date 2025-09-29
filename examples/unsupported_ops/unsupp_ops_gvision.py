@@ -1,5 +1,4 @@
 # Command to run script: python3 gvision_inference_library.py > gvision_aiu_out.txt 2>&1
-
 from transformers import LlavaNextProcessor
 import torch
 import requests
@@ -8,6 +7,7 @@ from transformers import LlavaNextForConditionalGeneration
 # REQUIRED FOR DEEPVIEW AS A LIBRARY
 import torch_sendnn
 from deepview.core.unsupported_ops import process_unsupported_ops
+
 
 def _get_inputs(processor):
     from PIL import Image
@@ -29,7 +29,6 @@ if __name__ == "__main__":
     model = LlavaNextForConditionalGeneration.from_pretrained(model_path).to("cpu")
     model.eval()
     model.compile(backend="sendnn")
-    
     # Set Autograd to false
     # model.requires_grad_(False)
 
@@ -43,4 +42,3 @@ if __name__ == "__main__":
 
     # STEP 4 REQUIRED FOR DEEPVIEW AS A LIBRARY: Process unsupported Ops
     process_unsupported_ops(True, True)
-    
