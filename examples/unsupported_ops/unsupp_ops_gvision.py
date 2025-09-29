@@ -1,17 +1,18 @@
 # Command to run script: python3 gvision_inference_library.py > gvision_aiu_out.txt 2>&1
-from transformers import LlavaNextProcessor
+# Third Party
+from PIL import Image
+from transformers import LlavaNextProcessor, LlavaNextForConditionalGeneration
 import torch
 import requests
-from transformers import LlavaNextForConditionalGeneration
 
 # REQUIRED FOR DEEPVIEW AS A LIBRARY
 import torch_sendnn
+
+# Local
 from deepview.core.unsupported_ops import process_unsupported_ops
 
 
 def _get_inputs(processor):
-    from PIL import Image
-
     url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/pipeline-cat-chonk.jpeg"
     image = Image.open(requests.get(url, stream=True).raw)
     inputs = "<|system|>\nA chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions.\n<|user|>\n<image>\nWhat animal is shown in this image?\n<|assistant|>\n"

@@ -1,11 +1,13 @@
-import torch
-import requests
+# Third Party
 from fms.models import get_model
 from fms.utils import tokenizers
 from fms.utils.generation import generate, pad_input_ids
+import torch
 
 # STEP 1 REQUIRED FOR DEEPVIEW AS A LIBRARY
 import torch_sendnn
+
+# Local
 from deepview.core.unsupported_ops import process_unsupported_ops
 
 if __name__ == "__main__":

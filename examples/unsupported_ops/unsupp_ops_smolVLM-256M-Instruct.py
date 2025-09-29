@@ -1,8 +1,11 @@
-import torch
-import torch_sendnn
+#Third Party
 from PIL import Image
 from transformers import AutoProcessor, AutoModelForVision2Seq
 from transformers.image_utils import load_image
+import torch
+import torch_sendnn
+
+# Local
 from deepview.core.unsupported_ops import process_unsupported_ops
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
