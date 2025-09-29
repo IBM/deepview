@@ -1,4 +1,4 @@
-#Third Party
+# Third Party
 from PIL import Image
 from transformers import AutoProcessor, AutoModelForVision2Seq
 from transformers.image_utils import load_image
