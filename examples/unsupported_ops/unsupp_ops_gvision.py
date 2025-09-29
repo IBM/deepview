@@ -5,7 +5,7 @@ import torch
 import requests
 from transformers import LlavaNextForConditionalGeneration
 
-#REQUIRED FOR DEEPVIEW AS A LIBRARY
+# REQUIRED FOR DEEPVIEW AS A LIBRARY
 import torch_sendnn
 from deepview.core.unsupported_ops import process_unsupported_ops
 
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     model.compile(backend="sendnn")
     
     # Set Autograd to false
-    #model.requires_grad_(False)
+    # model.requires_grad_(False)
 
     # STEP 3 REQUIRED FOR DEEPVIEW AS A LIBRARY: call sendnn warmup mode
     with torch_sendnn.warmup_mode(skip_compilation=True):
@@ -42,4 +42,5 @@ if __name__ == "__main__":
     print(processor.decode(output[0], skip_special_tokens=True))
 
     # STEP 4 REQUIRED FOR DEEPVIEW AS A LIBRARY: Process unsupported Ops
-    process_unsupported_ops(True, True) 
+    process_unsupported_ops(True, True)
+    
