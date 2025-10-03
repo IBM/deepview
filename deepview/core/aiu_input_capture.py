@@ -31,7 +31,7 @@ def run_model_for_inputs(model_type, model_path, layer_inputs_file):
         str: A complete Python script as a string that can be executed to generate the inputs.
     """
     return f"""
-from deepview.utils.model_handler import ModelHandler
+from deepview.utils.model_handler import ModelHandler,setup_model_handler
 import torch_sendnn
 import pickle
 import torch
@@ -39,16 +39,14 @@ import os
 
 os.environ["COMPILATION_MODE"] = "offline_decoder"
 
-aiu_model_handler = ModelHandler(
-                        model_type="{model_type}",
-                        model_path="{model_path}",
-                        device="aiu",
-                        prompt="What is the capital of Egypt?",
-                    )
+aiu_model_handler = setup_model_handler(
+        model_type='{model_type}',
+        model_path='{model_path}',
+        device="aiu",
+        prompt="What is the capital of Egypt?",
+        insert_forward_hooks=True,
+    )
                     
-aiu_model_handler.load_and_compile_model()
-aiu_model_handler.prep_input()
-aiu_model_handler.insert_forward_hooks()
 aiu_model_handler.warmup()
 
 print("Reached second infer call post compile.....")
@@ -57,9 +55,9 @@ aiu_model_handler.infer()
 
 print(f"Saving layer inputs.....")
 aiu_model_handler.get_layer_io()
-layer_inputs = aiu_model_handler.layer_inputs
+layer_ios = aiu_model_handler.layer_ios
 with open("{layer_inputs_file}", "wb") as f:
-    pickle.dump(layer_inputs, f)
+    pickle.dump(layer_ios, f)
 print("Saved inputs to {layer_inputs_file}")
 
 aiu_model_handler.remove_forward_hooks()

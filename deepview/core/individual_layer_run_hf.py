@@ -32,7 +32,7 @@ def run_layers(modelpath, sub_layer, filename):
     return f"""
 from fms.models import get_model
 import deepview.utils.model_handler as dvmh
-
+from torch import tensor
 import torch_sendnn
 import itertools
 import pickle
@@ -60,29 +60,32 @@ model = model_handler.model
 model.eval()
 torch.set_grad_enabled(False)
 
-layer = {sub_layer}
-target_layer = layer
-forward_signature = inspect.signature(target_layer.forward)
+{sub_layer}.compile(backend="sendnn", dynamic=False)
+
+forward_signature = inspect.signature({sub_layer}.forward)
 expected_args = list(forward_signature.parameters.keys())
 
 
 with open("{filename}", "rb") as f:
-    layer_inputs_dict = pickle.load(f)
-inputval = layer_inputs_dict["{sub_layer}"]
+    layer_ios_dict = pickle.load(f)
+inputval = layer_ios_dict["{sub_layer}"]["input"]
 inputvals = list(inputval)
+kwargs = layer_ios_dict["{sub_layer}"]["kwarg"]
 
-if len(inputval) < len(expected_args):
-    print("WARNING: Missing values of input arguments padded with None.")
-    zipped_inputs = list(itertools.zip_longest(expected_args, inputval, fillvalue=None))
-else:
-    zipped_inputs = list(zip(expected_args, inputval))
-kwargs = dict(zipped_inputs)
-    
-layer.compile(backend="sendnn", dynamic=False)
+if 'attn_kwargs' in expected_args:
+    expected_args.remove('attn_kwargs')
+
+all_keys = list(expected_args) + [k for k in kwargs if k not in expected_args]
+
+all_kwargs = {{
+    k: inputvals[i] if i < len(inputvals) else kwargs.get(k)
+    for i, k in enumerate(all_keys)
+}} 
 
 with torch_sendnn.warmup_mode():
-   result = layer(**kwargs)    
+    result = {sub_layer}(**all_kwargs) 
+
 print(f"Warmup for {sub_layer} completed")
-result = layer(**kwargs)
+result = {sub_layer}(**all_kwargs)
 print(f"Second run for {sub_layer} completed")
 """
