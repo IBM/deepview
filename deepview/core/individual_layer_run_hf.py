@@ -67,7 +67,7 @@ expected_args = list(forward_signature.parameters.keys())
 
 
 with open("{filename}", "rb") as f:
-    layer_inputs_dict = pickle.load(f)
+    layer_ios_dict = pickle.load(f)
 inputval = layer_ios_dict["{sub_layer}"]["input"]
 inputvals = list(inputval)
 kwargs = layer_ios_dict["{sub_layer}"]["kwarg"]
