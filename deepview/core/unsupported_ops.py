@@ -5,8 +5,11 @@ import shutil
 
 # Third Party
 from sendnn import opcodes
-from torch_sendnn.backends.backend_utils import lazy_handles
-from torch_sendnn.utils import convert
+from torch_sendnn.backends.sendnn_backend import __state
+from torch_sendnn.conversion.conversion_utils import (
+    shape_to_list,
+    torch_datatype_to_sendnn,
+)
 import torch
 
 # Local
@@ -138,11 +141,11 @@ def process_unsupported_ops_lazy_handle(
         # Note: This logic of finding data type and shape is taken from torch_sendnn
         IS_DYNAMIC = False
         if isinstance(node.meta["val"], list):
-            dt = [convert.torch_datatype_to_sendnn(t) for t in node.meta["val"]]
-            shape = [convert.shape_to_list(s, IS_DYNAMIC) for s in node.meta["val"]]
+            dt = [torch_datatype_to_sendnn(t) for t in node.meta["val"]]
+            shape = [shape_to_list(s, IS_DYNAMIC) for s in node.meta["val"]]
         else:
-            dt = convert.torch_datatype_to_sendnn(node.meta["val"].dtype)
-            shape = convert.shape_to_list(node.meta["val"].shape, IS_DYNAMIC)
+            dt = torch_datatype_to_sendnn(node.meta["val"].dtype)
+            shape = shape_to_list(node.meta["val"].shape, IS_DYNAMIC)
 
         error = ""
         if show_details_flag:
@@ -162,7 +165,7 @@ def process_unsupported_ops_lazy_handle(
             generate_reproduction(lazy_handle_id, node.name, target_name, args)
 
 
-def process_unsupported_ops(show_details_flag, generate_repro_code_flag):
+def process_unsupported_ops(show_details_flag, generate_repro_code_flag, lazy_handles):
     """Identifies unsupported operations and optionally generates reproduction scripts.
 
     This function processes all lazy handles to extract unsupported operations using
@@ -223,4 +226,7 @@ def run_unsupported_op_mode(
         prompt="What is the capital of Egypt?",
         safe_warmup=True,
     )
-    process_unsupported_ops(show_details_flag, generate_repro_code_flag)
+    preserved_lazy_handles = __state.lazy_handles
+    process_unsupported_ops(
+        show_details_flag, generate_repro_code_flag, preserved_lazy_handles
+    )
