@@ -58,14 +58,14 @@ device = torch.device("cpu")
 model.eval()
 torch.set_grad_enabled(False)
 
-layer = {sub_layer}
-target_layer = layer
-forward_signature = inspect.signature(target_layer.forward)
+{sub_layer}.compile(backend="sendnn", dynamic=False)
+
+forward_signature = inspect.signature({sub_layer}.forward)
 expected_args = list(forward_signature.parameters.keys())
 
 with open("{filename}", "rb") as f:
-    layer_inputs_dict = pickle.load(f)
-inputval = layer_inputs_dict["{sub_layer}"]
+    layer_ios_dict = pickle.load(f)
+inputval = layer_ios_dict["{sub_layer}"]["input"]
 inputvals = list(inputval)
 
 if len(inputval) < len(expected_args):
@@ -73,13 +73,12 @@ if len(inputval) < len(expected_args):
     zipped_inputs = list(itertools.zip_longest(expected_args, inputval, fillvalue=None))
 else:
     zipped_inputs = list(zip(expected_args, inputval))
-kwargs = dict(zipped_inputs)
+all_kwargs = dict(zipped_inputs)
 
-layer.compile(backend="sendnn", dynamic=False)
 with torch_sendnn.warmup_mode():
-    result = layer(**kwargs)    
+    result = {sub_layer}(**all_kwargs) 
 print(f"Warmup for {sub_layer} completed")
-result = layer(**kwargs)
+result = {sub_layer}(**all_kwargs)
 print(f"Second run for {sub_layer} completed")
     
 output_filename = "dv_layer_io_debugging_tmp/{sub_layer}_output_kwargs.pkl"
