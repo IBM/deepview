@@ -165,7 +165,7 @@ def process_unsupported_ops_lazy_handle(
             generate_reproduction(lazy_handle_id, node.name, target_name, args)
 
 
-def process_unsupported_ops(show_details_flag, generate_repro_code_flag, lazy_handles):
+def process_unsupported_ops(show_details_flag, generate_repro_code_flag):
     """Identifies unsupported operations and optionally generates reproduction scripts.
 
     This function processes all lazy handles to extract unsupported operations using
@@ -177,6 +177,7 @@ def process_unsupported_ops(show_details_flag, generate_repro_code_flag, lazy_ha
         show_details_flag (bool): Whether to print detailed stack traces for each unsupported op.
         generate_repro_code_flag (bool): Whether to generate minimal repro scripts for each op.
     """
+    lazy_handles = __state.lazy_handles
     all_unsupported_ops = []
     for iter_idx, lh in enumerate(lazy_handles):
         unsupported_ops = get_unsupported_ops(lh)
@@ -226,7 +227,5 @@ def run_unsupported_op_mode(
         prompt="What is the capital of Egypt?",
         safe_warmup=True,
     )
-    preserved_lazy_handles = __state.lazy_handles
     process_unsupported_ops(
-        show_details_flag, generate_repro_code_flag, preserved_lazy_handles
-    )
+        show_details_flag, generate_repro_code_flag)
