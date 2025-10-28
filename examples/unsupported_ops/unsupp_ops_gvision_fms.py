@@ -1,5 +1,7 @@
 # Command to run script: python3 gvision_inference_library.py > gvision_aiu_out.txt 2>&1
 # Third Party
+from fms.models import get_model
+from fms.utils.generation import generate, pad_input_ids
 from PIL import Image
 from transformers import LlavaNextForConditionalGeneration, LlavaNextProcessor
 import requests
@@ -7,8 +9,6 @@ import torch
 
 # REQUIRED FOR DEEPVIEW AS A LIBRARY
 import torch_sendnn
-from fms.models import get_model
-from fms.utils.generation import generate, pad_input_ids
 
 # Local
 from deepview.core.unsupported_ops import process_unsupported_ops
