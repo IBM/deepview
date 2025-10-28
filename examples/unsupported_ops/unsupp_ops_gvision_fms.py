@@ -41,7 +41,8 @@ if __name__ == "__main__":
 
     # Set Autograd to false
     model.requires_grad_(False)
-    
+
+    # Prepare Inputs
     input_ids = inputs["input_ids"]
     inputs.pop("input_ids")
     input_ids, padding_kwargs = pad_input_ids(input_ids, min_pad_length=0)
