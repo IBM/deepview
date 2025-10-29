@@ -61,6 +61,8 @@ python3 unsupported_ops/unsupp_ops_bamba.py
 ```
 python3 unsupported_ops/unsupp_ops_gvision_fms.py
 ```
+
+The following script uses the recipe above but will **NOT** return successfully. This is the current status of this model and needs further investigation
 ```
 python3 unsupported_ops/unsupp_ops_smolVLM-256M-Instruct.py
 ```
