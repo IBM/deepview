@@ -44,7 +44,7 @@ if __name__ == "__main__":
         device_type=device,
         data_type=torch.float16,
         force_override_config=True,
-        override_hf_pretrained_config=True if device_type == "aiu" and head_dim is not None else False, 
+        override_hf_pretrained_config=bool(device_type == "aiu" and head_dim is not None), 
         head_dim=head_dim,
     )
 
