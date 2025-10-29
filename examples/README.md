@@ -59,7 +59,7 @@ Run the scripts:
 python3 unsupported_ops/unsupp_ops_bamba.py
 ```
 ```
-python3 unsupported_ops/unsupp_ops_gvision.py
+python3 unsupported_ops/unsupp_ops_gvision_fms.py
 ```
 ```
 python3 unsupported_ops/unsupp_ops_smolVLM-256M-Instruct.py

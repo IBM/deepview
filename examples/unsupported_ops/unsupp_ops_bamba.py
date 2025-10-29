@@ -17,7 +17,7 @@ if __name__ == "__main__":
     # STEP 2 REQUIRED FOR DEEPVIEW AS A LIBRARY: prep input
     tokenizer = tokenizers.get_tokenizer(model_path)
     tokens = tokenizer.tokenize(prompt)
-    ids_l = tokenizer.convert_tokens_to_ids(tokens)
+    ids_l = tokenizer.encode(prompt, add_special_tokens=True)
     if tokenizer.bos_token_id != tokenizer.eos_token_id:
         ids_l = [tokenizer.bos_token_id] + ids_l
 

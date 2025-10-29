@@ -1,4 +1,4 @@
-# Command to run script: python3 gvision_inference_library.py > gvision_aiu_out.txt 2>&1
+# Command to run script: python3 unsupp_ops_gvision_fms.py > gvision_aiu_out.txt 2>&1
 # Third Party
 from fms.models import get_model
 from fms.utils.generation import generate, pad_input_ids
@@ -6,6 +6,7 @@ from PIL import Image
 from transformers import LlavaNextForConditionalGeneration, LlavaNextProcessor
 import requests
 import torch
+from fms.utils import serialization
 
 # REQUIRED FOR DEEPVIEW AS A LIBRARY
 import torch_sendnn
@@ -29,13 +30,24 @@ if __name__ == "__main__":
     inputs = _get_inputs(processor)
 
     device = "cpu"
+    device_type = "aiu"
+    head_dim = 128
+    if device_type == "aiu" and head_dim is not None:
+        serialization.extend_adapter("granite", "hf", ["weight_expansion_for_mismatched_head_dim"])
+
+
     # STEP 2 REQUIRED FOR DEEPVIEW AS A LIBRARY: load & Compile (ensure to add compile for sendnn backend)
+    
     model = get_model(
         "hf_pretrained",
         model_path,
-        data_type=torch.float32,
         device_type=device,
+        data_type=torch.float16,
+        force_override_config=True,
+        override_hf_pretrained_config=True if device_type == "aiu" and head_dim is not None else False, 
+        head_dim=head_dim,
     )
+
     model.eval()
     model.compile(backend="sendnn")
 
@@ -66,5 +78,5 @@ if __name__ == "__main__":
 
     print(processor.decode(output[0], skip_special_tokens=True))
 
-    # STEP 4 REQUIRED FOR DEEPVIEW AS A LIBRARY: Process unsupported Ops
+    # STEP 5 REQUIRED FOR DEEPVIEW AS A LIBRARY: Process unsupported Ops
     process_unsupported_ops(True, True)
