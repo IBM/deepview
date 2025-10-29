@@ -33,11 +33,12 @@ if __name__ == "__main__":
     device_type = "aiu"
     head_dim = 128
     if device_type == "aiu" and head_dim is not None:
-        serialization.extend_adapter("granite", "hf", ["weight_expansion_for_mismatched_head_dim"])
+        serialization.extend_adapter(
+            "granite", "hf", ["weight_expansion_for_mismatched_head_dim"]
+        )
 
 
     # STEP 2 REQUIRED FOR DEEPVIEW AS A LIBRARY: load & Compile (ensure to add compile for sendnn backend)
-    
     model = get_model(
         "hf_pretrained",
         model_path,
