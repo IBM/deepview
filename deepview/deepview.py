@@ -52,9 +52,10 @@ def main():
             "unsupported_op",
             "layer_debugging",
             "layer_io_divergence",
+            "allops_testgen",
         ],
         default="unsupported_op",
-        help="Modes: [unsupported_op, layer_debugging, layer_io_divergence] (Choose ONLY one). Default is the unsupported_op mode.",
+        help="Modes: [unsupported_op, layer_debugging, layer_io_divergence, allops_testgen] (Choose ONLY one). Default is the unsupported_op mode.",
     )
 
     parser.add_argument(
@@ -70,6 +71,12 @@ def main():
     )
 
     parser.add_argument(
+        "--yaml_gen",
+        action="store_true",
+        help="Generate yaml_file in folder rerpo_codes_1 with ops and input shapes.",
+    )
+
+    parser.add_argument(
         "--output_file",
         default="debug_tool_log.txt",
         help="Name of the file in which the debug tool output will be stored.",
@@ -78,7 +85,7 @@ def main():
     args = parser.parse_args()
 
     if (
-        args.mode not in ["unsupported_op", "layer_debugging"]
+        args.mode not in ["unsupported_op", "layer_debugging","allops_testgen"]
         and args.model_type == "hf"
     ):
         print(f"{args.mode} is currently supported only for FMS models.")
@@ -96,6 +103,7 @@ def main():
         args.mode,
         args.show_details,
         args.generate_repro_code,
+        args.yaml_gen,
     )
     print("DeepView run completed")
 

@@ -42,6 +42,9 @@ from deepview.core.unsupported_ops import (
     process_unsupported_ops,
     run_unsupported_op_mode,
 )
+from deepview.core.inference_testgen import (
+    run_allopstestgen_mode,
+)
 from deepview.utils.logger import save_deepview_logs
 from deepview.utils.model_handler import ModelHandler, validate_model_id
 from deepview.utils.tee import Tee
@@ -69,6 +72,7 @@ def run_model(
     deepview_mode,
     show_details_flag,
     generate_repro_code_flag,
+    yaml_gen,
     logfile="model_output.txt",
 ):
     """Main entry point to run a model and process its execution logs.
@@ -115,6 +119,10 @@ def run_model(
 
             elif deepview_mode == "layer_io_divergence":
                 passed = run_layer_io_divergence_mode(model_path, model_type)
+            elif deepview_mode == "allops_testgen":
+                run_allopstestgen_mode(
+                    model_path, model_type, yaml_gen
+                )
 
             # Process the logfile to create the tool_output_file
             tee.flush()

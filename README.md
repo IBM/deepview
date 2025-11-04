@@ -101,7 +101,7 @@ The command to run deepview is as follows :
 ```shell
 usage: deepview [-h] --model_type {fms,hf} --model MODEL
                    [--mode {unsupported_op,layer_debugging,layer_io_divergence} [{unsupported_op,layer_debugging,layer_io_divergence} ...]]
-                   [--show_details] [--generate_repro_code] --output_file OUTPUT_FILE --layer_inputs_file LAYER_INPUTS_FILE
+                   [--show_details] [--generate_repro_code] [--yaml_gen] --output_file OUTPUT_FILE --layer_inputs_file LAYER_INPUTS_FILE
 
 Script to run DeepView tool on any model.
 
@@ -110,12 +110,14 @@ options:
   --model_type {fms,hf}
                         The type of model you want to debug - fms or hf.
   --model MODEL         Model name in HF format or model path
-  --mode {unsupported_op,layer_debugging,layer_io_divergence} 
-                        Modes: [unsupported_op, layer_debugging, layer_io_divergence] (Choose ONLY one). Default is the
+  --mode {unsupported_op,layer_debugging,layer_io_divergence,allops_testgen} 
+                        Modes: [unsupported_op, layer_debugging, layer_io_divergence,allops_testgen] (Choose ONLY one). Default is the
                         unsupported_op mode.
   --show_details        Print stack trace and other details, valid only with unsupported_op.
   --generate_repro_code
                         Generate minimal reproducible code for unsupported operation.
+  --yaml_gen
+			Generate yaml with all ops and input shapes. Also dump input files at folder repro_codes_1.
   --output_file OUTPUT_FILE
                         Name of the file in which the debug tool output will be stored.
   --layer_inputs_file LAYER_INPUTS_FILE
@@ -124,6 +126,11 @@ options:
 
 ## Examples
 A few examples demonstrating the use of unsupported_op, layer_debugging, and layer_io_divergence modes are shown below. A detailed list of models tested with DeepView can be found under [examples](./examples).
+
+### allops_testgen
+```
+deepview --model_type fms --model ibm-ai-platform/Bamba-9B-v1 --mode allops_testgen --show_details --output_file debugger.txt
+```
 
 ### unsupported_op mode
 ```
