@@ -22,8 +22,7 @@ import time
 
 # Third Party
 from fms.models import get_model
-from fms.utils import serialization
-from fms.utils import tokenizers
+from fms.utils import serialization, tokenizers
 from fms.utils.generation import generate, pad_input_ids
 from sentence_transformers import SentenceTransformer
 from transformers import (
