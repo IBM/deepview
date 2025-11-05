@@ -22,6 +22,7 @@ import time
 
 # Third Party
 from fms.models import get_model
+from fms.utils import serialization
 from fms.utils import tokenizers
 from fms.utils.generation import generate, pad_input_ids
 from sentence_transformers import SentenceTransformer
@@ -267,6 +268,14 @@ class ModelHandler:
         print("Loading model")
         start = time.time()
 
+        device_type = "aiu"
+        head_dim = 128
+        if device_type == "aiu" and head_dim is not None:
+            print("serialization the backend adapter for granite models ========")
+            serialization.extend_adapter(
+                "granite", "hf", ["weight_expansion_for_mismatched_head_dim"]
+            )
+
         if self.model_type == "fms":
             # This get_model call assumes locally downloaded weights
             self.model = get_model(
@@ -275,6 +284,10 @@ class ModelHandler:
                 device_type="cpu",
                 data_type=torch.float16,
                 fused_weights=False,
+                override_hf_pretrained_config=bool(
+                    device_type == "aiu" and head_dim is not None
+                ),
+                head_dim=head_dim,
             )
         elif self.model_type == "hf":
             # TODO: we can do specific handling per model class but for now everything apart from CausalLM is treated as AutoModel
