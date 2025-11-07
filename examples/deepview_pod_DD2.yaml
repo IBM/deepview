@@ -25,16 +25,6 @@ spec:
 
         pip3 install -q -U transformers
         
-        cp ${AIU_AUTOGEN_SENLIB_CONFIG_FILE} /tmp/etc/ibm/spyre/senlib_config.json
-
-        FILE=/tmp/etc/ibm/spyre/senlib_config.json
-
-        cat $FILE | jq '. += {"RISCV": {"DOOM": { "enable" : false}}, "SNT_MCI" : { "DCR": {"MCI_CTRL": {"ENABLE_RISCV": "0x0"} } }}' > $FILE.jq
-
-        mv $FILE.jq $FILE
-
-        cp /tmp/etc/ibm/spyre/senlib_config.json $HOME/.senlib.json
-
         echo "POD_IMAGE:" $POD_IMAGE >> /tmp/aiu-query-devices.txt
 
         echo " " >> /tmp/aiu-query-devices.txt
