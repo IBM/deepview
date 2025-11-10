@@ -55,13 +55,26 @@ process_unsupported_ops(True, False)
 Example scripts are provided in the `unsupported_ops/` folder located in this directory
 
 Run the scripts:
+**1. ibm-ai-platform/Bamba-9B-v2**
 ```
 python3 unsupported_ops/unsupp_ops_bamba.py
 ```
+**2. ibm-granite/granite-vision-3.3-2b**
+This Example requires that we expand the head_dim paramter to 128. You will need to manually clone FMS in your pod **AFTER** deepview installation
+```
+git clone https://github.com/foundation-model-stack/foundation-model-stack.git
+```
+Then checkout the branch with the head_dim fix
+```
+git checkout multi-model-serialization-expansion
+```
+
+You will also need the changes from this PR 
+
 ```
 python3 unsupported_ops/unsupp_ops_gvision_fms.py
 ```
-
+**3. HuggingFaceTB/SmolVLM-256M-Instruct**
 The following script uses the recipe above but will **NOT** return successfully. This is the current status of this model and needs further investigation
 ```
 python3 unsupported_ops/unsupp_ops_smolVLM-256M-Instruct.py

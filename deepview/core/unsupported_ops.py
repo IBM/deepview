@@ -5,7 +5,7 @@ import shutil
 
 # Third Party
 from sendnn import opcodes
-from torch_sendnn.backends.sendnn_backend import __state
+from torch_sendnn.backends.sendnn_backend import _get_global_state
 from torch_sendnn.conversion.conversion_utils import (
     shape_to_list,
     torch_datatype_to_sendnn,
@@ -133,7 +133,7 @@ def process_unsupported_ops_lazy_handle(
         show_details_flag (bool): Whether to print stack traces for each unsupported op.
         generate_repro_code_flag (bool): Whether to generate a minimal script to reproduce the error.
     """
-    for node in lazy_handle.graph.nodes:
+    for node in lazy_handle.aot_autograd_gm.graph.nodes:
         if node.name not in unsupported_ops:
             continue
 
@@ -227,4 +227,7 @@ def run_unsupported_op_mode(
         prompt="What is the capital of Egypt?",
         safe_warmup=True,
     )
-    process_unsupported_ops(show_details_flag, generate_repro_code_flag)
+    preserved_lazy_handles = _get_global_state().lazy_handles
+    process_unsupported_ops(
+        show_details_flag, generate_repro_code_flag, preserved_lazy_handles
+    )
