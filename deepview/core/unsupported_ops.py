@@ -177,7 +177,7 @@ def process_unsupported_ops(show_details_flag, generate_repro_code_flag):
         show_details_flag (bool): Whether to print detailed stack traces for each unsupported op.
         generate_repro_code_flag (bool): Whether to generate minimal repro scripts for each op.
     """
-    lazy_handles = __state.lazy_handles
+    lazy_handles = _get_global_state().lazy_handles
     all_unsupported_ops = []
     for iter_idx, lh in enumerate(lazy_handles):
         unsupported_ops = get_unsupported_ops(lh)
@@ -227,7 +227,6 @@ def run_unsupported_op_mode(
         prompt="What is the capital of Egypt?",
         safe_warmup=True,
     )
-    preserved_lazy_handles = _get_global_state().lazy_handles
     process_unsupported_ops(
-        show_details_flag, generate_repro_code_flag, preserved_lazy_handles
+        show_details_flag, generate_repro_code_flag
     )
