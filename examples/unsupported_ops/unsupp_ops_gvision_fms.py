@@ -43,7 +43,7 @@ if __name__ == "__main__":
     serialization.extend_adapter("llava_next", "hf", ["weight_expansion_for_mismatched_head_dim"])
 
     config_dict = {}
-    config_dict['head_dim'] = 128
+    config_dict["head_dim"] = 128
 
     # STEP 2 REQUIRED FOR DEEPVIEW AS A LIBRARY: load & Compile (ensure to add compile for sendnn backend)
     model = get_model(
@@ -71,7 +71,7 @@ if __name__ == "__main__":
     input_ids = input_ids.to(device)
 
     inputs["only_last_token"] = True
-    inputs['attn_name'] = 'sdpa_causal'
+    inputs["attn_name"] = "sdpa_causal"
 
     # STEP 3 REQUIRED FOR DEEPVIEW AS A LIBRARY: call sendnn warmup mode
     with torch_sendnn.warmup_mode():
