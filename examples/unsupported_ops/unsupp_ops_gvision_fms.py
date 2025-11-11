@@ -1,4 +1,7 @@
 # Command to run script: python3 unsupp_ops_gvision_fms.py > gvision_aiu_out.txt 2>&1
+# Standard
+import os
+
 # Third Party
 from fms.models import get_model
 from fms.utils import serialization
@@ -7,7 +10,6 @@ from PIL import Image
 from transformers import LlavaNextForConditionalGeneration, LlavaNextProcessor
 import requests
 import torch
-import os
 
 # REQUIRED FOR DEEPVIEW AS A LIBRARY
 import torch_sendnn
