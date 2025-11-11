@@ -227,6 +227,4 @@ def run_unsupported_op_mode(
         prompt="What is the capital of Egypt?",
         safe_warmup=True,
     )
-    process_unsupported_ops(
-        show_details_flag, generate_repro_code_flag
-    )
+    process_unsupported_ops(show_details_flag, generate_repro_code_flag)

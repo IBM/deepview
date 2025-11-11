@@ -41,7 +41,7 @@ if __name__ == "__main__":
     max_new_tokens = 20
     min_pad_length = 0
     fixed_prompt_length = 0
-    
+
     serialization.extend_adapter(
         "llava_next", "hf", ["weight_expansion_for_mismatched_head_dim"]
     )
