@@ -17,12 +17,14 @@ os.environ.setdefault("COMPILATION_MODE", "offline_decoder")
 # Local
 from deepview.core.unsupported_ops import process_unsupported_ops
 
+
 def _get_inputs(processor):
     url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/pipeline-cat-chonk.jpeg"
     image = Image.open(requests.get(url, stream=True).raw)
     inputs = "<|system|>\nA chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions.\n<|user|>\n<image>\nWhat animal is shown in this image?\n<|assistant|>\n"
     inputs = processor(text=inputs, images=image, return_tensors="pt").to("cpu")
     return inputs
+
 
 def print_result(result, result_idx: int):
     print(processor.decode(result, skip_special_tokens=True))
@@ -40,7 +42,9 @@ if __name__ == "__main__":
     min_pad_length = 0
     fixed_prompt_length = 0
     
-    serialization.extend_adapter("llava_next", "hf", ["weight_expansion_for_mismatched_head_dim"])
+    serialization.extend_adapter(
+        "llava_next", "hf", ["weight_expansion_for_mismatched_head_dim"]
+    )
 
     config_dict = {}
     config_dict["head_dim"] = 128
@@ -53,7 +57,7 @@ if __name__ == "__main__":
         device_type=device,
         fused_weights=False,
         override_hf_pretrained_config=True,
-        text_config=config_dict
+        text_config=config_dict,
     )
 
     model.eval()
@@ -87,7 +91,7 @@ if __name__ == "__main__":
             prepare_model_inputs_hook=model.prepare_inputs_for_generation,
             contiguous_cache=True,
         )
-    
+
     for i in range(output.shape[0]):
         print_result(output[i], i)
 
