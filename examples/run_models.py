@@ -73,4 +73,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    dv_run_models(args.mode, args.models, args.output_file)
+    dv_run_models(args.mode, args.models, args.output_file, args.silent)
