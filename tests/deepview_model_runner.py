@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-import subprocess
-import argparse
+# Standard
 from datetime import datetime
+import argparse
+import subprocess
 
-def dv_run_models(mode: str, models: list[str], output_file: str, silent: bool):
+
+def deepview_model_runner(mode: str, models: list[str], output_file: str, silent: bool):
     def emit(msg: str, end: str = "\n"):
         if not silent:
             print(msg, end=end)
@@ -16,14 +18,14 @@ def dv_run_models(mode: str, models: list[str], output_file: str, silent: bool):
             f.write(header)
 
             try:
-                # Stream stdout+stderr live (stderr merged into stdout) 
+                # Stream stdout+stderr live (stderr merged into stdout)
                 process = subprocess.Popen(
                     full_command,
                     shell=True,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     text=True,
-                    bufsize=1  # line-buffered
+                    bufsize=1,  # line-buffered
                 )
 
                 # Stream each line to terminal (unless silent) and to file
@@ -56,21 +58,26 @@ if __name__ == "__main__":
         description="Run Deepview sequentially for multiple models and save results to an output file."
     )
     parser.add_argument(
-        "--mode", required=True,
-        help="Deepview mode to run."
+        "--mode",
+        required=True,
+        help="Deepview mode to run.",
     )
     parser.add_argument(
-        "--models", nargs="+", required=True,
-        help="List of model names to run sequentially."
+        "--models",
+        nargs="+",
+        required=True,
+        help="List of model names to run sequentially.",
     )
     parser.add_argument(
-        "--output_file", required=True,
-        help="Output file path for saving all run logs."
+        "--output_file",
+        required=True,
+        help="Output file path for saving all run logs.",
     )
     parser.add_argument(
-        "--silent", action="store_true",
-        help="If set, suppress live terminal output (still logs to file)."
+        "--silent",
+        action="store_true",
+        help="If set, suppress live terminal output (still logs to file).",
     )
     args = parser.parse_args()
 
-    dv_run_models(args.mode, args.models, args.output_file, args.silent)
+    deepview_model_runner(args.mode, args.models, args.output_file, args.silent)
