@@ -57,7 +57,7 @@ pytest --cov=deepview .
 
 ## `deepview_model_runner.py` for automated batch testing of models with Deepview
 
-With this new script utility we automate Deepview to run batch testing via its CLI tool, running each mode in batches for a list of user-given models. All the results are saved to the specified output file.
+With this new script utility we automate Deepview to run batch testing on pod via its CLI tool, running each mode in batches for a list of user-given models. All the results are saved to the specified output file.
 
 For now you can only run one mode of deepview at a time but we can test multiple models for that mode.
 
