@@ -69,33 +69,6 @@ DEEPVIEW========================================================================
 ```
 
 **2. ibm-granite/granite-vision-3.3-2b**
-This Example requires that we expand the head_dim paramter to 128. You will need to manually clone FMS in your pod **AFTER** deepview installation
-```
-cd /home/senuser/
-```
-
-```
-git clone https://github.com/foundation-model-stack/foundation-model-stack.git
-```
-
-```
-cd foundation-model-stack/
-```
-
-Then checkout the branch with the head_dim fix
-```
-git checkout multi-model-serialization-expansion
-```
-
-You will also need to grab [this](https://github.com/foundation-model-stack/foundation-model-stack/blob/hierarchical-configs-override/fms/utils/config.py) config.yaml which is in a separate PR. Both are needed for this to work as expected. Replace your `fms/utils/config.py` with the one from the link.
-
-Reinstall foundation model stack (assuming you are in the top level of FMS repository)
-```
-pip3 install -e . 
-```
-
-Then you can run the example:
-
 ```
 python3 unsupported_ops/unsupp_ops_gvision_fms.py
 ```
@@ -108,7 +81,7 @@ A chat between a curious user and an artificial intelligence assistant. The assi
 
 What animal is shown in this image?
 <|assistant|>
-|
+
 DEEPVIEW========================================================================
 DEEPVIEW No unsupported operations detected.
 DEEPVIEW========================================================================
@@ -120,7 +93,7 @@ The following script uses the recipe above but will **NOT** return successfully.
 python3 unsupported_ops/unsupp_ops_smolVLM-256M-Instruct.py
 ```
 
-Output:
+Expected Output:
 ```
 /home/senuser/.local/lib/python3.12/site-packages/transformers/models/auto/modeling_auto.py:2242: FutureWarning: The class `AutoModelForVision2Seq` is deprecated and will be removed in v5.0. Please use `AutoModelForImageTextToText` instead.
   warnings.warn(
@@ -190,6 +163,7 @@ Traceback (most recent call last):
   File "/home/senuser/.local/lib/python3.12/site-packages/transformers/models/idefics3/modeling_idefics3.py", line 164, in forward
     position_ids[batch_idx][p_attn_mask.view(-1)] = pos_ids
     ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: shape mismatch: value tensor of shape [594] cannot be broadcast to indexing result of shape [466]
 ```
 
 ## Layer Debugging Mode
