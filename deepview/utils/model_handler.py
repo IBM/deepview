@@ -332,7 +332,7 @@ class ModelHandler:
 
     def _forward_output(self):
         if self.model_type == "fms":
-            return self.model(self.input_id)
+            return self.model(self.input_id, last_n_tokens=0)
         if self.model_type == "hf":
             if self.model_class in ["causal_lm"]:
                 return self.model(self.input_id["input_ids"])
