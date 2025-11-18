@@ -33,7 +33,7 @@ def print_result(result, result_idx: int):
 
 
 if __name__ == "__main__":
-    model_path = "ibm-granite/granite-vision-3.2-2b"
+    model_path = "ibm-granite/granite-vision-3.3-2b"
     # STEP 1 REQUIRED FOR DEEPVIEW AS A LIBRARY: prep input
     processor = LlavaNextProcessor.from_pretrained(model_path)
     inputs = _get_inputs(processor)
