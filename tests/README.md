@@ -57,9 +57,12 @@ pytest --cov=deepview .
 
 ## `deepview_model_runner.py` for automated batch testing of models with Deepview
 
-With this new script utility we automate Deepview to run batch testing on pod via its CLI tool, running each mode in batches for a list of user-given models. All the results are saved to the specified output file.
+With this script utility we automate Deepview to run batch testing on pod via its CLI tool, running each mode in batches for either:
 
-For now you can only run one mode of deepview at a time but we can test multiple models for that mode.
+* user-specified models via `--models`
+* the curated list defined inside `deepview_model_runner.py` via `--all_models` (currently Granite 3.2 2B, Granite 3.2 8B, Granite 3.3 8B, Bamba 9B v2, and Mistral 7B Instruct)
+
+All the results are saved to the specified output file. For now you can only run one mode of Deepview at a time, but we can test multiple models for that mode.
 
 Live mode:
 
@@ -67,6 +70,15 @@ Live mode:
 python3 deepview_model_runner.py \
   --mode {unsupported_op, layer_debugging, layer_io_divergence} \
   --models ibm-granite/granite-3.3-8b-instruct ibm-ai-platform/Bamba-9B-v2 \
+  --output_file deepview_unsupported_ops.txt
+```
+
+All models list mode:
+
+```bash
+python3 deepview_model_runner.py \
+  --mode {unsupported_op, layer_debugging, layer_io_divergence} \
+  --all_models \
   --output_file deepview_unsupported_ops.txt
 ```
 

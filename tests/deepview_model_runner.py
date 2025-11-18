@@ -5,6 +5,15 @@ import argparse
 import subprocess
 
 
+TEST_MODELS: list[str] = [
+    "ibm-granite/granite-3.2-2b-instruct",
+    "ibm-granite/granite-3.2-8b-instruct",
+    "ibm-granite/granite-3.3-8b-instruct",
+    "ibm-ai-platform/Bamba-9B-v2",
+    "mistralai/Mistral-7B-Instruct-v0.3",
+]
+
+
 def deepview_model_runner(mode: str, models: list[str], output_file: str, silent: bool):
     def emit(msg: str, end: str = "\n"):
         if not silent:
@@ -65,8 +74,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--models",
         nargs="+",
-        required=True,
         help="List of model names to run sequentially.",
+    )
+    parser.add_argument(
+        "--all_models",
+        action="store_true",
+        help="Run Deepview on the curated set of models defined in this script.",
     )
     parser.add_argument(
         "--output_file",
@@ -80,4 +93,12 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    deepview_model_runner(args.mode, args.models, args.output_file, args.silent)
+    if args.all_models and args.models:
+        parser.error("Use either --models or --all_models, not both.")
+
+    if not args.all_models and not args.models:
+        parser.error("Provide --models or pass --all_models to use the curated list.")
+
+    selected_models = TEST_MODELS if args.all_models else args.models
+
+    deepview_model_runner(args.mode, selected_models, args.output_file, args.silent)
