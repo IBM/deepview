@@ -4,7 +4,6 @@ from datetime import datetime
 import argparse
 import subprocess
 
-
 TEST_MODELS: list[str] = [
     "ibm-granite/granite-3.2-2b-instruct",
     "ibm-granite/granite-3.2-8b-instruct",
