@@ -20,6 +20,7 @@ from deepview.core.unsupported_ops import process_unsupported_ops
 # Set Required Environment Variable
 os.environ.setdefault("COMPILATION_MODE", "offline_decoder")
 
+
 def _get_inputs(processor):
     device = torch.device("cpu")
     url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/pipeline-cat-chonk.jpeg"
@@ -78,9 +79,9 @@ if __name__ == "__main__":
     max_new_tokens = 4
     min_pad_length = 4992
     fixed_prompt_length = 0
-    
+
     _setup_dynamo_cache(max_new_tokens, min_pad_length, fixed_prompt_length)
-    
+
     model_path = "ibm-granite/granite-vision-3.3-2b"
     device = torch.device("cpu")
     device_type = "aiu"
@@ -99,7 +100,7 @@ if __name__ == "__main__":
 
     inputs["only_last_token"] = True
     inputs["attn_name"] = "sdpa_causal"
-    
+
     # head_dim expansion required for granite vision
     serialization.extend_adapter(
         "llava_next", "hf", ["weight_expansion_for_mismatched_head_dim"]
@@ -122,10 +123,10 @@ if __name__ == "__main__":
     model.eval()
     torch.set_grad_enabled(False)
     model.compile(backend="sendnn")
-    
+
     # Warmup AIU
     infer(model, input_ids, inputs, max_new_tokens, linear_config)
-    
+
     #STEP 4 REQUIRED FOR DEEPVIEW AS A LIBRARY: call generate
     output, timings = infer(model, input_ids, inputs, max_new_tokens, linear_config)
 
