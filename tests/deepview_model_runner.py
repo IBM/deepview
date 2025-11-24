@@ -2,8 +2,8 @@
 # Standard
 from datetime import datetime
 import argparse
-import subprocess
 import os
+import subprocess
 
 TEST_MODELS: list[str] = [
     "ibm-granite/granite-3.2-2b-instruct",
@@ -123,5 +123,9 @@ if __name__ == "__main__":
     selected_models = TEST_MODELS if args.all_models else args.models
 
     deepview_model_runner(
-        args.mode, selected_models, args.output_file, args.silent, args.generate_repro_code
+        args.mode,
+        selected_models,
+        args.output_file,
+        args.silent,
+        args.generate_repro_code,
     )
