@@ -3,6 +3,7 @@
 from datetime import datetime
 import argparse
 import subprocess
+import os
 
 TEST_MODELS: list[str] = [
     "ibm-granite/granite-3.2-2b-instruct",
@@ -65,6 +66,16 @@ def deepview_model_runner(
             f.flush()  # make sure content is written to file immediately
 
     print(f"\n✅ All runs completed. Output saved to: {output_file}")
+
+    # Cleanup temporary files
+    for temp_file in ["debug_tool_log.txt", "model_output.txt"]:
+        if os.path.exists(temp_file):
+            try:
+                os.remove(temp_file)
+                if not silent:
+                    print(f"Cleaned up: {temp_file}")
+            except OSError as e:
+                print(f"Failed to clean up {temp_file}: {e}")
 
 
 if __name__ == "__main__":
