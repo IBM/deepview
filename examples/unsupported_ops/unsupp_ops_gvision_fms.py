@@ -127,7 +127,7 @@ if __name__ == "__main__":
     # Warmup AIU
     infer(model, input_ids, inputs, max_new_tokens, linear_config)
 
-    #STEP 4 REQUIRED FOR DEEPVIEW AS A LIBRARY: call generate
+    # STEP 4 REQUIRED FOR DEEPVIEW AS A LIBRARY: call generate
     output, timings = infer(model, input_ids, inputs, max_new_tokens, linear_config)
 
     if len(output.shape) == 1:
