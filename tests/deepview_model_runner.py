@@ -13,14 +13,20 @@ TEST_MODELS: list[str] = [
 ]
 
 
-def deepview_model_runner(mode: str, models: list[str], output_file: str, silent: bool):
+def deepview_model_runner(
+    mode: str,
+    models: list[str],
+    output_file: str,
+    silent: bool,
+    generate_repro_code: bool,
+):
     def emit(msg: str, end: str = "\n"):
         if not silent:
             print(msg, end=end)
 
     with open(output_file, "w", encoding="utf-8") as f:
         for model in models:
-            full_command = f"deepview --model_type fms --model {model} --mode {mode}"
+            full_command = f"deepview --model_type fms --model {model} --mode {mode} {"--show_details" if mode == "unsupported_op" else ""} {"--generate_repro_code" if generate_repro_code else ""}"
             header = f"\n=== [{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Running: {full_command} ===\n"
             emit(header.strip())
             f.write(header)
@@ -90,6 +96,11 @@ if __name__ == "__main__":
         action="store_true",
         help="If set, suppress live terminal output (still logs to file).",
     )
+    parser.add_argument(
+        "--generate_repro_code",
+        action="store_true",
+        help="If set, pass --generate_repro_code to Deepview CLI.",
+    )
     args = parser.parse_args()
 
     if args.all_models and args.models:
@@ -100,4 +111,6 @@ if __name__ == "__main__":
 
     selected_models = TEST_MODELS if args.all_models else args.models
 
-    deepview_model_runner(args.mode, selected_models, args.output_file, args.silent)
+    deepview_model_runner(
+        args.mode, selected_models, args.output_file, args.silent, args.generate_repro_code
+    )
