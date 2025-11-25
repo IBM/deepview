@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+# Standard
+from datetime import datetime
+import argparse
+import glob
+import os
+import shutil
+import subprocess
+
+TEST_MODELS: list[str] = [
+    "ibm-granite/granite-3.2-2b-instruct",
+    "ibm-granite/granite-3.3-8b-instruct",
+    "ibm-ai-platform/Bamba-9B-v2",
+    "mistralai/Mistral-7B-Instruct-v0.3",
+]
+
+
+def deepview_model_runner(
+    mode: str,
+    models: list[str],
+    output_file: str,
+    silent: bool,
+    generate_repro_code: bool,
+):
+    def emit(msg: str, end: str = "\n"):
+        if not silent:
+            print(msg, end=end)
+
+    with open(output_file, "w", encoding="utf-8") as f:
+        for model in models:
+            full_command = f"deepview --model_type fms --model {model} --mode {mode} {"--show_details" if mode == "unsupported_op" else ""} {"--generate_repro_code" if generate_repro_code else ""}"
+            header = f"\n=== [{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Running: {full_command} ===\n"
+            emit(header.strip())
+            f.write(header)
+
+            try:
+                # Stream stdout+stderr live (stderr merged into stdout)
+                process = subprocess.Popen(
+                    full_command,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=1,  # line-buffered
+                )
+
+                # Stream each line to terminal (unless silent) and to file
+                assert process.stdout is not None
+                for line in process.stdout:
+                    if not silent:
+                        print(line, end="")
+                    f.write(line)
+
+                process.wait()
+
+                if process.returncode != 0:
+                    err_msg = f"[WARNING] Deepview run for {model} {mode} mode exited with code {process.returncode}\n"
+                    print(err_msg)
+                    f.write(err_msg)
+
+            except Exception as e:
+                err_msg = f"[ERROR] Exception while running Deepview {mode} mode for {model}: {e}\n"
+                print(err_msg)
+                f.write(err_msg)
+
+            f.write(f"=== Finished {mode} for model: {model} ===\n\n")
+            f.flush()
+
+    print(f"\n✅ All runs completed. Output saved to: {output_file}")
+
+    # Remove specific files generated from deepview run shared between modes
+    for temp_file in ["debug_tool_log.txt", "model_output.txt"]:
+        if os.path.exists(temp_file):
+            try:
+                os.remove(temp_file)
+                if not silent:
+                    print(f"Cleaned up: {temp_file}")
+            except OSError as e:
+                print(f"Failed to clean up {temp_file}: {e}")
+
+    # Remove tmp directory for layer_io_divergence
+    temp_dir = "dv_layer_io_debugging_tmp"
+    if os.path.exists(temp_dir):
+        try:
+            shutil.rmtree(temp_dir)
+            if not silent:
+                print(f"Cleaned up directory: {temp_dir}")
+        except OSError as e:
+            print(f"Failed to clean up directory {temp_dir}: {e}")
+
+    # Remove all .pkl files generated with layer_io_divergence
+    for pkl_file in glob.glob("*.pkl"):
+        try:
+            os.remove(pkl_file)
+            if not silent:
+                print(f"Cleaned up: {pkl_file}")
+        except OSError as e:
+            print(f"Failed to clean up {pkl_file}: {e}")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Run Deepview sequentially for multiple models and save results to an output file."
+    )
+    parser.add_argument(
+        "--mode",
+        required=True,
+        help="Deepview mode to run.",
+    )
+    parser.add_argument(
+        "--models",
+        nargs="+",
+        help="List of model names to run sequentially.",
+    )
+    parser.add_argument(
+        "--all_models",
+        action="store_true",
+        help="Run Deepview on the curated set of models defined in this script.",
+    )
+    parser.add_argument(
+        "--output_file",
+        required=True,
+        help="Output file path for saving all run logs.",
+    )
+    parser.add_argument(
+        "--silent",
+        action="store_true",
+        help="If set, suppress live terminal output (still logs to file).",
+    )
+    parser.add_argument(
+        "--generate_repro_code",
+        action="store_true",
+        help="If set, pass --generate_repro_code to Deepview CLI.",
+    )
+    args = parser.parse_args()
+
+    if args.all_models and args.models:
+        parser.error("Use either --models or --all_models, not both.")
+
+    if not args.all_models and not args.models:
+        parser.error("Provide --models or pass --all_models to use the curated list.")
+
+    selected_models = TEST_MODELS if args.all_models else args.models
+
+    deepview_model_runner(
+        args.mode,
+        selected_models,
+        args.output_file,
+        args.silent,
+        args.generate_repro_code,
+    )
