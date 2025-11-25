@@ -46,6 +46,8 @@ aiu_model_handler = setup_model_handler(
         prompt="What is the capital of Egypt?",
         insert_forward_hooks=True,
     )
+                    
+aiu_model_handler.warmup()
 
 print("Reached second infer call post compile.....")
 aiu_model_handler.clear_layer_io()

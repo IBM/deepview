@@ -63,10 +63,9 @@ forward_signature = inspect.signature({sub_layer}.forward)
 expected_args = list(forward_signature.parameters.keys())
 
 with open("{filename}", "rb") as f:
-       layer_ios_dict = pickle.load(f)
+    layer_ios_dict = pickle.load(f)
 inputval = layer_ios_dict["{sub_layer}"]["input"]
 inputvals = list(inputval)
-
 kwargs = layer_ios_dict["{sub_layer}"]["kwarg"]
 
 if 'attn_kwargs' in expected_args:

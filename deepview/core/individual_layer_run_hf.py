@@ -32,6 +32,7 @@ def run_layers(modelpath, sub_layer, filename):
     return f"""
 from fms.models import get_model
 from deepview.utils.ModelHandler.model_handler_utils import create_model_handler
+import deepview.utils.model_handler as dvmh
 from torch import tensor
 import torch_sendnn
 import itertools
@@ -69,15 +70,18 @@ kwargs = layer_ios_dict["{sub_layer}"]["kwarg"]
 
 if 'attn_kwargs' in expected_args:
     expected_args.remove('attn_kwargs')
+
 all_keys = list(expected_args) + [k for k in kwargs if k not in expected_args]
+
 all_kwargs = {{
     k: inputvals[i] if i < len(inputvals) else kwargs.get(k)
     for i, k in enumerate(all_keys)
-}}
+}} 
 
 with torch_sendnn.warmup_mode():
     result = {sub_layer}(**all_kwargs) 
+
 print(f"Warmup for {sub_layer} completed")
-    result = layer(**kwargs)
+result = {sub_layer}(**all_kwargs)
 print(f"Second run for {sub_layer} completed")
 """

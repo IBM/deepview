@@ -24,7 +24,7 @@ spec:
         cd $HOME
 
         pip3 install -q -U transformers
-
+        
         echo "POD_IMAGE:" $POD_IMAGE >> /tmp/aiu-query-devices.txt
 
         echo " " >> /tmp/aiu-query-devices.txt

@@ -75,9 +75,8 @@ else:
     zipped_inputs = list(zip(expected_args, inputval))
 all_kwargs = dict(zipped_inputs)
 
-layer.compile(backend="sendnn", dynamic=False)
 with torch_sendnn.warmup_mode():
-    result = layer(**kwargs)    
+    result = {sub_layer}(**all_kwargs) 
 print(f"Warmup for {sub_layer} completed")
 result = {sub_layer}(**all_kwargs)
 print(f"Second run for {sub_layer} completed")
