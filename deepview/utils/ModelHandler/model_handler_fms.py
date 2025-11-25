@@ -1,14 +1,15 @@
 class ModelHandlerFMS(ModelHandlerBase):
     """Model handler for FMS models."""
+
     def _load_model(self):
-         # This get_model call assumes locally downloaded weights
-            self.model = get_model(
-                "hf_pretrained",
-                variant=self.model_path,
-                device_type="cpu",
-                data_type=torch.float16,
-                fused_weights=False,
-            )
+        # This get_model call assumes locally downloaded weights
+        self.model = get_model(
+            "hf_pretrained",
+            variant=self.model_path,
+            device_type="cpu",
+            data_type=torch.float16,
+            fused_weights=False,
+        )
 
     def prep_input(self):
         """Prepares input for the model."""

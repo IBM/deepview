@@ -28,14 +28,14 @@ dependencies = [
 "transformers",
 "sentence_transformers",
 "protobuf",
-"pycony"
-""triton>=3.0.0,<3.5.0"
+"pycony",
+"triton>=3.0.0,<3.5.0"
 ]
 
 [project.optional-dependencies]
 dev = [
 "pytest",
-"pytest-cov"
+"pytest-cov",
 "tox"
 ]
 

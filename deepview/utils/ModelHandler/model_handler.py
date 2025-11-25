@@ -261,11 +261,10 @@ class ModelHandlerBase:
             else:
                 self._generate_output(True)
 
-
     def infer(self):
         """Perform inference on the prepared input based on the model type."""
         return self._generate_output(False)
-    
+
     def _forward_output(self):
         if self.model_type == "fms":
             return self.model(self.input_id, last_n_tokens=0)
@@ -301,7 +300,7 @@ class ModelHandlerBase:
         print("Extracting layer IO ...")
         for module_name, module in self.model.named_modules():
             ## Modifying keys to match the layer names which can be used to run the layers later.
-            name = convert_attr_path(module_name)            
+            name = convert_attr_path(module_name)
             self.layer_ios[name] = {}
             self.layer_ios[name]["input"] = []
             self.layer_ios[name]["kwarg"] = {}
