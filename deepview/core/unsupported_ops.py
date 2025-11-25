@@ -5,8 +5,11 @@ import shutil
 
 # Third Party
 from sendnn import opcodes
-from torch_sendnn.backends import lazy_handles
-from torch_sendnn.utils import convert
+from torch_sendnn.backends.sendnn_backend import _get_global_state
+from torch_sendnn.conversion.conversion_utils import (
+    shape_to_list,
+    torch_datatype_to_sendnn,
+)
 import torch
 
 # Local
@@ -130,7 +133,7 @@ def process_unsupported_ops_lazy_handle(
         show_details_flag (bool): Whether to print stack traces for each unsupported op.
         generate_repro_code_flag (bool): Whether to generate a minimal script to reproduce the error.
     """
-    for node in lazy_handle.graph.nodes:
+    for node in lazy_handle.aot_autograd_gm.graph.nodes:
         if node.name not in unsupported_ops:
             continue
 
@@ -138,11 +141,11 @@ def process_unsupported_ops_lazy_handle(
         # Note: This logic of finding data type and shape is taken from torch_sendnn
         IS_DYNAMIC = False
         if isinstance(node.meta["val"], list):
-            dt = [convert.convert_datatype(t) for t in node.meta["val"]]
-            shape = [convert.convert_shape(s, IS_DYNAMIC) for s in node.meta["val"]]
+            dt = [torch_datatype_to_sendnn(t) for t in node.meta["val"]]
+            shape = [shape_to_list(s, IS_DYNAMIC) for s in node.meta["val"]]
         else:
-            dt = convert.convert_datatype(node.meta["val"].dtype)
-            shape = convert.convert_shape(node.meta["val"].shape, IS_DYNAMIC)
+            dt = torch_datatype_to_sendnn(node.meta["val"].dtype)
+            shape = shape_to_list(node.meta["val"].shape, IS_DYNAMIC)
 
         error = ""
         if show_details_flag:
@@ -162,7 +165,7 @@ def process_unsupported_ops_lazy_handle(
             generate_reproduction(lazy_handle_id, node.name, target_name, args)
 
 
-def process_unsupported_ops(show_details_flag, generate_repro_code_flag):
+def process_unsupported_ops(show_details_flag, generate_repro_code_flag, lazy_handles):
     """Identifies unsupported operations and optionally generates reproduction scripts.
 
     This function processes all lazy handles to extract unsupported operations using
@@ -223,4 +226,7 @@ def run_unsupported_op_mode(
         prompt="What is the capital of Egypt?",
         safe_warmup=True,
     )
-    process_unsupported_ops(show_details_flag, generate_repro_code_flag)
+    preserved_lazy_handles = _get_global_state().lazy_handles
+    process_unsupported_ops(
+        show_details_flag, generate_repro_code_flag, preserved_lazy_handles
+    )

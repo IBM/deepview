@@ -37,8 +37,8 @@ def run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_cod
         return
 
     print("Running each layer individually........")
-    for layer in aiu_model_handler.layer_inputs.keys():
-        if layer in layers_done:
+    for layer in aiu_model_handler.layer_ios.keys():
+        if layer in layers_done or layer.endswith(".layers") or layer.endswith("]"):
             continue
         layer_run = run_layers(aiu_model_handler.model_path, layer, inputs_filename)
 
@@ -118,9 +118,9 @@ def save_into_file(data, filename):
 
 def save_layer_inputs(model_handler, inputs_filename):
     model_handler.get_layer_io()
-    layer_inputs = model_handler.layer_inputs
+    layer_ios = model_handler.layer_ios
 
-    save_into_file(layer_inputs, inputs_filename)
+    save_into_file(layer_ios, inputs_filename)
     print(f"Saved inputs to {inputs_filename}")
 
     model_handler.remove_forward_hooks()
@@ -137,6 +137,7 @@ def run_layer_debugging_mode(model_path, model_type, generate_repro_code_flag):
         device="aiu",
         prompt="What is the capital of Egypt?",
         safe_warmup=True,
+        is_layer_debug_mode=True,
         insert_forward_hooks=True,
     )
     print(f"Saving layer inputs.....")

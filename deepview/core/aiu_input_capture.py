@@ -40,13 +40,12 @@ import os
 os.environ["COMPILATION_MODE"] = "offline_decoder"
 
 aiu_model_handler = setup_model_handler(
-                        model_type="{model_type}",
-                        model_path="{model_path}",
-                        device="aiu",
-                        prompt="What is the capital of Egypt?",
-                        safe_warmup=False,
-                        insert_forward_hooks=True
-                    )
+        model_type='{model_type}',
+        model_path='{model_path}',
+        device="aiu",
+        prompt="What is the capital of Egypt?",
+        insert_forward_hooks=True,
+    )
 
 print("Reached second infer call post compile.....")
 aiu_model_handler.clear_layer_io()
@@ -54,9 +53,9 @@ aiu_model_handler.infer()
 
 print(f"Saving layer inputs.....")
 aiu_model_handler.get_layer_io()
-layer_inputs = aiu_model_handler.layer_inputs
+layer_ios = aiu_model_handler.layer_ios
 with open("{layer_inputs_file}", "wb") as f:
-    pickle.dump(layer_inputs, f)
+    pickle.dump(layer_ios, f)
 print("Saved inputs to {layer_inputs_file}")
 
 aiu_model_handler.remove_forward_hooks()

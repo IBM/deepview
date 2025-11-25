@@ -103,8 +103,8 @@ def get_layer_thresholds(thresholds_filepath):
 def get_layerwise_outputs_cpu(model_handler):
     """Gets the output of CPU run in dict format with properly formatted keys."""
     full_output_dict = {}
-    for layer, output in model_handler.layer_outputs.items():
-        full_output_dict[layer] = output
+    for layer, io in model_handler.layer_ios.items():
+        full_output_dict[layer] = io["output"]
     return full_output_dict
 
 
@@ -150,8 +150,8 @@ def generate_layerwise_output_diffs(
     layers_done = []
     print("Running each layer individually........")
     os.makedirs("dv_layer_io_debugging_tmp", exist_ok=True)
-    for layer in aiu_model_handler.layer_inputs.keys():
-        if layer in layers_done:
+    for layer in aiu_model_handler.layer_ios.keys():
+        if layer in layers_done or layer.endswith(".layers") or layer.endswith("]"):
             continue
         if layer != "model" and layer != "model.base_model":
             layer_run = run_layers_with_inputs(
@@ -295,7 +295,7 @@ def run_layer_io_divergence_mode(model_path, model_type):
     )
 
     print("Capturing layerwise inputs....")
-    aiu_model_handler.layer_inputs = get_layerwise_inputs(
+    aiu_model_handler.layer_ios = get_layerwise_inputs(
         model_type, model_path, inputs_filename
     )
 
