@@ -61,6 +61,7 @@ With this script utility we automate Deepview to run batch testing on pod via it
 
 * user-specified models via `--models`
 * the curated list defined inside `deepview_model_runner.py` via `--all_models` (currently Granite 3.2 2B, Granite 3.2 8B, Granite 3.3 8B, Bamba 9B v2, and Mistral 7B Instruct)
+* optionally generate reproduction code for issues found during the run via `--generate_repro_code` that you can find in the `repro_codes` folder.
 
 All the results are saved to the specified output file. For now you can only run one mode of Deepview at a time, but we can test multiple models for that mode.
 
@@ -90,6 +91,16 @@ python3 deepview_model_runner.py \
   --models ibm-granite/granite-3.3-8b-instruct ibm-ai-platform/Bamba-9B-v2 \
   --output_file deepview_unsupported_ops.txt
   --silent
+```
+
+Generate reproduction code:
+
+```bash
+python3 deepview_model_runner.py \
+  --mode {unsupported_op, layer_debugging} \
+  --all_models \
+  --generate_repro_code \
+  --output_file deepview_unsupported_ops.txt
 ```
 
 Help command:
