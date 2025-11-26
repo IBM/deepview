@@ -25,25 +25,25 @@ Those can be installed with `pip3 install` or `pip3 install .[dev]` as is define
 > To run the e2e tests as the state of current Deepview implementation to not have problem with subprocess leaking output from one model test case to another we need to run them sequentially. To do so please run each of the tests once the previous one ends:
 
 ```bash
-pytest tests/models/<path_to_your_test_file>
+pytest models/<path_to_your_test_file>
 ```
 
 To run our current e2e tests run it sequentially in the following order:
 
 ```bash
 # tests skipped as the unsupported ops changed.
-pytest tests/models/test_bamba9b_hf.py
+pytest models/test_bamba9b_hf.py
 ```
 ```bash
-pytest tests/models/test_mpnetV2_hf.py
-```
-
-```bash
-pytest tests/models/test_granite2b_fms.py
+pytest models/test_mpnetV2_hf.py
 ```
 
 ```bash
-pytest tests/models/test_mistral7b_fms.py
+pytest models/test_granite2b_fms.py
+```
+
+```bash
+pytest models/test_mistral7b_fms.py
 ```
 
 ## Check for test coverage
@@ -51,5 +51,59 @@ pytest tests/models/test_mistral7b_fms.py
 We can check our test code coverage using the `pytest-cov` utility as follows:
 
 ```bash
-pytest --cov=deepview tests/
+pytest --cov=deepview .
+```
+
+
+## `deepview_model_runner.py` for automated batch testing of models with Deepview
+
+With this script utility we automate Deepview to run batch testing on pod via its CLI tool, running each mode in batches for either:
+
+* user-specified models via `--models`
+* the curated list defined inside `deepview_model_runner.py` via `--all_models` (currently Granite 3.2 2B, Granite 3.2 8B, Granite 3.3 8B, Bamba 9B v2, and Mistral 7B Instruct)
+* optionally generate reproduction code for issues found during the run via `--generate_repro_code` that you can find in the `repro_codes` folder.
+
+All the results are saved to the specified output file. For now you can only run one mode of Deepview at a time, but we can test multiple models for that mode.
+
+Live mode:
+
+```bash
+python3 deepview_model_runner.py \
+  --mode {unsupported_op, layer_debugging, layer_io_divergence} \
+  --models ibm-granite/granite-3.3-8b-instruct ibm-ai-platform/Bamba-9B-v2 \
+  --output_file deepview_unsupported_ops.txt
+```
+
+All models list mode:
+
+```bash
+python3 deepview_model_runner.py \
+  --mode {unsupported_op, layer_debugging, layer_io_divergence} \
+  --all_models \
+  --output_file deepview_unsupported_ops.txt
+```
+
+Silent mode (no console output):
+
+```bash
+python3 deepview_model_runner.py \
+  --mode {unsupported_op, layer_debugging, layer_io_divergence} \
+  --models ibm-granite/granite-3.3-8b-instruct ibm-ai-platform/Bamba-9B-v2 \
+  --output_file deepview_unsupported_ops.txt
+  --silent
+```
+
+Generate reproduction code:
+
+```bash
+python3 deepview_model_runner.py \
+  --mode {unsupported_op, layer_debugging} \
+  --all_models \
+  --generate_repro_code \
+  --output_file deepview_unsupported_ops.txt
+```
+
+Help command:
+```bash
+python3 deepview_model_runner.py --help
 ```
