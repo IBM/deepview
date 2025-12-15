@@ -3,14 +3,14 @@ kind: Pod
 metadata:
   name: <pod-name>
 spec:
-  schedulerName: aiu-scheduler
+  schedulerName: spyre-scheduler
   containers:
   - name: <pod-name>
     resources:
       limits:
-        ibm.com/aiu_pf: 1
+        ibm.com/spyre_pf: 1
       requests:
-        ibm.com/aiu_pf: 1
+        ibm.com/spyre_pf: 1
     imagePullPolicy: Always
     image: &pod_image icr.io/ibmaiu_internal/1.0/x86_64/spyre:dev
     command:
