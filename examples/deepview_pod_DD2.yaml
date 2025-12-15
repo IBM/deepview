@@ -18,13 +18,14 @@ spec:
       - '-c'
     args:
       # lines without gap are considered on the same line and indented are new lines
+      # lines 29-37 are for DOOM fix
       - >
         source ~/.bashrc
         
         cd $HOME
 
         pip3 install -q -U transformers
-
+        
         cp ${AIU_AUTOGEN_SENLIB_CONFIG_FILE} /tmp/etc/ibm/spyre/senlib_config.json
 
         FILE=/tmp/etc/ibm/spyre/senlib_config.json
