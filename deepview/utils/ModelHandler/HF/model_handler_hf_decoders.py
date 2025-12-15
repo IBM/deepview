@@ -45,3 +45,9 @@ class ModelHandlerHFDecoders(ModelHandlerBase):
             result = self.model(**self.input_id)
 
         return result
+    
+    def _forward_output(self):
+        if self.model_class in ["causal_lm"]:
+            return self.model(self.input_id["input_ids"])
+        else:
+            return self.model(self.input_id)
