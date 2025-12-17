@@ -44,11 +44,10 @@ aiu_model_handler = setup_model_handler(
         model_path='{model_path}',
         device="aiu",
         prompt="What is the capital of Egypt?",
+        safe_warmup=False,
         insert_forward_hooks=True,
     )
                     
-aiu_model_handler.warmup()
-
 print("Reached second infer call post compile.....")
 aiu_model_handler.clear_layer_io()
 aiu_model_handler.infer()

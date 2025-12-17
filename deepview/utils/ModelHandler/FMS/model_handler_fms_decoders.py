@@ -49,7 +49,7 @@ class ModelHandlerFMSDecoders(ModelHandlerBase):
                 max_len = max(len(self.prompt), self.model.config.max_expected_seq_len)
             else:
                 max_len = self.model.config.max_expected_seq_len
-        print(f"Generating output with max_len={max_len}...", self.model, self.input_id, self.max_new_tokens, max_len, eos_token_id, self.extra_generation_kwargs)
+
         result = generate(
             self.model,
             self.input_id,

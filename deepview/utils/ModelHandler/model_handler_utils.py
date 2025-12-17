@@ -5,6 +5,7 @@ import sys
 
 # Third Party
 from huggingface_hub import model_info
+import torch
 
 # Local
 from deepview.utils.ModelHandler.FMS.model_handler_fms_decoders import (
@@ -43,7 +44,12 @@ def setup_model_handler(
     insert_forward_hooks=False,
 ):
     handler = create_model_handler(model_type, model_path, device, prompt)
-    handler.load_and_compile_model()
+
+    handler.load_model()
+    handler.model.eval()
+    torch.set_grad_enabled(False)
+    handler.compile_model()
+    
     handler.prep_input()
     if insert_forward_hooks:
         handler.insert_forward_hooks()

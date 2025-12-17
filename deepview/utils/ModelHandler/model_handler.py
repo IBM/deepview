@@ -38,6 +38,7 @@ from transformers import (
 )
 import torch
 import torch_sendnn
+import warnings
 
 MODEL_CLASSES = {
     "auto": AutoModel,
@@ -96,9 +97,6 @@ class ModelHandlerBase:
     Methods:
         _get_model_class(model_path):
             Infers the Hugging Face model class based on the model's config or files.
-
-        load_and_compile_model():
-            Loads the model from path and compiles it with 'sendnn' backend.
 
         prep_input():
             Prepares tokenized inputs for the model based on model type.
@@ -217,19 +215,6 @@ class ModelHandlerBase:
         compile_model[self.device_to_run]()
         print(f"Compiling complete, took {time.time() - start:.3f}s")
 
-    def load_and_compile_model(self):
-        """Load and compile the model based on the model type and path.
-
-        Returns:
-            torch.nn.Module: The loaded and compiled PyTorch model.
-        """
-
-        self.load_model()
-        self.model.eval()
-        torch.set_grad_enabled(False)
-        self.compile_model()
-
-        return self.model
 
     def _prep_input(self):
         """Prepare input tensors for the model based on the model type."""
@@ -246,6 +231,7 @@ class ModelHandlerBase:
 
     def _generate_output(self, is_warmup):
         """Calling generate function based on model_type."""
+        # warnings.warn("Output generation not implemented.", RuntimeWarning)
         NotImplementedError(
             "This method should be implemented in subclasses to generate output."
         )
@@ -263,13 +249,8 @@ class ModelHandlerBase:
         return self._generate_output(False)
 
     def _forward_output(self):
-        if self.model_type == "fms":
-            return self.model(self.input_id, last_n_tokens=0)
-        if self.model_type == "hf":
-            if self.model_class in ["causal_lm"]:
-                return self.model(self.input_id["input_ids"])
-            else:
-                return self.model(self.input_id)
+        """Calling generate function based on model_type."""
+        NotImplementedError("This method should be implemented in subclasses to generate output.")
 
     def insert_forward_hooks(self):
         """Insert forward hooks into the model layers to capture input shapes and types during forward pass."""
