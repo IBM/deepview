@@ -181,9 +181,11 @@ class ModelHandlerBase:
         return config.architectures[0].lower() if config.architectures else ""
 
     def _load_model(self):
-        NotImplementedError(
-            "This method should be implemented in subclasses to load the model."
+        warnings.warn(
+            "ModelHandlerBase._load_model should be implemented in subclasses to load the model.",
+            UserWarning,
         )
+        return
 
     def load_model(self):
         """Load the model based on the model type and path.
@@ -218,8 +220,9 @@ class ModelHandlerBase:
 
     def _prep_input(self):
         """Prepare input tensors for the model based on the model type."""
-        NotImplementedError(
-            "This method should be implemented in subclasses to prepare the input tensors."
+        warnings.warn(
+            "This method should be implemented in subclasses to prepare the input tensors.",
+            UserWarning,
         )
 
     def prep_input(self):
@@ -231,9 +234,9 @@ class ModelHandlerBase:
 
     def _generate_output(self, is_warmup):
         """Calling generate function based on model_type."""
-        # warnings.warn("Output generation not implemented.", RuntimeWarning)
-        NotImplementedError(
-            "This method should be implemented in subclasses to generate output."
+        warnings.warn(
+            "This method should be implemented in subclasses to generate output.",
+            UserWarning,
         )
 
     def warmup(self, safe=True, is_layer_debug_mode=False):
@@ -250,7 +253,10 @@ class ModelHandlerBase:
 
     def _forward_output(self):
         """Calling generate function based on model_type."""
-        NotImplementedError("This method should be implemented in subclasses to generate output.")
+        warnings.warn(
+            "This method should be implemented in subclasses to generate output.",
+            UserWarning,
+        )
 
     def insert_forward_hooks(self):
         """Insert forward hooks into the model layers to capture input shapes and types during forward pass."""
