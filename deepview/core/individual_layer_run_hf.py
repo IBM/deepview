@@ -32,7 +32,7 @@ def run_layers(modelpath, sub_layer, filename):
     return f"""
 from fms.models import get_model
 from deepview.utils.ModelHandler.model_handler_utils import create_model_handler
-import deepview.utils.ModelHandler.model_handler as dvmh
+import deepview.utils.ModelHandler.model_handler_base as dvmh
 from torch import tensor
 import torch_sendnn
 import itertools

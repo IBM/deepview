@@ -2,7 +2,7 @@
 from transformers import AutoTokenizer
 
 # Local
-from deepview.utils.ModelHandler.model_handler import ModelHandlerBase
+from deepview.utils.ModelHandler.model_handler_base import ModelHandlerBase
 
 
 class ModelHandlerHFDecoders(ModelHandlerBase):

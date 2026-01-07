@@ -38,7 +38,6 @@ from transformers import (
 )
 import torch
 import torch_sendnn
-import warnings
 
 MODEL_CLASSES = {
     "auto": AutoModel,
@@ -181,9 +180,8 @@ class ModelHandlerBase:
         return config.architectures[0].lower() if config.architectures else ""
 
     def _load_model(self):
-        warnings.warn(
-            "ModelHandlerBase._load_model should be implemented in subclasses to load the model.",
-            UserWarning,
+        NotImplementedError(
+            "This method should be implemented in subclasses to load the model."
         )
         return
 
@@ -220,9 +218,8 @@ class ModelHandlerBase:
 
     def _prep_input(self):
         """Prepare input tensors for the model based on the model type."""
-        warnings.warn(
-            "This method should be implemented in subclasses to prepare the input tensors.",
-            UserWarning,
+        NotImplementedError(
+            "This method should be implemented in subclasses to load the model."
         )
 
     def prep_input(self):
@@ -234,9 +231,8 @@ class ModelHandlerBase:
 
     def _generate_output(self, is_warmup):
         """Calling generate function based on model_type."""
-        warnings.warn(
-            "This method should be implemented in subclasses to generate output.",
-            UserWarning,
+        NotImplementedError(
+            "This method should be implemented in subclasses to load the model."
         )
 
     def warmup(self, safe=True, is_layer_debug_mode=False):
@@ -253,9 +249,8 @@ class ModelHandlerBase:
 
     def _forward_output(self):
         """Calling generate function based on model_type."""
-        warnings.warn(
-            "This method should be implemented in subclasses to generate output.",
-            UserWarning,
+        NotImplementedError(
+            "This method should be implemented in subclasses to load the model."
         )
 
     def insert_forward_hooks(self):

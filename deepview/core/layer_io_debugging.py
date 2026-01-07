@@ -279,6 +279,8 @@ def run_layer_io_divergence_mode(model_path, model_type):
         model_path=model_path,
         device="cpu",
         prompt="What is the capital of Egypt?",
+        safe_warmup=True,
+        is_layer_debug_mode=False,
         insert_forward_hooks=True,
     )
     print("Reached first infer call post compile.....")

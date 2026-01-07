@@ -220,11 +220,13 @@ def run_unsupported_op_mode(
 ):
     """Runs the unsupported ops mode using the flags specified by the user."""
     setup_model_handler(
-        model_type=model_type,
-        model_path=model_path,
+        model_type,
+        model_path,
         device="aiu",
         prompt="What is the capital of Egypt?",
         safe_warmup=True,
+        is_layer_debug_mode=False,
+        insert_forward_hooks=False,
     )
     preserved_lazy_handles = _get_global_state().lazy_handles
     process_unsupported_ops(
