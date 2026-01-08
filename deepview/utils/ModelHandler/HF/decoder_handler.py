@@ -5,7 +5,7 @@ from transformers import AutoTokenizer
 from deepview.utils.ModelHandler.model_handler_base import ModelHandlerBase
 
 
-class ModelHandlerHFDecoders(ModelHandlerBase):
+class DecoderHandlerHF(ModelHandlerBase):
     """Handles Hugging Face models with specific input preparation and compilation methods."""
 
     def _load_model(self):

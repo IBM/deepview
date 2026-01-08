@@ -30,7 +30,6 @@ def run_layers(modelpath, sub_layer, filename):
         str: A complete Python script as a string that can be saved and executed to reproduce the failure.
     """
     return f"""
-from fms.models import get_model
 from deepview.utils.ModelHandler.model_handler_utils import create_model_handler
 import deepview.utils.ModelHandler.model_handler_base as dvmh
 from torch import tensor
@@ -48,7 +47,6 @@ model_handler = create_model_handler(
     device="aiu",
     prompt='What is the capital of Egypt?',
 )
-
 
 model_handler.load_model()
 

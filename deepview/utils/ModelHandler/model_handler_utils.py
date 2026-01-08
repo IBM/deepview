@@ -8,19 +8,19 @@ from huggingface_hub import model_info
 import torch
 
 # Local
-from deepview.utils.ModelHandler.FMS.model_handler_fms_decoders import (
-    ModelHandlerFMSDecoders,
+from deepview.utils.ModelHandler.FMS.decoder_handler import (
+    DecoderHandlerFMS,
 )
-from deepview.utils.ModelHandler.HF.model_handler_hf_decoders import (
-    ModelHandlerHFDecoders,
+from deepview.utils.ModelHandler.HF.decoder_handler import (
+    DecoderHandlerHF,
 )
 
 
 def create_model_handler(model_type, model_path, device, prompt):
     """Factory function to create the appropriate ModelHandler based on model type."""
     ModelHandler = {
-        "fms": ModelHandlerFMSDecoders,
-        "hf": ModelHandlerHFDecoders,
+        "fms": DecoderHandlerFMS,
+        "hf": DecoderHandlerHF,
     }.get(model_type)
     if ModelHandler is None:
         raise ValueError(f"Unsupported model type: {model_type}")
