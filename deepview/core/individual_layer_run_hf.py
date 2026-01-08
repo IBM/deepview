@@ -31,7 +31,6 @@ def run_layers(modelpath, sub_layer, filename):
     """
     return f"""
 from deepview.utils.ModelHandler.model_handler_utils import create_model_handler
-import deepview.utils.ModelHandler.model_handler_base as dvmh
 from torch import tensor
 import torch_sendnn
 import itertools
@@ -39,6 +38,7 @@ import pickle
 import inspect
 import torch
 import os
+
 os.environ["COMPILATION_MODE"] = "offline"
 
 model_handler = create_model_handler(
