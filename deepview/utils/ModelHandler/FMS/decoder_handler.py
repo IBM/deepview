@@ -62,6 +62,6 @@ class DecoderHandlerFMS(ModelHandlerBase):
             extra_kwargs=self.extra_generation_kwargs,
         )
         return result
+        
     def _forward_output(self):
         return self.model(self.input_id, last_n_tokens=0)
-

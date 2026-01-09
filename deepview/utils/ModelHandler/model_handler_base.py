@@ -235,17 +235,18 @@ class ModelHandlerBase:
             "This method should be implemented in subclasses to load the model."
         )
 
-    def warmup(self, safe=True, is_layer_debug_mode=False):
-        """Perform warmup on the prepared input based on the model type."""
-        with torch_sendnn.warmup_mode(skip_compilation=safe):
+    def warmup(self, is_layer_debug_mode=False):
+        """Perform warmup on the prepared input based on the model type. Always skip compilation as this is handled earlier in the flow"""
+        with torch_sendnn.warmup_mode(skip_compilation=True):
             if is_layer_debug_mode:
                 self._forward_output()
             else:
                 self._generate_output(True)
-
+    
     def infer(self):
         """Perform inference on the prepared input based on the model type."""
         return self._generate_output(False)
+    
 
     def _forward_output(self):
         """Calling generate function based on model_type."""

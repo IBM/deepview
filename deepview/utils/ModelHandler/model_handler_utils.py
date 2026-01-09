@@ -39,22 +39,23 @@ def setup_model_handler(
     model_path,
     device="aiu",
     prompt="What is the capital of Egypt?",
-    safe_warmup=True,
     is_layer_debug_mode=False,
     insert_forward_hooks=False,
 ):
     handler = create_model_handler(model_type, model_path, device, prompt)
-
-    handler.load_model()
-    handler.model.eval()
-    torch.set_grad_enabled(False)
-    handler.compile_model()
     
     handler.prep_input()
+    handler.load_model()
+    handler.model.eval()
+    handler.compile_model()
+
+    torch.set_grad_enabled(False)
+    
     if insert_forward_hooks:
         handler.insert_forward_hooks()
+        
     if device == "aiu":
-        handler.warmup(safe=safe_warmup, is_layer_debug_mode=is_layer_debug_mode)
+        handler.warmup(is_layer_debug_mode=is_layer_debug_mode)
 
     return handler
 

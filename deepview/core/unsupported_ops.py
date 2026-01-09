@@ -224,7 +224,6 @@ def run_unsupported_op_mode(
         model_path,
         device="aiu",
         prompt="What is the capital of Egypt?",
-        safe_warmup=True,
         is_layer_debug_mode=False,
         insert_forward_hooks=False,
     )

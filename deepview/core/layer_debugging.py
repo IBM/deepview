@@ -136,7 +136,6 @@ def run_layer_debugging_mode(model_path, model_type, generate_repro_code_flag):
         model_path=model_path,
         device="aiu",
         prompt="What is the capital of Egypt?",
-        safe_warmup=True,
         is_layer_debug_mode=True,
         insert_forward_hooks=True,
     )

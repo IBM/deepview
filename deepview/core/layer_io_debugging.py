@@ -279,7 +279,6 @@ def run_layer_io_divergence_mode(model_path, model_type):
         model_path=model_path,
         device="cpu",
         prompt="What is the capital of Egypt?",
-        safe_warmup=True,
         is_layer_debug_mode=False,
         insert_forward_hooks=True,
     )
@@ -289,6 +288,7 @@ def run_layer_io_divergence_mode(model_path, model_type):
     cpu_layer_outputs = get_layerwise_outputs(cpu_model_handler)
 
     print("========= Running on AIU to capture layer divergence ==========")
+    # TODO: investigate why we are calling create MH & not setup MH here
     aiu_model_handler = create_model_handler(
         model_type=model_type,
         model_path=model_path,
