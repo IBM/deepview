@@ -338,5 +338,7 @@ class ModelHandlerBase:
         for name, module in self.model.named_modules():
             if hasattr(module, "_debug_input"):
                 module._debug_input = None
+            if hasattr(module, "_debug_kwarg"):
+                module._debug_kwarg = None
             if hasattr(module, "_debug_output"):
                 module._debug_output = None

@@ -50,4 +50,4 @@ class DecoderHandlerHF(ModelHandlerBase):
         if self.model_class in ["causal_lm"]:
             return self.model(self.input_id["input_ids"])
         else:
-            return self.model(self.input_id)
+            return self.model(**self.input_id)
