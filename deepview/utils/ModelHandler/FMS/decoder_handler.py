@@ -25,7 +25,7 @@ class DecoderHandlerFMS(ModelHandlerBase):
         """Prepare input tensors for FMS models."""
         self.tokenizer = tokenizers.get_tokenizer(self.model_path)
         tokens = self.tokenizer.tokenize(self.prompt)
-        ids_l = self.tokenizer.convert_tokens_to_ids(tokens)
+        ids_l = self.tokenizer.encode(self.prompt, add_special_tokens=True)
         if self.tokenizer.bos_token_id != self.tokenizer.eos_token_id:
             ids_l = [self.tokenizer.bos_token_id] + ids_l
 
