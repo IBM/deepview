@@ -19,8 +19,8 @@ import torch
 # Local
 from deepview.core.aiu_input_capture import run_model_for_inputs
 from deepview.core.individual_layer_run_with_inputs import run_layers_with_inputs
-from deepview.utils.model_handler import (
-    ModelHandler,
+from deepview.utils.ModelHandler.model_handler_utils import (
+    create_model_handler,
     extract_hf_model_id,
     setup_model_handler,
 )
@@ -37,12 +37,14 @@ def get_thresholds_json_file(model_path):
     1. Extracting the HF model ID and checking in DEEPVIEW_THRESHOLDS_FOLDERPATH
     2. Falling back to dynamic subfolder structure with 'generate' suffix
     """
+    print(f"Getting thresholds JSON file for {model_path}.....")
     thresholds_folder = os.getenv("DEEPVIEW_THRESHOLDS_FOLDERPATH", ".")
+    print(f"Using thresholds folder: {thresholds_folder}")
     if not thresholds_folder:
         raise EnvironmentError("DEEPVIEW_THRESHOLDS_FOLDERPATH is not set")
 
     model_id = extract_hf_model_id(model_path)
-
+    print(f"Extracted model ID: {model_id}")
     # First attempt: direct match using model_id inside 'generate' subfolder
     direct_folder = os.path.join(thresholds_folder, f"{model_id}", "generate")
     if os.path.isdir(direct_folder):
@@ -213,6 +215,7 @@ def generate_layerwise_output_diffs(
 
 def get_thresholds(model_path):
     """Returns the thresholds from the environment variable DEEPVIEW_THRESHOLDS_FILEPATH."""
+    print(f"Getting thresholds for {model_path}.....")
     threshold_filepath = get_thresholds_json_file(model_path)
     if not threshold_filepath:
         print(f"Unable to find thresholds for {model_path}.")
@@ -276,6 +279,7 @@ def run_layer_io_divergence_mode(model_path, model_type):
         model_path=model_path,
         device="cpu",
         prompt="What is the capital of Egypt?",
+        is_layer_debug_mode=False,
         insert_forward_hooks=True,
     )
     print("Reached first infer call post compile.....")
@@ -284,12 +288,14 @@ def run_layer_io_divergence_mode(model_path, model_type):
     cpu_layer_outputs = get_layerwise_outputs(cpu_model_handler)
 
     print("========= Running on AIU to capture layer divergence ==========")
-    aiu_model_handler = ModelHandler(
+    # TODO: investigate why we are calling create MH & not setup MH here
+    aiu_model_handler = create_model_handler(
         model_type=model_type,
         model_path=model_path,
         device="aiu",
         prompt="What is the capital of Egypt?",
     )
+
     print("Capturing layerwise inputs....")
     aiu_model_handler.layer_ios = get_layerwise_inputs(
         model_type, model_path, inputs_filename

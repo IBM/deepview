@@ -15,15 +15,12 @@
 # *******************************************************************************/
 
 # Standard
-import json
-import os
+
+# Standard
 import re
 import time
 
 # Third Party
-from fms.models import get_model
-from fms.utils import tokenizers
-from fms.utils.generation import generate, pad_input_ids
 from sentence_transformers import SentenceTransformer
 from transformers import (
     AutoConfig,
@@ -44,53 +41,17 @@ import torch_sendnn
 
 MODEL_CLASSES = {
     "auto": AutoModel,
-    "sequence_classification": AutoModelForSequenceClassification,
-    "question_answering": AutoModelForQuestionAnswering,
-    "causal_lm": AutoModelForCausalLM,
-    "seq2seq_lm": AutoModelForSeq2SeqLM,
-    "image_classification": AutoModelForImageClassification,
-    "object_detection": AutoModelForObjectDetection,
-    "zero_shot_image_classification": AutoModelForZeroShotImageClassification,
+    "sequenceclassification": AutoModelForSequenceClassification,
+    "questionanswering": AutoModelForQuestionAnswering,
+    "causallm": AutoModelForCausalLM,
+    "seq2seq": AutoModelForSeq2SeqLM,
+    "imageclassification": AutoModelForImageClassification,
+    "objectdetection": AutoModelForObjectDetection,
+    "zeroshotimageclassification": AutoModelForZeroShotImageClassification,
     "vision2seq": AutoModelForVision2Seq,
-    "visual_question_answering": AutoModelForVisualQuestionAnswering,
+    "visualquestionanswering": AutoModelForVisualQuestionAnswering,
     "sentence": SentenceTransformer,
 }
-
-
-def extract_hf_model_id(model_path: str) -> str:
-    """
-    Extracts the Hugging Face model ID from either a plain HF model ID string or an FMS model directory path.
-    """
-    if os.path.isdir(model_path):  # likely an FMS path
-        config_path = os.path.join(model_path, "config.json")
-        if os.path.exists(config_path):
-            with open(config_path, "r") as f:
-                config = json.load(f)
-            # Prefer 'original_model_id', fallback to 'model_id' or raise error
-            if "original_model_id" in config:
-                return config["original_model_id"]
-            elif "model_id" in config:
-                return config["model_id"]
-            else:
-                print(f"No Hugging Face model ID found in config.json at {config_path}")
-        else:
-            print(f"No config.json found in model directory: {model_path}")
-    elif "/" in model_path and len(model_path.strip("/")) > 2:
-        # Assume it's a Hugging Face ID
-        return model_path.strip("/")
-    else:
-        raise ValueError(
-            f"No valid ID was found at: {model_path} - please provide model id or path that contains organization_name/model_name"
-        )
-
-
-def validate_model_id(model_path: str) -> bool:
-    """
-    Basic validation: either a string model ID or a valid FMS directory with config.json.
-    """
-    if os.path.isdir(model_path):
-        return os.path.exists(os.path.join(model_path, "config.json"))
-    return isinstance(model_path, str) and ("/" in model_path or "-" in model_path)
 
 
 def convert_attr_path(attr_path):
@@ -110,31 +71,7 @@ def convert_attr_path(attr_path):
     return converted
 
 
-def setup_model_handler(
-    model_type,
-    model_path,
-    device="aiu",
-    prompt="What is the capital of Egypt?",
-    safe_warmup=False,
-    is_layer_debug_mode=False,
-    insert_forward_hooks=False,
-):
-    handler = ModelHandler(
-        model_type=model_type,
-        model_path=model_path,
-        device=device,
-        prompt=prompt,
-    )
-    handler.load_and_compile_model()
-    handler.prep_input()
-    if insert_forward_hooks:
-        handler.insert_forward_hooks()
-    if safe_warmup:
-        handler.safe_warmup(is_layer_debug_mode)
-    return handler
-
-
-class ModelHandler:
+class ModelHandlerBase:
     """Handles loading, compiling, input preparation, inference, and debugging using hooks for ML models.
 
     Supports both custom fms and hf models.
@@ -157,11 +94,8 @@ class ModelHandler:
         max_new_tokens (int): Number of tokens to generate during inference.
 
     Methods:
-        _infer_model_class(model_path):
+        _get_model_class(model_path):
             Infers the Hugging Face model class based on the model's config or files.
-
-        load_and_compile_model():
-            Loads the model from path and compiles it with 'sendnn' backend.
 
         prep_input():
             Prepares tokenized inputs for the model based on model type.
@@ -181,9 +115,6 @@ class ModelHandler:
         clear_layer_io():
             Clears the captured inputs and outputs from the model's modules.
 
-        safe_warmup():
-            Performs a warmup pass on the model without updating lazy handles.
-
         warmup():
             Performs a warmup pass on the model to initialize it for inference.
     """
@@ -197,6 +128,7 @@ class ModelHandler:
             prompt (str): Prompt text for model inference.
             model_class (str, optional): Specific model class to use. Defaults to None.
         """
+
         self.model_type = model_type
         self.model_path = model_path
         self.model_class = model_class
@@ -214,7 +146,7 @@ class ModelHandler:
         self.min_pad_length = 64
         self.max_new_tokens = 2
 
-    def _infer_model_class(self, model_path):
+    def _get_model_class(self, model_path):
         """Infer the model class based on the model configuration or repo contents.
 
         Args:
@@ -223,187 +155,104 @@ class ModelHandler:
         Returns:
             str: Inferred model class name such as 'causal_lm', 'sequence_classification', 'sentence', etc.
         """
-        # First check if it of type sentence transformer
-        try:
-            # Third Party
-            from huggingface_hub import hf_hub_download
 
-            hf_hub_download(repo_id=model_path, filename="modules.json")
-            return "sentence"
-        except Exception as e:
-            pass
+        arch = self._get_model_architecture(model_path)
+        model_class = MODEL_CLASSES.get(arch, None)
+
+        if not model_class:
+            return MODEL_CLASSES.get("auto", AutoModel)
+
+        print("---------------------------------------------------------")
+        print(f"Model class is {arch}")
+        print("---------------------------------------------------------")
+        return model_class
+
+    def _get_model_architecture(self, model_path):
+        """Get the architecture of the model from its configuration.
+
+        Args:
+            model_path (str): Path to the model checkpoint.
+        Returns:
+            str: The architecture type of the model, such as 'causallm', 'sequenceclassification', etc.
+        """
 
         config = AutoConfig.from_pretrained(model_path)
-        arch = config.architectures[0].lower() if config.architectures else ""
+        return config.architectures[0].lower() if config.architectures else ""
 
-        if "sequenceclassification" in arch:
-            return "sequence_classification"
-        elif "questionanswering" in arch:
-            return "question_answering"
-        elif "causallm" in arch:
-            return "causal_lm"
-        elif "seq2seq" in arch:
-            return "seq2seq_lm"
-        elif "imageclassification" in arch:
-            return "image_classification"
-        elif "objectdetection" in arch:
-            return "object_detection"
-        elif "zeroshotimageclassification" in arch:
-            return "zero_shot_image_classification"
-        elif "vision2seq" in arch:
-            return "vision2seq"
-        elif "visualquestionanswering" in arch:
-            return "visual_question_answering"
+    def _load_model(self):
+        NotImplementedError(
+            "This method should be implemented in subclasses to load the model."
+        )
+        return
 
-        # Fallback to AutoModel
-        return "auto"
+    def load_model(self):
+        """Load the model based on the model type and path.
 
-    def load_and_compile_model(self):
-        """Load and compile the model based on the model type and path.
-
-        Returns:
-            torch.nn.Module: The loaded and compiled PyTorch model.
+        Raises:
+            ValueError: If the model type is not supported.
         """
         print("Loading model")
         start = time.time()
-
-        if self.model_type == "fms":
-            # This get_model call assumes locally downloaded weights
-            self.model = get_model(
-                "hf_pretrained",
-                variant=self.model_path,
-                device_type="cpu",
-                data_type=torch.float16,
-                fused_weights=False,
-            )
-        elif self.model_type == "hf":
-            # TODO: we can do specific handling per model class but for now everything apart from CausalLM is treated as AutoModel
-            # Note: SentenceTransformer has to be loaded as AutoModel as torch.compile does not work for SentenceTransformer
-            self.model_class = self._infer_model_class(self.model_path)
-            print("---------------------------------------------------------")
-            print(f"Model class is {self.model_class}")
-            print("---------------------------------------------------------")
-
-            model_class = MODEL_CLASSES[self.model_class]
-            if self.model_class == "causal_lm":
-                self.model = model_class.from_pretrained(self.model_path)
-            else:
-                self.model = AutoModel.from_pretrained(self.model_path)
-
+        self._load_model()
         print(f"Loading complete, took {time.time() - start:.3f}s")
 
-        self.model.eval()
-        torch.set_grad_enabled(False)
+    def compile_model(self):
+        """Compile the model for the specified device using the appropriate backend.
+        Raises:
+            ValueError: If the device is not supported.
+        """
+        compile_model = {
+            "aiu": lambda: self.model.compile(backend="sendnn", dynamic=False),
+            "cpu": lambda: self.model.compile(backend="inductor"),
+        }
+
+        if self.device_to_run not in compile_model:
+            print("Device not supported by Deepview yet.")
+            raise ValueError(f"Unsupported device: {self.device_to_run}")
 
         print("Compiling model")
         start = time.time()
-        if self.device_to_run == "aiu":
-            self.model.compile(backend="sendnn", dynamic=False)
-        elif self.device_to_run == "cpu":
-            self.model.compile(backend="inductor")
-        else:
-            print("Device not supported by Deepview yet.")
+        compile_model[self.device_to_run]()
         print(f"Compiling complete, took {time.time() - start:.3f}s")
 
-        return self.model
+
+    def _prep_input(self):
+        """Prepare input tensors for the model based on the model type."""
+        NotImplementedError(
+            "This method should be implemented in subclasses to load the model."
+        )
 
     def prep_input(self):
         """Prepare input tensors and tokenizers based on the model type and prompt."""
-        if self.model_type == "fms":
-            self.tokenizer = tokenizers.get_tokenizer(self.model_path)
-            tokens = self.tokenizer.tokenize(self.prompt)
-            ids_l = self.tokenizer.convert_tokens_to_ids(tokens)
-            if self.tokenizer.bos_token_id != self.tokenizer.eos_token_id:
-                ids_l = [self.tokenizer.bos_token_id] + ids_l
-
-            prompt1 = torch.tensor(ids_l, dtype=torch.long, device=self.device)
-            self.input_id, self.extra_generation_kwargs = pad_input_ids(
-                [prompt1], min_pad_length=self.min_pad_length
-            )
-        elif self.model_type == "hf":
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_path, use_fast=True
-            )
-            if self.tokenizer.pad_token is None:
-                self.tokenizer.pad_token = self.tokenizer.eos_token
-            self.input_id = self.tokenizer(
-                [self.prompt], padding=True, truncation=True, return_tensors="pt"
-            )
-
-    def _forward_output(self):
-        if self.model_type == "fms":
-            return self.model(self.input_id, last_n_tokens=0)
-        if self.model_type == "hf":
-            if self.model_class in ["causal_lm"]:
-                return self.model(self.input_id["input_ids"])
-            else:
-                return self.model(self.input_id)
+        print("Preparing input")
+        start = time.time()
+        self._prep_input()
+        print(f"Input preparation complete, took {time.time() - start:.3f}s")
 
     def _generate_output(self, is_warmup):
         """Calling generate function based on model_type."""
-        if self.model_type == "fms":
-            self.extra_generation_kwargs["only_last_token"] = True
-            if is_warmup:
-                eos_token_id = None
-                max_len = self.model.config.max_expected_seq_len
-            else:
-                eos_token_id = self.tokenizer.eos_token_id
-                if (
-                    hasattr(self.model.config, "ntk_scaling")
-                    and self.model.config.ntk_scaling
-                ):
-                    max_len = max(
-                        len(self.prompt), self.model.config.max_expected_seq_len
-                    )
-                else:
-                    max_len = self.model.config.max_expected_seq_len
-            result = generate(
-                self.model,
-                self.input_id,
-                max_new_tokens=self.max_new_tokens,
-                use_cache=True,
-                do_sample=False,
-                max_seq_len=max_len,
-                eos_token_id=eos_token_id,
-                contiguous_cache=True,
-                extra_kwargs=self.extra_generation_kwargs,
-            )
-        elif self.model_type == "hf":
-            if self.model_class in ["causal_lm"]:
-                input_ids = self.input_id["input_ids"]
-                attention_mask = self.input_id.get("attention_mask", None)
+        NotImplementedError(
+            "This method should be implemented in subclasses to load the model."
+        )
 
-                generate_ids = self.model.generate(
-                    input_ids,
-                    attention_mask=attention_mask,
-                    max_new_tokens=self.max_new_tokens,
-                    do_sample=False,  ## Somehow taking True as default which is resulting in error for models like Llama
-                )
-                result = self.tokenizer.batch_decode(
-                    generate_ids,
-                    skip_special_tokens=True,
-                    clean_up_tokenization_spaces=False,
-                )[0]
-            else:
-                result = self.model(**self.input_id)
-        return result
-
-    def safe_warmup(self, is_layer_debug_mode=False):
-        """Perform warmup on the prepared input based on the model type, but skip update_lazyhandle()."""
+    def warmup(self, is_layer_debug_mode=False):
+        """Perform warmup on the prepared input based on the model type. Always skip compilation as this is handled earlier in the flow"""
         with torch_sendnn.warmup_mode(skip_compilation=True):
             if is_layer_debug_mode:
                 self._forward_output()
             else:
                 self._generate_output(True)
-
-    def warmup(self):
-        """Perform warmup on the prepared input based on the model type."""
-        with torch_sendnn.warmup_mode():
-            self._generate_output(True)
-
+    
     def infer(self):
         """Perform inference on the prepared input based on the model type."""
         return self._generate_output(False)
+    
+
+    def _forward_output(self):
+        """Calling generate function based on model_type."""
+        NotImplementedError(
+            "This method should be implemented in subclasses to load the model."
+        )
 
     def insert_forward_hooks(self):
         """Insert forward hooks into the model layers to capture input shapes and types during forward pass."""
@@ -432,7 +281,6 @@ class ModelHandler:
         for module_name, module in self.model.named_modules():
             ## Modifying keys to match the layer names which can be used to run the layers later.
             name = convert_attr_path(module_name)
-
             self.layer_ios[name] = {}
             self.layer_ios[name]["input"] = []
             self.layer_ios[name]["kwarg"] = {}
@@ -479,7 +327,7 @@ class ModelHandler:
             if hasattr(module, "_debug_output"):
                 self.layer_ios[name]["output"] = module._debug_output
 
-        ## Sorting the layers by complexity
+            ## Sorting the layers by complexity
         self.layer_ios = dict(
             sorted(self.layer_ios.items(), key=lambda item: item[1]["complexity"])
         )

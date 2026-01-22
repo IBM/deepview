@@ -6,7 +6,7 @@ import re
 import subprocess
 
 # Local
-from deepview.utils.model_handler import ModelHandler, setup_model_handler
+from deepview.utils.ModelHandler.model_handler_utils import setup_model_handler
 
 
 def run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_code_flag):
@@ -110,27 +110,37 @@ def generate_repro_code_layer_debugging(aiu_model_handler, failed_layer):
         print(f"Error: Repro code generation : {e}")
 
 
+def save_into_file(data, filename):
+    """Saves the provided data into a file."""
+    with open(f"{filename}", "wb") as f:
+        pickle.dump(data, f)
+
+
+def save_layer_inputs(model_handler, inputs_filename):
+    model_handler.get_layer_io()
+    layer_ios = model_handler.layer_ios
+
+    save_into_file(layer_ios, inputs_filename)
+    print(f"Saved inputs to {inputs_filename}")
+
+    model_handler.remove_forward_hooks()
+    model_handler.clear_layer_io()
+
+
 def run_layer_debugging_mode(model_path, model_type, generate_repro_code_flag):
     """Runs the layer debugging mode using the flags specified by the user."""
+    inputs_filename = model_path.split("/")[-1] + ".pkl"
+
     aiu_model_handler = setup_model_handler(
         model_type=model_type,
         model_path=model_path,
         device="aiu",
         prompt="What is the capital of Egypt?",
-        safe_warmup=True,
         is_layer_debug_mode=True,
         insert_forward_hooks=True,
     )
-
     print(f"Saving layer inputs.....")
-    aiu_model_handler.get_layer_io()
-    layer_ios = aiu_model_handler.layer_ios
-    inputs_filename = model_path.split("/")[-1] + ".pkl"
-    with open(f"{inputs_filename}", "wb") as f:
-        pickle.dump(layer_ios, f)
-    print(f"Saved inputs to {inputs_filename}")
+    save_layer_inputs(aiu_model_handler, inputs_filename)
 
-    aiu_model_handler.remove_forward_hooks()
-    aiu_model_handler.clear_layer_io()
-
+    print(f"Running individual layers.....")
     run_individual_layers(aiu_model_handler, inputs_filename, generate_repro_code_flag)

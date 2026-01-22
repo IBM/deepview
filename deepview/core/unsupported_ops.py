@@ -13,7 +13,7 @@ from torch_sendnn.conversion.conversion_utils import (
 import torch
 
 # Local
-from deepview.utils.model_handler import setup_model_handler
+from deepview.utils.ModelHandler.model_handler_utils import setup_model_handler
 
 
 def get_unsupported_ops(lazy_handle):
@@ -221,10 +221,11 @@ def run_unsupported_op_mode(
 ):
     """Runs the unsupported ops mode using the flags specified by the user."""
     setup_model_handler(
-        model_type=model_type,
-        model_path=model_path,
+        model_type,
+        model_path,
         device="aiu",
         prompt="What is the capital of Egypt?",
-        safe_warmup=True,
+        is_layer_debug_mode=False,
+        insert_forward_hooks=False,
     )
     process_unsupported_ops(show_details_flag, generate_repro_code_flag)
