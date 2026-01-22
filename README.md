@@ -48,7 +48,7 @@ Clone the Deepview Repository:
 git clone git@github.com:IBM/deepview.git 
 ```
 
-A sample pod yaml for DD2 is provided in `/examples/deepview_pod_DD2.yaml`. This yaml has been tested on an Openshift DD2 cluster and includes the following:
+A sample pod yaml for DD2 is provided in the top-level directory `deepview_pod_DD2.yaml`. This yaml has been tested on an Openshift DD2 cluster and includes the following:
 - Upgrade of Transformers to the latest version. This is required for the examples provided
 - Installation of the Foundation Model Stack repository on a specific commit. This ensures reproducibility in the results returned by DeepView when using `--model_type=fms`
 - Temporary DOOM Fix (This will be removed when fixed in base image and base image is tested with Deepview)

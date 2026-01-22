@@ -1,26 +1,173 @@
-## Models tested with DeepView Release v0.2.0
+# Using Deepview as a Library
+This document walks through how to call the core modules of DeepView from within your own inference script. This allows us to debug and analyze a larger set of models that deepview does not have support for yet in the CLI tool. 
 
-| Model                          | Comand                                                                                                                                                                      | Depview Mode        | Results                                                                                                                                                                                                                                                                                                                                   |
-|--------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Bamba-9B-V1                    | deepview --model_type fms --model ibm-ai-platform/Bamba-9B-V1 --mode unsupported_op --output_file debugger.txt --show_details --generate_repro_code                         | Unsupported Ops     | copy                                                                                                                                                                                                                                                                                                                                      |
-|                                | deepview --model_type fms --model ibm-ai-platform/Bamba-9B-V1 --mode layer_debugging --output_file debugger.txt                                                             | Layer Debug         | model.base_model.layers[0].ssm                                                                                                                                                                                                                                                                                                            |
-| granite-3.2-2b-instruct (FMS)  | deepview --model_type fms --model ibm-granite/granite-3.2-2b-instruct --mode unsupported_op --output_file debugger.txt --show_details                                       | Unsupported Ops     | No unsupported operations detected.                                                                                                                                                                                                                                                                                                       |
-|                                | deepview --model_type fms --model ibm-granite/granite-3.2-2b-instruct --mode layer_debugging --output_file debugger.txt                                                     | Layer Debug         | model.base_model                                                                                                                                                                                                                                                                                                                          |
-| Mistral-7B-Instruct-v0.3 (FMS) | deepview --model_type fms --model mistralai/Mistral-7B-Instruct-v0.3 --mode unsupported_op --output_file debugger.txt --show_details --generate_repro_code                  | Unsupported Ops     | No unsupported operations detected.                                                                                                                                                                                                                                                                                                       |
-|                                | deepview --model_type fms --model mistralai/Mistral-7B-Instruct-v0.3 --mode layer_debugging --output_file debugger.txt                                                      | Layer Debug         | No model layer has failed                                                                                                                                                                                                                                                                                                                 |
-|                                | deepview --model_type fms --model  mistralai/Mistral-7B-Instruct-v0.3  --mode layer_io_divergence --output_file debugger.txt                                                | Layer IO Divergence | Metric: abs_diff. Observed Value = 6.7265625. Threshold = 0.06180856272430244.<br>  Metric: cos _sim_ avg. Observed Value = 0.7607421875. Threshold = 0.9999883319280163.<br>  Metric: cos _sim_mean. Observed Value = 0.7607421875. Threshold = 0.9999883319280163.<br>  Threshold test failed for model.base_model.layers[0].ff_ln.     |
-| Mistral-7B-Instruct-v0.3 (HF)  | deepview --model_type hf --model mistralai/Mistral-7B-Instruct-v0.3 --mode unsupported_op --output_file debugger.txt --show_details --generate_repro_code                   | Unsupported Ops     | copy<br>  cos <br> gt <br> sin <br> slice_scatter                                                                                                                                                                                                                                                                                         |
-|                                | deepview --model_type hf --model mistralai/Mistral-7B-Instruct-v0.3 --mode layer_debugging --output_file debugger.txt                                                       | Layer Debug         | model.model.rotary_emb                                                                                                                                                                                                                                                                                                                    |
-| Bamba-9B-v2 (HF)               | deepview --model_type hf --model ibm-ai-platform/Bamba-9B-v2 --mode unsupported_op --output_file debugger.txt --show_details --generate_repro_code                          | Unsupported Ops     | constant_pad_nd<br> copy<br>  cos <br> gt <br> roll<br>  select_scatter <br> sin <br> slice_scatter <br> softplus <br> triu                                                                                                                                                                                                               |
-|                                | deepview --model_type hf --model ibm-ai-platform/Bamba-9B-v2 --mode layer_debugging --output_file debugger.txt                                                              | Layer Debug         | slice_scatter                                                                                                                                                                                                                                                                                                                             |
-| granite-3.3-2b-instruct (HF)   | deepview --model_type hf --model ibm-granite/granite-3.3-2b-instruct --mode unsupported_op --output_file debugger.txt --show_details --generate_repro_code                  | Unsupported Ops     | copy<br>  cos <br> gt <br> sin <br> slice_scatter <br> triu                                                                                                                                                                                                                                                                               |
-|                                | deepview --model_type hf --model ibm-granite/granite-3.3-2b-instruct --mode layer_debugging --output_file debugger.txt                                                      | Layer Debug         | model.model.layers[0]                                                                                                                                                                                                                                                                                                                     |
-| all-mpnet-base-v2(HF)          | deepview --model_type hf --model sentence-transformers/all-mpnet-base-v2 --mode unsupported_op --output_file debugger.txt --show_details --generate_repro_code              | Unsupported Ops     | No unsupported operations detected.                                                                                                                                                                                                                                                                                                       |
-|                                | deepview --model_type hf --model sentence-transformers/all-mpnet-base-v2 --mode layer_debugging --output_file debugger.txt                                                  | Layer Debug         | model.embeddings.position_embeddings                                                                                                                                                                                                                                                                                                      |
-| Llama-3.2-3B-Instruct(HF)      | deepview --model_type hf --model meta-llama/Llama-3.2-3B-Instruct --mode unsupported_op --output_file debugger.txt --show_details --generate_repro_code                     | Unsupported Ops     | bitwise_and<br> cos<br> index<br> le<br> sin                                                                                                                                                                                                                                                                                              |
-|                                | deepview --model_type hf --model meta-llama/Llama-3.2-3B-Instruct --mode layer_debugging --output_file debugger.txt                                                         | Layer Debug         | running model.model.layers[0]                                                                                                                                                                                                                                                                                                             |
-| Devstral-Small-2505(FMS)*      | deepview --model_type fms --model /home/senuser/models/mistralai/Devstral-Small-2505/ --mode unsupported_op --output_file debugger.txt --show_details --generate_repro_code | Unsupported Ops     | No unsupported operations detected.                                                                                                                                                                                                                                                                                                       |
-|                                | deepview --model_type fms --model /home/senuser/models/mistralai/Devstral-Small-2505/ --mode layer_debugging --output_file debugger.txt                                     | Layer Debug         | No model layer has failed                                                                                                                                                                                                                                                                                                                 |
-|                                | deepview --model_type fms --model /home/senuser/models/mistralai/Devstral-Small-2505/ --mode layer_io_divergence --output_file debugger.txt                                 | Layer IO Divergence | Metric: abs_diff. Observed Value = 0.62060546875. Threshold = 13.934890432343078.<br> Metric: cos_sim_avg. Observed Value = 0.8818359375. Threshold = 0.9687074087560177.<br> Metric: cos_sim_mean. Observed Value = 0.8818359375. Threshold = 0.9687074087560177.<br> Threshold test failed for model.base_model.layers[6].ff_sub_layer. |
+## Unsupported Ops Mode
+To use unsupported ops mode within your inference script, you will need the following steps:
 
-\* need further debugging with loading this model from HF cache
+**1. Add Imports**
+```python
+import torch_sendnn
+from deepview.core.unsupported_ops import process_unsupported_ops
+```
+
+**2. Prep Model Input**
+This step will look different for every model, ensure that you have the proper setup for input in your script
+
+**3. Load and Compile Model** 
+There are 2 ways to load a model:
+1. Using Hugging Face Transformers library (most-common)
+2. Using Foundation Model Stack (model architecture must be supported)
+
+Loading the model is different for each one, ensure that you use the proper loader in your script
+
+After you load the model, you must also add the following compile line (this ensures you are running on Spyre):
+
+```python
+model.compile(backend="sendnn")
+```
+
+**4. Call Generate on the Model**
+This step is dependent on the input prep required for your model and how the model is loaded.
+1. If you load with Hugging Face Transformers, you can call `model.generate` and pass any input / kwargs needed
+2. If you load with Foundation Model Stack, FMS provides a generate utility you can import directly into your script:
+```
+from fms.utils.generation import generate, pad_input_ids
+```
+
+Ensure to wrap your generate call in the following block:
+```python
+with torch_sendnn.warmup_mode(skip_compilation=True):
+    model.generate(...)
+```
+
+**5. Process Unsupported Ops with DeepView**
+The process unsupported ops method takes 2 arguments:
+1. show_details_flag (bool): Whether to print detailed stack traces for each unsupported op.
+2. generate_repro_code_flag (bool): Whether to generate minimal repro scripts for each op.
+
+Add this line to your script with your desired values for the two flags:
+
+```python
+process_unsupported_ops(True, False) 
+```
+
+#### Example Scripts 
+Example scripts are provided in the `unsupported_ops/` folder located in this directory
+
+Run the scripts:
+**1. ibm-ai-platform/Bamba-9B-v2**
+```
+python3 unsupported_ops/unsupp_ops_bamba.py
+```
+Expected Output:
+```
+DEEPVIEW========================================================================
+DEEPVIEW Unsupported operations list:
+DEEPVIEW copy
+DEEPVIEW le
+DEEPVIEW========================================================================
+```
+
+**2. ibm-granite/granite-vision-3.3-2b**
+```
+python3 unsupported_ops/unsupp_ops_gvision_fms.py
+```
+
+Expected Output: 
+```
+<|system|>
+A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions.
+<|user|>
+
+What animal is shown in this image?
+<|assistant|>
+
+DEEPVIEW========================================================================
+DEEPVIEW No unsupported operations detected.
+DEEPVIEW========================================================================
+```
+
+**3. HuggingFaceTB/SmolVLM-256M-Instruct**
+The following script uses the recipe above but will **NOT** return successfully. This is the current status of this model and needs further investigation
+```
+python3 unsupported_ops/unsupp_ops_smolVLM-256M-Instruct.py
+```
+
+Expected Output:
+```
+/home/senuser/.local/lib/python3.12/site-packages/transformers/models/auto/modeling_auto.py:2242: FutureWarning: The class `AutoModelForVision2Seq` is deprecated and will be removed in v5.0. Please use `AutoModelForImageTextToText` instead.
+  warnings.warn(
+`torch_dtype` is deprecated! Use `dtype` instead!
+Traceback (most recent call last):
+  File "/home/senuser/deepview/examples/unsupported_ops/unsupp_ops_smolVLM-256M-Instruct.py", line 47, in <module>
+    generated_ids = model.generate(**inputs, max_new_tokens=500)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib64/python3.12/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/senuser/.local/lib/python3.12/site-packages/transformers/generation/utils.py", line 2539, in generate
+    result = self._sample(
+             ^^^^^^^^^^^^^
+  File "/home/senuser/.local/lib/python3.12/site-packages/transformers/generation/utils.py", line 2867, in _sample
+    outputs = self(**model_inputs, return_dict=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib64/python3.12/site-packages/torch/nn/modules/module.py", line 1749, in _wrapped_call_impl
+    return self._compiled_call_impl(*args, **kwargs)  # type: ignore[misc]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib64/python3.12/site-packages/torch/_dynamo/eval_frame.py", line 655, in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib64/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/senuser/.local/lib/python3.12/site-packages/transformers/utils/generic.py", line 940, in wrapper
+    output = func(self, *args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/senuser/.local/lib/python3.12/site-packages/transformers/models/idefics3/modeling_idefics3.py", line 973, in forward
+    outputs = self.model(
+              ^^^^^^^^^^^
+  File "/usr/local/lib64/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib64/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/senuser/.local/lib/python3.12/site-packages/transformers/utils/generic.py", line 940, in wrapper
+    output = func(self, *args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/senuser/.local/lib/python3.12/site-packages/transformers/models/idefics3/modeling_idefics3.py", line 795, in forward
+    image_hidden_states = self.get_image_features(pixel_values, pixel_attention_mask)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/senuser/.local/lib/python3.12/site-packages/transformers/models/idefics3/modeling_idefics3.py", line 702, in get_image_features
+    pixel_values = pixel_values[real_images_inds].contiguous()
+  File "/home/senuser/.local/lib/python3.12/site-packages/transformers/models/idefics3/modeling_idefics3.py", line 714, in torch_dynamo_resume_in_get_image_features_at_702
+    pixel_attention_mask = pixel_attention_mask[real_images_inds].contiguous()
+  File "/home/senuser/.local/lib/python3.12/site-packages/transformers/models/idefics3/modeling_idefics3.py", line 722, in torch_dynamo_resume_in_get_image_features_at_714
+    image_hidden_states = self.vision_model(pixel_values=pixel_values, patch_attention_mask=patch_attention_mask)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib64/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib64/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/senuser/.local/lib/python3.12/site-packages/transformers/models/idefics3/modeling_idefics3.py", line 561, in forward
+    hidden_states = self.embeddings(pixel_values=pixel_values, patch_attention_mask=patch_attention_mask)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib64/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib64/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/senuser/.local/lib/python3.12/site-packages/transformers/models/idefics3/modeling_idefics3.py", line 164, in forward
+    position_ids[batch_idx][p_attn_mask.view(-1)] = pos_ids
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: shape mismatch: value tensor of shape [594] cannot be broadcast to indexing result of shape [466]
+```
+
+## Layer Debugging Mode
+Coming Soon
+
+## Layer IO Divergence Mode 
+Coming Soon 
