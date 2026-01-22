@@ -32,7 +32,7 @@ def run_layers(modelpath, sub_layer, filename):
         str: A complete Python script as a string that can be saved and executed to reproduce the failure.
     """
     return f"""
-from fms.models import get_model
+from deepview.utils.ModelHandler.model_handler_utils import create_model_handler
 from torch import tensor
 import itertools
 import torch_sendnn
@@ -43,23 +43,20 @@ import os
 
 os.environ["COMPILATION_MODE"] = "offline"
 
-model = get_model(
-    "hf_pretrained",
-    variant='{modelpath}',
-    device_type="cpu",
-    data_type=torch.float16,
-    source=None,
-    distributed_strategy=None,
-    linear_config={{"linear_type": "torch_linear"}},
-    fused_weights=False,
+model_handler = create_model_handler(
+    model_type='fms',
+    model_path='{modelpath}',
+    device="aiu",
+    prompt='What is the capital of Egypt?',
 )
 
+model_handler.load_model()
+model = model_handler.model
 device = torch.device("cpu")
 model.eval()
 torch.set_grad_enabled(False)
 
 {sub_layer}.compile(backend="sendnn", dynamic=False)
-
 forward_signature = inspect.signature({sub_layer}.forward)
 expected_args = list(forward_signature.parameters.keys())
 
