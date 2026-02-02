@@ -11,7 +11,32 @@ The format is based on [Keep a Changelog], and this project adheres to
 * `Removed` for now removed features.
 * `Fixed` for any bug fixes.
 * `Security` in case of vulnerabilities.
-## Unreleased
+
+## [1.0.0] - 2026/02/02
+
+### Added 
+* Added setup_model_handler wrapper function to reduce redundant code (\#155)
+* Added Tox to pyproject.toml for development testing (\#166) 
+* Added sorting of layers by complexity and run them in order to layer debug mode (\#167) 
+* Added last_n_tokens parameter when using FMS model forward (\#178) 
+* Added a utility script for automating DeepView testing on a list of models for a single mode of DeepView (\#180) 
+* Added example scripts for using DeepView unsupported ops mode as a library (\#168)
+
+### Changed
+* Move model runner methods for each individual DeepView mode into its respective file in the core (\#155)
+* Update COMPILATION_MODE environment variable (\#161)
+* Update lazy handle import and torch_sendnn convertor methods as they were renamed (\#164 ,\#172) 
+* Update layer_io data structure in layer debug mode (\#167) 
+* Update image in sample pod yaml (\#172) 
+* Update pod yaml to use spyre scheduler and resources instead of aiu (\#183) 
+* Refactor model handler to modular sub-handlers for scalability to new model types (\#156) 
+* Move sample pod yaml to top-level directory(\#168) 
+
+### Fixed
+* Fix triton warning (#162) 
+* Fix handling of kwargs and dynamo error in layer debug mode (\#167) 
+* Fix lazy handle structure parsing in unsupported ops mode (\#176) 
+* Limit Triton version to match PyTorch version (\#181)
 
 ## [0.2.0] - 2025/08/07
 

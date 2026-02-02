@@ -27,6 +27,7 @@ DeepView is a modular debugging and diagnostics toolkit designed to streamline t
 *	Layer diversion or intermediate Tensor/layer Comparisons: Layer-wise comparison of outputs between CPU/GPU and AIU to identify numerical mismatches or accuracy regressions.
 * Minimal Reproduction Scripts: Generates self-contained, minimal scripts to reproduce failures and aid debugging workflows.
 * Compiler and Runtime Integration: Hooks into the model compilation pipeline to trace issues early and often.
+* Ability to use unsupported ops core library mode in independent inference scripts without needing to call CLI tool
 
 ## Planned / Future Capabilities (draft)
 * Graph Break Root-Cause Tracing (with Graph Rewrite Suggestions)
@@ -39,6 +40,7 @@ DeepView is a modular debugging and diagnostics toolkit designed to streamline t
     * Enable debugging and graph inspection directly inside inference servers.
 *	Visualization Tools
     * Graph-based interfaces for analyzing PyTorch FX graphs, unsupported paths, and fallback decisions.
+* Layer Debuggging and Layer IO Divergence Modes as a library support
 
 
 # Environment & Installation
