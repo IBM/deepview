@@ -27,6 +27,7 @@ DeepView is a modular debugging and diagnostics toolkit designed to streamline t
 *	Layer diversion or intermediate Tensor/layer Comparisons: Layer-wise comparison of outputs between CPU/GPU and AIU to identify numerical mismatches or accuracy regressions.
 * Minimal Reproduction Scripts: Generates self-contained, minimal scripts to reproduce failures and aid debugging workflows.
 * Compiler and Runtime Integration: Hooks into the model compilation pipeline to trace issues early and often.
+* Ability to use unsupported ops core library mode in independent inference scripts without needing to call CLI tool
 
 ## Planned / Future Capabilities (draft)
 * Graph Break Root-Cause Tracing (with Graph Rewrite Suggestions)
@@ -39,6 +40,7 @@ DeepView is a modular debugging and diagnostics toolkit designed to streamline t
     * Enable debugging and graph inspection directly inside inference servers.
 *	Visualization Tools
     * Graph-based interfaces for analyzing PyTorch FX graphs, unsupported paths, and fallback decisions.
+* Layer Debuggging and Layer IO Divergence Modes as a library support
 
 
 # Environment & Installation
@@ -123,9 +125,9 @@ options:
 ```
 
 ## Examples
-A few examples demonstrating the use of unsupported_op, layer_debugging, and layer_io_divergence modes are shown below. A detailed list of models tested with DeepView can be found under [examples](./examples).
+A few examples demonstrating the use of unsupported_op, layer_debugging, and layer_io_divergence modes are shown below. 
 
-### unsupported_op mode
+### unsupported_op Mode
 ```
 deepview --model_type fms --model ibm-ai-platform/Bamba-9B-v1 --mode unsupported_op --show_details --output_file debugger.txt
 ```
@@ -147,7 +149,7 @@ DEEPVIEW     past_key_value_state.ssm_state.copy_(  # type: ignore[union-attr]
 DEEPVIEW
 ```
 
-### layer_debugging mode
+### layer_debugging Mode
 ```
 deepview --model_type fms --model ibm-granite/granite-3.2-2b-instruct --mode layer_debugging --output_file debugger.txt
 ```
@@ -165,7 +167,7 @@ DEEPVIEW========================================================================
 ```
 
 
-### layer_io_divergence mode
+### layer_io_divergence Mode
 ```
 deepview --model_type fms --model ibm-granite/granite-3.2-8b-instruct --mode layer_io_divergence
 ```
@@ -276,3 +278,5 @@ DEEPVIEW========================================================================
 
 DeepView run completed
 ```
+### Library Mode for Unsupported Ops
+Please refer to this ReadMe for a full example: [Libray Model Example](./examples/README.md).
