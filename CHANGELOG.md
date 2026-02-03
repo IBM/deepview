@@ -12,7 +12,7 @@ The format is based on [Keep a Changelog], and this project adheres to
 * `Fixed` for any bug fixes.
 * `Security` in case of vulnerabilities.
 
-## [1.0.0] - 2026/02/02
+## [1.0.0] - 2026/02/03
 
 ### Added 
 * Added setup_model_handler wrapper function to reduce redundant code (\#155)
