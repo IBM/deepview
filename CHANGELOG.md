@@ -16,14 +16,14 @@ The format is based on [Keep a Changelog], and this project adheres to
 
 ### Added 
 * Added setup_model_handler wrapper function to reduce redundant code (\#155)
-* Added Tox to pyproject.toml for development testing (\#166) 
-* Added sorting of layers by complexity and run them in order to layer debug mode (\#167) 
+* Added TOX to pyproject.toml for development testing (\#166) 
+* Added support for sorting layers by complexity and executing them sequential in layer-level debug mode. (\#167) 
 * Added last_n_tokens parameter when using FMS model forward (\#178) 
 * Added a utility script for automating DeepView testing on a list of models for a single mode of DeepView (\#180) 
 * Added example scripts for using DeepView unsupported ops mode as a library (\#168)
 
 ### Changed
-* Move model runner methods for each individual DeepView mode into its respective file in the core (\#155)
+* Move model runner methods for each individual DeepView mode into its respective file in the core component (\#155)
 * Update COMPILATION_MODE environment variable (\#161)
 * Update lazy handle import and torch_sendnn convertor methods as they were renamed (\#164 ,\#172) 
 * Update layer_io data structure in layer debug mode (\#167) 
