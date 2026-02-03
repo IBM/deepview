@@ -125,9 +125,9 @@ options:
 ```
 
 ## Examples
-A few examples demonstrating the use of unsupported_op, layer_debugging, and layer_io_divergence modes are shown below. A detailed list of models tested with DeepView can be found under [examples](./examples).
+A few examples demonstrating the use of unsupported_op, layer_debugging, and layer_io_divergence modes are shown below. 
 
-### unsupported_op mode
+### unsupported_op Mode
 ```
 deepview --model_type fms --model ibm-ai-platform/Bamba-9B-v1 --mode unsupported_op --show_details --output_file debugger.txt
 ```
@@ -149,7 +149,7 @@ DEEPVIEW     past_key_value_state.ssm_state.copy_(  # type: ignore[union-attr]
 DEEPVIEW
 ```
 
-### layer_debugging mode
+### layer_debugging Mode
 ```
 deepview --model_type fms --model ibm-granite/granite-3.2-2b-instruct --mode layer_debugging --output_file debugger.txt
 ```
@@ -167,7 +167,7 @@ DEEPVIEW========================================================================
 ```
 
 
-### layer_io_divergence mode
+### layer_io_divergence Mode
 ```
 deepview --model_type fms --model ibm-granite/granite-3.2-8b-instruct --mode layer_io_divergence
 ```
@@ -278,3 +278,5 @@ DEEPVIEW========================================================================
 
 DeepView run completed
 ```
+### Library Mode for Unsupported Ops
+Please refer to this ReadMe for a full example: [Libray Model Example](./examples/README.md).
