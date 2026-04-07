@@ -31,7 +31,7 @@ from transformers import (
     AutoModelForQuestionAnswering,
     AutoModelForSeq2SeqLM,
     AutoModelForSequenceClassification,
-    AutoModelForVision2Seq,
+    AutoModelForImageTextToText,
     AutoModelForVisualQuestionAnswering,
     AutoModelForZeroShotImageClassification,
     AutoTokenizer,
@@ -48,7 +48,7 @@ MODEL_CLASSES = {
     "imageclassification": AutoModelForImageClassification,
     "objectdetection": AutoModelForObjectDetection,
     "zeroshotimageclassification": AutoModelForZeroShotImageClassification,
-    "vision2seq": AutoModelForVision2Seq,
+    "vision2seq": AutoModelForImageTextToText,
     "visualquestionanswering": AutoModelForVisualQuestionAnswering,
     "sentence": SentenceTransformer,
 }
@@ -242,11 +242,11 @@ class ModelHandlerBase:
                 self._forward_output()
             else:
                 self._generate_output(True)
-    
+
     def infer(self):
         """Perform inference on the prepared input based on the model type."""
         return self._generate_output(False)
-    
+
 
     def _forward_output(self):
         """Calling generate function based on model_type."""
