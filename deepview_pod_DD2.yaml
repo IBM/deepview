@@ -4,111 +4,62 @@ metadata:
   name: <pod-name>
 spec:
   schedulerName: spyre-scheduler
+  securityContext:
+    seccompProfile:
+      type: RuntimeDefault
   containers:
-  - name: <pod-name>
-    resources:
-      limits:
-        ibm.com/spyre_pf: 1
-      requests:
-        ibm.com/spyre_pf: 1
-    imagePullPolicy: Always
-    image: &pod_image icr.io/ibmaiu_internal/1.0/x86_64/spyre:dev
-    command:
-      - bash
-      - '-c'
-    args:
-      # lines without gap are considered on the same line and indented are new lines
-      # lines 29-37 are for DOOM fix
-      - >
-        source ~/.bashrc
-        
-        cd $HOME
-
-        pip3 install -q -U transformers
-        
-        cp ${AIU_AUTOGEN_SENLIB_CONFIG_FILE} /tmp/etc/ibm/spyre/senlib_config.json
-
-        FILE=/tmp/etc/ibm/spyre/senlib_config.json
-
-        cat $FILE | jq '. += {"RISCV": {"DOOM": { "enable" : false}}, "SNT_MCI" : { "DCR": {"MCI_CTRL": {"ENABLE_RISCV": "0x0"} } }}' > $FILE.jq
-
-        mv $FILE.jq $FILE
-
-        cp /tmp/etc/ibm/spyre/senlib_config.json $HOME/.senlib.json
-        
-        echo "POD_IMAGE:" $POD_IMAGE >> /tmp/aiu-query-devices.txt
-
-        echo " " >> /tmp/aiu-query-devices.txt
-
-        /opt/sentient/bin/aiu-query-devices >> /tmp/aiu-query-devices.txt
-
-        echo " " >> ~/.bashrc
-
-        echo "cat /tmp/aiu-query-devices.txt" >> ~/.bashrc
-
-        echo 'FLEX_COMPUTE      = ' $FLEX_COMPUTE
-
-        echo 'FLEX_DEVICE       = ' $FLEX_DEVICE
-
-        echo 'DTLOG_LEVEL       = ' $DTLOG_LEVEL
-
-        echo 'TORCH_SENDNN_LOG  = ' $TORCH_SENDNN_LOG
-
-        echo 'DT_DEEPRT_VERBOSE = ' $DT_DEEPRT_VERBOSE
-
-        echo 'INFER_SCRIPT      = ' $INFER_SCRIPT
-
-        echo 'MODEL             = ' $MODEL
-
-        tail -f /dev/null
-    workingDir: /home/senuser
-    env:
-    # Use the AIU device
-    - name: FLEX_COMPUTE
-      value: "SENTIENT"
-    - name: FLEX_DEVICE
-      value: "PF"
-    # Force runtime to use the same heap data structure for everything
-    - name: FLEX_OVERWRITE_NMB_FRAME
-      value: "1"
-    # Needed for multi-AIU runs
-    - name: FLEX_UNLINK_DEVMEM
-      value: "false"
-    # Turn off Python line buffering
-    - name: PYTHONUNBUFFERED
-      value: "1"
-    # HOME might not be set, so set it
-    - name: HOME
-      value: /home/senuser
-    - name: HF_HOME
-      value: /home/senuser/models/huggingface_cache
-    - name:  HF_HUB_CACHE
-      value: /home/senuser/models/huggingface_cache/hub
-    - name: HF_DATASETS_CACHE
-      value: $HF_HOME/datasets
-    # Make the AIU stack quiet
-    - name: DTLOG_LEVEL
-      value: "error"
-    - name: TORCH_SENDNN_LOG
-      value: "CRITICAL"
-    - name: DT_DEEPRT_VERBOSE
-      value: "-1"
-    - name: POD_IMAGE
-      value: *pod_image
-    - name: DEEPVIEW_THRESHOLDS_FOLDERPATH
-      value: /home/senuser/models/deepview/layerwise-thresholds
-    volumeMounts:
-    # Expanded Shared Memory
-    - name: dev-shm
-      mountPath: /dev/shm
-    # Model mount
-    - name: shared-models
-      mountPath: /home/senuser/models
+    - name: spyre-container
+      imagePullPolicy: Always
+      # image: registry.redhat.io/rhaiis/vllm-spyre-rhel9:3.3.0-1771459423
+      image: registry.redhat.io/rhaii-early-access/vllm-spyre-rhel9:3.4.0-ea.2
+      resources:
+        limits:
+          ibm.com/spyre_pf: 1
+        requests:
+          ibm.com/spyre_pf: 1
+      workingDir: /tmp/
+      command:
+        - bash
+        - '-c'
+      args:
+        - |
+          # 1. Strip it from the current running script
+          unset HF_HUB_OFFLINE
+          
+          # 2. Permanently strip it for future 'kubectl exec' sessions
+          echo "unset HF_HUB_OFFLINE" >> ~/.bashrc
+          echo "unset HF_HUB_OFFLINE" >> /etc/profile
+          echo "unset HF_HUB_OFFLINE" >> ~/.bash_profile 
+          echo "unset HF_HUB_OFFLINE" >> ~/.zshrc
+          
+          pip3 install --no-deps --index-url https://pypi.org/simple aiu-fms-testing-utils==0.7.1
+          pip3 install sentence-transformers --index-url https://pypi.org/simple --no-deps
+          git clone https://github.com/IBM/deepview.git 
+          cd deepview
+          pip3 install -e . --index-url https://pypi.org/simple --no-deps
+          sleep infinity
+      env:
+        - name: HOME
+          value: /opt/app-root/src
+        - name: AIU_TOPO_FILE
+          value: /etc/ibm/spyre/topo.json
+        - name: HF_HUB_CACHE
+          value: /shared/.cache
+        - name: FLEX_COMPUTE
+          value: SENTIENT
+        - name: FLEX_DEVICE
+          value: PF
+        - name: TORCH_SENDNN_CACHE_DIR
+          value: /dev/shm/cache
+      volumeMounts:
+        - mountPath: /dev/shm
+          name: dev-shm
+        - mountPath: "/shared"
+          name: shared
   volumes:
-  - name: dev-shm
-    emptyDir:
-      medium: Memory
-      sizeLimit: 64Gi
-  - name: shared-models
-    persistentVolumeClaim:
-      claimName: shared-models
+    - name: dev-shm
+      emptyDir:
+        medium: Memory
+        sizeLimit: 32Gi
+    - name: shared
+      emptyDir: {}
